@@ -1,46 +1,43 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, getCurrentUser, setCurrentUser as persistCurrentUser, Notification, getNotifications } from './storage';
+import { onAuthChange, AppUser, refreshUserFromDB } from './fbAuth';
+import { Notification, getNotifications } from './storage';
 
 interface AppContextType {
-  currentUser: User | null;
-  setUser: (user: User | null) => void;
+  currentUser: AppUser | null;
+  setUser: (user: AppUser | null) => void;
   refreshUser: () => void;
+  loading: boolean;
   activePage: string;
   setActivePage: (page: string) => void;
   activeRoom: string | null;
   setActiveRoom: (roomId: string | null) => void;
   activeChat: string | null;
   setActiveChat: (userId: string | null) => void;
+  // Local notifications (kept for gift/follow alerts)
   notifications: Notification[];
   refreshNotifications: () => void;
   unreadCount: number;
+  // Gift animation
   giftAnimation: { emoji: string; name: string } | null;
   showGiftAnimation: (emoji: string, name: string) => void;
+  // Profile view
   viewingProfile: string | null;
   setViewingProfile: (uid: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType>({
-  currentUser: null,
-  setUser: () => {},
-  refreshUser: () => {},
-  activePage: 'home',
-  setActivePage: () => {},
-  activeRoom: null,
-  setActiveRoom: () => {},
-  activeChat: null,
-  setActiveChat: () => {},
-  notifications: [],
-  refreshNotifications: () => {},
-  unreadCount: 0,
-  giftAnimation: null,
-  showGiftAnimation: () => {},
-  viewingProfile: null,
-  setViewingProfile: () => {},
+  currentUser: null, setUser: () => {}, refreshUser: () => {}, loading: true,
+  activePage: 'home', setActivePage: () => {},
+  activeRoom: null, setActiveRoom: () => {},
+  activeChat: null, setActiveChat: () => {},
+  notifications: [], refreshNotifications: () => {}, unreadCount: 0,
+  giftAnimation: null, showGiftAnimation: () => {},
+  viewingProfile: null, setViewingProfile: () => {},
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser_] = useState<User | null>(null);
+  const [currentUser, setCurrentUser_] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState('home');
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [activeChat, setActiveChat] = useState<string | null>(null);
@@ -49,19 +46,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [viewingProfile, setViewingProfile] = useState<string | null>(null);
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (user) setCurrentUser_(user);
-    setNotifications(getNotifications());
+    const unsub = onAuthChange(user => {
+      setCurrentUser_(user);
+      setLoading(false);
+      if (user) setNotifications(getNotifications());
+    });
+    return unsub;
   }, []);
 
-  function setUser(user: User | null) {
+  function setUser(user: AppUser | null) {
     setCurrentUser_(user);
-    persistCurrentUser(user?.id || null);
   }
 
-  function refreshUser() {
-    const user = getCurrentUser();
-    if (user) setCurrentUser_(user);
+  async function refreshUser() {
+    if (!currentUser) return;
+    const updated = await refreshUserFromDB(currentUser.uid);
+    if (updated) setCurrentUser_(updated);
   }
 
   function refreshNotifications() {
@@ -70,14 +70,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   function showGiftAnimation(emoji: string, name: string) {
     setGiftAnimation({ emoji, name });
-    setTimeout(() => setGiftAnimation(null), 3000);
+    setTimeout(() => setGiftAnimation(null), 3200);
   }
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <AppContext.Provider value={{
-      currentUser, setUser, refreshUser,
+      currentUser, setUser, refreshUser, loading,
       activePage, setActivePage,
       activeRoom, setActiveRoom,
       activeChat, setActiveChat,

@@ -373,5 +373,16 @@ textarea.galaxy-input { resize: none; }
 * { scrollbar-width: none; -ms-overflow-style: none; }
 *::-webkit-scrollbar { display: none; }
 
+/* ─────────── MISC ANIMATIONS ─────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes logo-pulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(108, 92, 231, 0.6), 0 0 60px rgba(108, 92, 231, 0.3); }
+  50%       { box-shadow: 0 0 50px rgba(108, 92, 231, 0.9), 0 0 100px rgba(108, 92, 231, 0.5); }
+}
+
 /* ─────────── SELECTION ─────────── */
 ::selection { background: rgba(108, 92, 231, 0.4); }
