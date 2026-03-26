@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getRedirectResult } from 'firebase/auth';
+import { auth } from './firebase';
 import { onAuthChange, AppUser, refreshUserFromDB } from './fbAuth';
 import { Notification, getNotifications } from './storage';
 
@@ -13,14 +15,11 @@ interface AppContextType {
   setActiveRoom: (roomId: string | null) => void;
   activeChat: string | null;
   setActiveChat: (userId: string | null) => void;
-  // Local notifications (kept for gift/follow alerts)
   notifications: Notification[];
   refreshNotifications: () => void;
   unreadCount: number;
-  // Gift animation
   giftAnimation: { emoji: string; name: string } | null;
   showGiftAnimation: (emoji: string, name: string) => void;
-  // Profile view
   viewingProfile: string | null;
   setViewingProfile: (uid: string | null) => void;
 }
@@ -46,6 +45,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [viewingProfile, setViewingProfile] = useState<string | null>(null);
 
   useEffect(() => {
+    // Consume Google redirect result once on app load (must run before onAuthStateChanged
+    // settles so Firebase can process the redirect credential properly).
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        console.log('[Auth] Google redirect sign-in completed for:', result.user.email);
+      }
+    }).catch((err) => {
+      console.error('[Auth] getRedirectResult error:', err);
+    });
+
+    // Single source of truth for auth state — drives all routing in App.tsx
     const unsub = onAuthChange(user => {
       setCurrentUser_(user);
       setLoading(false);

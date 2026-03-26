@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Stars } from '../components/Stars';
 import {
-  loginWithGoogleRedirect, checkGoogleRedirectResult,
+  loginWithGoogleRedirect,
   loginAnonymously, sendOTP, verifyOTP, setupRecaptcha,
 } from '../lib/fbAuth';
 import { useApp } from '../lib/context';
@@ -24,22 +24,6 @@ export function AuthPage() {
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
 
-  // ─── On mount: check for Google redirect result ───────────────────
-  useEffect(() => {
-    async function handleRedirect() {
-      setLoading('redirect');
-      try {
-        const user = await checkGoogleRedirectResult();
-        if (user) setUser(user);
-      } catch (err) {
-        console.error('[Auth] redirect check error:', err);
-      } finally {
-        setLoading(null);
-      }
-    }
-    handleRedirect();
-  }, []);
-
   // ─── Countdown timer for OTP resend ──────────────────────────────
   function startCountdown(seconds = 60) {
     setResendCountdown(seconds);
@@ -58,7 +42,7 @@ export function AuthPage() {
     setLoading('google');
     try {
       await loginWithGoogleRedirect();
-      // Page will redirect — execution stops here
+      // Browser redirects to Google — execution stops here
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg.includes('cancelled') ? 'Sign-in cancelled.' : 'Google sign-in failed. Try again.');
@@ -84,7 +68,6 @@ export function AuthPage() {
     setScreen('phone-number');
     setError('');
     setInfo('');
-    // Init invisible reCAPTCHA once DOM has the container
     setTimeout(() => setupRecaptcha('recaptcha-container'), 100);
   }
 
@@ -94,7 +77,6 @@ export function AuthPage() {
     const raw = phoneNumber.trim();
     if (!raw) { setError('Enter a phone number.'); return; }
 
-    // Auto-prefix + if missing
     const formatted = raw.startsWith('+') ? raw : `+${raw}`;
     if (!/^\+\d{7,15}$/.test(formatted)) {
       setError('Use international format, e.g. +12025550123');
@@ -174,37 +156,16 @@ export function AuthPage() {
     setError('');
     setInfo('');
     setOtpDigits(['', '', '', '', '', '']);
-    // Re-init reCAPTCHA before resend
     setupRecaptcha('recaptcha-container');
     await handleSendOTP();
   }
 
   // ─── Render ───────────────────────────────────────────────────────
-
-  // Checking redirect...
-  if (loading === 'redirect') {
-    return (
-      <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%', margin: '0 auto 16px',
-            background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 30px rgba(108,92,231,0.7)', animation: 'logo-pulse 2s ease-in-out infinite',
-          }}>
-            <Mic size={32} color="white" />
-          </div>
-          <p style={{ color: 'rgba(162,155,254,0.7)', fontSize: 14 }}>Signing you in...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="app-container">
       <Stars />
 
-      {/* ── Hidden reCAPTCHA container (always in DOM) ── */}
+      {/* Hidden reCAPTCHA container (always in DOM) */}
       <div id="recaptcha-container" style={{ position: 'fixed', bottom: 0, left: 0, zIndex: -1 }} />
 
       {/* ━━━━━━━━ MAIN SCREEN ━━━━━━━━ */}
@@ -253,7 +214,7 @@ export function AuthPage() {
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
             }
-            label={loading === 'google' ? 'Redirecting...' : 'Continue with Google'}
+            label={loading === 'google' ? 'Redirecting to Google...' : 'Continue with Google'}
             variant="white"
             style={{ marginBottom: 10 }}
           />
