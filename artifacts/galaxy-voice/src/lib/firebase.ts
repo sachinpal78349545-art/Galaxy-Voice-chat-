@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyACJvjNecVmc-ooULC99pjlu6slWiQz_3o',
-  authDomain: 'chalotalk-67106.firebaseapp.com',
-  databaseURL: 'https://chalotalk-67106-default-rtdb.firebaseio.com',
-  projectId: 'chalotalk-67106',
-  storageBucket: 'chalotalk-67106.firebasestorage.app',
-  messagingSenderId: '767922030084',
-  appId: '1:767922030084:web:f8f1664a9685832faf5751',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
