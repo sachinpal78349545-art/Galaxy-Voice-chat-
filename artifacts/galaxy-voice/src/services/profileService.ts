@@ -54,15 +54,25 @@ export const VIP_GLOW: Record<VIPTier, string> = {
 // ─── Achievements ────────────────────────────────────────────────────
 
 export function getAchievements(user: AppUser): Achievement[] {
+  const safeUser = {
+    ...user,
+    followers:           Array.isArray(user?.followers) ? user.followers : [],
+    following:           Array.isArray(user?.following) ? user.following : [],
+    totalGiftsReceived:  user?.totalGiftsReceived  ?? 0,
+    totalGiftsSent:      user?.totalGiftsSent      ?? 0,
+    level:               user?.level               ?? 1,
+    coins:               user?.coins               ?? 0,
+    xp:                  user?.xp                  ?? 0,
+  };
   return [
     { id: 'first_steps',     icon: '🚀', label: 'First Steps',       earned: true },
-    { id: 'voice_star',      icon: '🎤', label: 'Voice Star',         earned: user.totalGiftsReceived > 0 },
-    { id: 'social_butterfly',icon: '🦋', label: 'Social Butterfly',   earned: user.followers.length >= 5 },
-    { id: 'gift_giver',      icon: '🎁', label: 'Gift Giver',         earned: user.totalGiftsSent >= 3 },
-    { id: 'level_up',        icon: '⚡', label: 'Level Up',           earned: user.level >= 3 },
-    { id: 'popular',         icon: '👑', label: 'Popular',            earned: user.followers.length >= 20 },
-    { id: 'rich',            icon: '💰', label: 'Millionaire',        earned: user.coins >= 10000 },
-    { id: 'galaxy_citizen',  icon: '🌌', label: 'Galaxy Citizen',     earned: user.level >= 5 },
+    { id: 'voice_star',      icon: '🎤', label: 'Voice Star',         earned: (safeUser.totalGiftsReceived ?? 0) > 0 },
+    { id: 'social_butterfly',icon: '🦋', label: 'Social Butterfly',   earned: safeUser.followers.length >= 5 },
+    { id: 'gift_giver',      icon: '🎁', label: 'Gift Giver',         earned: (safeUser.totalGiftsSent ?? 0) >= 3 },
+    { id: 'level_up',        icon: '⚡', label: 'Level Up',           earned: (safeUser.level ?? 1) >= 3 },
+    { id: 'popular',         icon: '👑', label: 'Popular',            earned: safeUser.followers.length >= 20 },
+    { id: 'rich',            icon: '💰', label: 'Millionaire',        earned: (safeUser.coins ?? 0) >= 10000 },
+    { id: 'galaxy_citizen',  icon: '🌌', label: 'Galaxy Citizen',     earned: (safeUser.level ?? 1) >= 5 },
   ];
 }
 
