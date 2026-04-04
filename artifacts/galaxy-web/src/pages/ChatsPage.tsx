@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { UserProfile, incrementStat, getUser, followUser, unfollowUser } from "../lib/userService";
+import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser } from "../lib/userService";
 import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, setTyping, subscribeTyping, markRead } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
 
@@ -37,7 +37,7 @@ export default function ChatsPage({ user }: Props) {
     if (!active) return;
     const unsub1 = subscribeMessages(active.id, setMsgs);
     const unsub2 = subscribeTyping(active.id, setTypingState);
-    markRead(active.id, user.uid).catch(() => {});
+    markRead(active.id, user.uid).catch(err => console.warn("markRead error:", err));
     return () => {
       unsub1(); unsub2();
       if (typingTimeout.current) clearTimeout(typingTimeout.current);
@@ -54,8 +54,11 @@ export default function ChatsPage({ user }: Props) {
       setInput("");
       setShowEmojiPicker(false);
       setTyping(active.id, user.uid, false);
-      incrementStat(user.uid, "messagesSent").catch(() => {});
-    } catch { showToast("Failed to send message", "error"); }
+      incrementStat(user.uid, "messagesSent").catch(err => console.error("Stat error:", err));
+    } catch (err) {
+      console.error("Send message error:", err);
+      showToast("Failed to send message", "error");
+    }
   };
 
   const handleImageSend = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,7 +68,10 @@ export default function ChatsPage({ user }: Props) {
       showToast("Uploading image...", "info", "\u{1F4F7}");
       await sendImageMessage(active.id, user.uid, file);
       showToast("Image sent!", "success");
-    } catch { showToast("Failed to send image", "error"); }
+    } catch (err) {
+      console.error("Image send error:", err);
+      showToast("Failed to send image", "error");
+    }
   };
 
   const handleTyping = (val: string) => {
@@ -88,9 +94,11 @@ export default function ChatsPage({ user }: Props) {
     if (!active) return;
     const otherId = active.participants[0] === user.uid ? active.participants[1] : active.participants[0];
     setIsFollowing((user.followingList || []).includes(otherId));
-    getUser(otherId).then(u => {
+    const unsubPresence = subscribeUser(otherId, u => {
       if (u) setOtherOnline(u.online ?? false);
-    }).catch(() => {});
+      else setOtherOnline(false);
+    });
+    return unsubPresence;
   }, [active?.id, user.followingList]);
 
   const handleFollow = async () => {
@@ -107,7 +115,8 @@ export default function ChatsPage({ user }: Props) {
         setIsFollowing(true);
         showToast("Following!", "success", "\u2764\uFE0F");
       }
-    } catch {
+    } catch (err) {
+      console.error("Follow/unfollow error:", err);
       showToast("Action failed", "error");
     } finally {
       setFollowLoading(false);

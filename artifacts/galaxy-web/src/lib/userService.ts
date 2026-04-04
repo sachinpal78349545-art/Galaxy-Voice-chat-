@@ -1,4 +1,4 @@
-import { ref, set, get, update, onValue, off, onDisconnect } from "firebase/database";
+import { ref, set, get, update, onValue, off, onDisconnect, runTransaction } from "firebase/database";
 import { db } from "./firebase";
 
 export interface Transaction {
@@ -119,8 +119,11 @@ export function subscribeUser(uid: string, cb: (u: UserProfile | null) => void):
   return () => off(r);
 }
 
-export async function addCoins(uid: string, amount: number, currentCoins: number): Promise<void> {
-  await update(ref(db, `users/${uid}`), { coins: currentCoins + amount });
+export async function addCoins(uid: string, amount: number): Promise<void> {
+  const coinsRef = ref(db, `users/${uid}/coins`);
+  await runTransaction(coinsRef, (current: number | null) => {
+    return (current ?? 0) + amount;
+  });
 }
 
 export async function gainXP(uid: string, amount: number, currentXP: number, currentLevel: number): Promise<void> {
@@ -187,9 +190,14 @@ export async function unfollowUser(myUid: string, targetUid: string): Promise<vo
   });
 }
 
-export async function claimDailyReward(uid: string, profile: UserProfile): Promise<{ coins: number; streak: number } | null> {
+export async function claimDailyReward(uid: string, _profile: UserProfile): Promise<{ coins: number; streak: number } | null> {
   const now = Date.now();
-  const daily = profile.dailyReward || { lastClaimed: 0, streak: 0 };
+
+  const freshSnap = await get(ref(db, `users/${uid}`));
+  if (!freshSnap.exists()) return null;
+  const freshProfile = freshSnap.val() as UserProfile;
+
+  const daily = freshProfile.dailyReward || { lastClaimed: 0, streak: 0 };
   const lastDate = new Date(daily.lastClaimed).toDateString();
   const todayDate = new Date(now).toDateString();
 
@@ -201,8 +209,11 @@ export async function claimDailyReward(uid: string, profile: UserProfile): Promi
   const bonusCoins = Math.min(streak * 10, 100);
   const totalCoins = baseCoins + bonusCoins;
 
+  const coinsRef = ref(db, `users/${uid}/coins`);
+  await runTransaction(coinsRef, (currentCoins: number | null) => {
+    return (currentCoins ?? 0) + totalCoins;
+  });
   await update(ref(db, `users/${uid}`), {
-    coins: (profile.coins || 0) + totalCoins,
     dailyReward: { lastClaimed: now, streak },
   });
 
@@ -212,7 +223,10 @@ export async function claimDailyReward(uid: string, profile: UserProfile): Promi
     description: `Day ${streak} reward (+${bonusCoins} streak bonus)`,
   });
 
-  await checkAchievements(uid, { ...profile, coins: profile.coins + totalCoins, dailyReward: { lastClaimed: now, streak } });
+  const updatedSnap = await get(ref(db, `users/${uid}`));
+  if (updatedSnap.exists()) {
+    await checkAchievements(uid, { ...updatedSnap.val(), uid });
+  }
 
   return { coins: totalCoins, streak };
 }
@@ -223,27 +237,39 @@ export async function addTransaction(uid: string, tx: Omit<Transaction, "id" | "
   await set(ref(db, `users/${uid}/transactions/${id}`), transaction);
 }
 
-export async function sendGift(senderUid: string, senderProfile: UserProfile, recipientSeatUser: string, giftEmoji: string, cost: number): Promise<boolean> {
-  if (senderProfile.coins < cost) return false;
+export async function sendGift(senderUid: string, _senderProfile: UserProfile, recipientUid: string, giftEmoji: string, cost: number): Promise<boolean> {
+  const senderCoinsRef = ref(db, `users/${senderUid}/coins`);
+  const result = await runTransaction(senderCoinsRef, (currentCoins: number | null) => {
+    const coins = currentCoins ?? 0;
+    if (coins < cost) return undefined;
+    return coins - cost;
+  });
 
-  await update(ref(db, `users/${senderUid}`), { coins: senderProfile.coins - cost });
+  if (!result.committed) return false;
+
   await addTransaction(senderUid, { type: "gift_sent", amount: -cost, description: `Sent ${giftEmoji} gift` });
 
-  const recipientSnap = await get(ref(db, `users/${recipientSeatUser}`));
-  if (recipientSnap.exists()) {
-    const recipient = recipientSnap.val();
-    await update(ref(db, `users/${recipientSeatUser}`), { coins: (recipient.coins || 0) + Math.floor(cost * 0.8) });
-    await addTransaction(recipientSeatUser, { type: "gift_received", amount: Math.floor(cost * 0.8), description: `Received ${giftEmoji} gift` });
+  if (recipientUid) {
+    const recipientCoinsRef = ref(db, `users/${recipientUid}/coins`);
+    const creditAmount = Math.floor(cost * 0.8);
+    await runTransaction(recipientCoinsRef, (currentCoins: number | null) => {
+      return (currentCoins ?? 0) + creditAmount;
+    });
+    await addTransaction(recipientUid, { type: "gift_received", amount: creditAmount, description: `Received ${giftEmoji} gift` });
   }
 
-  await checkAchievements(senderUid, { ...senderProfile, coins: senderProfile.coins - cost });
+  const freshSnap = await get(ref(db, `users/${senderUid}`));
+  if (freshSnap.exists()) {
+    await checkAchievements(senderUid, { ...freshSnap.val(), uid: senderUid });
+  }
   return true;
 }
 
 export async function incrementStat(uid: string, stat: "roomsJoined" | "messagesSent"): Promise<void> {
-  const snap = await get(ref(db, `users/${uid}/${stat}`));
-  const current = snap.val() || 0;
-  await update(ref(db, `users/${uid}`), { [stat]: current + 1 });
+  const statRef = ref(db, `users/${uid}/${stat}`);
+  await runTransaction(statRef, (current: number | null) => {
+    return (current ?? 0) + 1;
+  });
 }
 
 export async function checkAchievements(uid: string, profile: UserProfile): Promise<string[]> {

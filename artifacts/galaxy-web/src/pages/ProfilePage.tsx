@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { UserProfile, updateUser, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement } from "../lib/userService";
+import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 
 interface Props {
@@ -46,17 +46,16 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   const transactions: Transaction[] = user.transactions ? Object.values(user.transactions).sort((a, b) => b.timestamp - a.timestamp) : [];
 
   const handleLogout = async () => {
-    try { await signOut(auth); } catch {}
+    try { await signOut(auth); } catch (err) { console.error("Logout error:", err); }
     onLogout();
   };
 
   const handleRecharge = async (coins: number, idx: number) => {
     setRecharging(idx);
     await new Promise(r => setTimeout(r, 1200));
-    const updated: UserProfile = { ...user, coins: user.coins + coins };
-    await updateUser(user.uid, { coins: updated.coins });
+    await addCoins(user.uid, coins);
     await addTransaction(user.uid, { type: "recharge", amount: coins, description: `Recharged ${coins} coins` });
-    onUpdate(updated);
+    onUpdate({ ...user, coins: user.coins + coins });
     setRecharging(null);
     setShowWallet(false);
     showToast(`+${coins} coins added!`, "success", "\u{1F48E}");

@@ -158,7 +158,7 @@ function getRooms(): Room[] {
   try {
     const r = localStorage.getItem(KEYS.ROOMS);
     if (r) return JSON.parse(r);
-  } catch {}
+  } catch (err) { console.warn("localStorage parse error:", err); }
   localStorage.setItem(KEYS.ROOMS, JSON.stringify(SEED_ROOMS));
   return SEED_ROOMS;
 }

@@ -173,7 +173,9 @@ export async function sendImageMessage(convId: string, senderId: string, file: F
 export async function setTyping(convId: string, userId: string, typing: boolean): Promise<void> {
   try {
     await update(ref(db, `conversations/${convId}/typing`), { [userId]: typing });
-  } catch {}
+  } catch (err) {
+    console.warn("Typing indicator error:", err);
+  }
 }
 
 export function subscribeTyping(convId: string, cb: (typing: Record<string, boolean>) => void): () => void {
@@ -187,7 +189,9 @@ export function subscribeTyping(convId: string, cb: (typing: Record<string, bool
 export async function markRead(convId: string, userId: string): Promise<void> {
   try {
     await update(ref(db, `conversations/${convId}/unread`), { [userId]: 0 });
-  } catch {}
+  } catch (err) {
+    console.warn("Mark read error:", err);
+  }
 }
 
 export async function getOrCreateConversation(

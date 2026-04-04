@@ -1,4 +1,4 @@
-import { ref, set, get, update, remove, push, onValue, off, query, orderByChild, limitToLast, serverTimestamp } from "firebase/database";
+import { ref, set, get, update, remove, push, onValue, off, runTransaction } from "firebase/database";
 import { db } from "./firebase";
 
 export interface RoomSeat {
@@ -174,14 +174,19 @@ export async function joinSeat(roomId: string, seatIndex: number, userId: string
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
     userId, username, avatar, isMuted: false, isLocked: false, isSpeaking: false, handRaised: false,
   });
-  const snap = await get(ref(db, `rooms/${roomId}/listeners`));
-  const current = snap.val() || 0;
-  await update(ref(db, `rooms/${roomId}`), { listeners: current + 1 });
+  const listenersRef = ref(db, `rooms/${roomId}/listeners`);
+  await runTransaction(listenersRef, (current: number | null) => {
+    return (current ?? 0) + 1;
+  });
 }
 
 export async function leaveSeat(roomId: string, seatIndex: number): Promise<void> {
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
     userId: null, username: null, avatar: null, isMuted: false, isSpeaking: false, handRaised: false,
+  });
+  const listenersRef = ref(db, `rooms/${roomId}/listeners`);
+  await runTransaction(listenersRef, (current: number | null) => {
+    return Math.max(0, (current ?? 0) - 1);
   });
 }
 
@@ -190,9 +195,17 @@ export async function toggleMuteSeat(roomId: string, seatIndex: number, muted: b
 }
 
 export async function toggleLockSeat(roomId: string, seatIndex: number, locked: boolean): Promise<void> {
+  const seatSnap = await get(ref(db, `rooms/${roomId}/seats/${seatIndex}`));
+  const hadUser = seatSnap.exists() && seatSnap.val().userId;
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
     isLocked: locked, userId: null, username: null, avatar: null,
   });
+  if (hadUser) {
+    const listenersRef = ref(db, `rooms/${roomId}/listeners`);
+    await runTransaction(listenersRef, (current: number | null) => {
+      return Math.max(0, (current ?? 0) - 1);
+    });
+  }
 }
 
 export async function raiseHand(roomId: string, seatIndex: number, raised: boolean): Promise<void> {

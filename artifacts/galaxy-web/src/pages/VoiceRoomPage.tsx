@@ -42,7 +42,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
       setRoom(r);
       if (r && !joinedRef.current) {
         joinedRef.current = true;
-        incrementStat(user.uid, "roomsJoined").catch(() => {});
+        incrementStat(user.uid, "roomsJoined").catch(err => console.error("Stat error:", err));
       }
     });
     const unsub2 = subscribeRoomMessages(roomId, setMessages);
@@ -92,15 +92,21 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
     try {
       await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text, type: "text" });
       setInputText("");
-      gainXP(user.uid, 3, user.xp, user.level).catch(() => {});
-      incrementStat(user.uid, "messagesSent").catch(() => {});
-    } catch { showToast("Failed to send message", "error"); }
+      gainXP(user.uid, 3, user.xp, user.level).catch(err => console.error("XP error:", err));
+      incrementStat(user.uid, "messagesSent").catch(err => console.error("Stat error:", err));
+    } catch (err) {
+      console.error("Chat send error:", err);
+      showToast("Failed to send message", "error");
+    }
   };
 
   const sendEmoji = async (e: string) => {
     spawnFloat(e);
     setShowEmoji(false);
-    await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: e, type: "emoji" }).catch(() => {});
+    await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: e, type: "emoji" }).catch(err => {
+      console.error("Emoji send error:", err);
+      showToast("Failed to send emoji", "error");
+    });
   };
 
   const handleGift = async (gift: typeof GIFTS[0]) => {
@@ -115,7 +121,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
     spawnFloat(gift.emoji);
     setShowGift(false);
     showToast(`Sent ${gift.emoji} to ${hostSeat?.username || room.host} (-${gift.cost} coins)`, "success");
-    await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: `sent ${gift.emoji} gift to ${hostSeat?.username || room.host}`, type: "gift" }).catch(() => {});
+    await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: `sent ${gift.emoji} gift to ${hostSeat?.username || room.host}`, type: "gift" }).catch(err => console.error("Gift message error:", err));
   };
 
   const handleRaiseHand = async () => {
@@ -151,7 +157,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
         await toggleLockSeat(roomId, seatIdx, !room.seats[seatIdx].isLocked);
         showToast(room.seats[seatIdx].isLocked ? "Seat unlocked" : "Seat locked", "info");
       }
-    } catch { showToast("Action failed", "error"); }
+    } catch (err) {
+      console.error("Host action error:", err);
+      showToast("Action failed", "error");
+    }
     setShowHostControls(false);
     setSelectedSeat(null);
   };
@@ -159,7 +168,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
   const handleLeave = async () => {
     if (room) {
       const mySeat = room.seats.findIndex(s => s.userId === user.uid);
-      if (mySeat >= 0) await leaveSeat(roomId, mySeat).catch(() => {});
+      if (mySeat >= 0) await leaveSeat(roomId, mySeat).catch(err => console.error("Leave seat error:", err));
     }
     onLeave();
   };
