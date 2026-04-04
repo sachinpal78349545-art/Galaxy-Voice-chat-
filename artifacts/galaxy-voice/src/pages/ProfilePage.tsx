@@ -211,25 +211,56 @@ export function ProfilePage() {
   function AvatarDisplay({ size = 90 }: { size?: number }) {
     const src = profile?.photoURL;
     const isEmoji = src && src.length <= 4 && !src.startsWith('http');
+    const ringSize = size + 18;
     return (
-      <div style={{
-        width: size, height: size, borderRadius: '50%',
-        border: `3px solid ${vipColor}`,
-        boxShadow: vipGlow,
-        background: 'rgba(108,92,231,0.2)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden', flexShrink: 0, position: 'relative',
-      }}>
-        {src && !isEmoji
-          ? <img src={src} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontSize: size * 0.5 }}>{src || '🌟'}</span>
-        }
+      <div style={{ position: 'relative', width: ringSize, height: ringSize, flexShrink: 0 }}>
+        {/* Outer pulsing ring */}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          border: `2px solid ${vipColor}`,
+          animation: 'avatar-ring-pulse 2.4s ease-in-out infinite',
+          boxShadow: `0 0 18px ${vipColor}88, 0 0 36px ${vipColor}44`,
+        }} />
+        {/* Mid ring */}
+        <div style={{
+          position: 'absolute', inset: 6, borderRadius: '50%',
+          border: `1.5px solid ${vipColor}55`,
+        }} />
+        {/* Avatar */}
+        <div style={{
+          position: 'absolute', inset: 9,
+          borderRadius: '50%',
+          border: `3px solid ${vipColor}`,
+          boxShadow: vipGlow,
+          background: 'linear-gradient(135deg, rgba(108,92,231,0.3), rgba(26,15,46,0.8))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
+        }}>
+          {src && !isEmoji
+            ? <img src={src} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: (size - 18) * 0.5 }}>{src || '🌟'}</span>
+          }
+        </div>
+        {/* Online dot */}
         {isOnline && (
           <div style={{
-            position: 'absolute', bottom: 4, right: 4,
-            width: 12, height: 12, borderRadius: '50%',
-            background: '#00e676', border: '2px solid #0F0F1A',
+            position: 'absolute', bottom: 10, right: 10,
+            width: 13, height: 13, borderRadius: '50%',
+            background: '#00e676',
+            border: '2.5px solid #0F0F1A',
+            boxShadow: '0 0 6px #00e676',
+            zIndex: 2,
           }} />
+        )}
+        {/* VIP crown badge */}
+        {vipTier !== 'Bronze' && (
+          <div style={{
+            position: 'absolute', top: 6, right: 6,
+            fontSize: 14, lineHeight: 1, zIndex: 2,
+            filter: 'drop-shadow(0 0 4px rgba(255,215,0,0.8))',
+          }}>
+            {vipTier === 'Galactic' ? '🔮' : vipTier === 'Platinum' ? '💎' : vipTier === 'Gold' ? '👑' : '⭐'}
+          </div>
         )}
       </div>
     );
@@ -300,10 +331,18 @@ export function ProfilePage() {
       </div>
 
       {/* ── Scrollable Content ── */}
-      <div style={S.scroll}>
+      <div style={{ ...S.scroll, animation: 'profile-fade-in 0.4s ease-out' }}>
 
         {/* ── Avatar + Name Banner ── */}
         <div style={S.banner}>
+          {/* decorative orb behind avatar */}
+          <div style={{
+            position: 'absolute', width: 200, height: 200, borderRadius: '50%',
+            background: `radial-gradient(circle, ${vipColor}22 0%, transparent 70%)`,
+            top: 0, left: '50%', transform: 'translateX(-50%)',
+            animation: 'glow-pulse 3s ease-in-out infinite',
+            pointerEvents: 'none',
+          }} />
           <div style={{ position: 'relative', display: 'inline-block' }}>
             <AvatarDisplay size={92} />
             {isOwnProfile && editMode && (
@@ -881,11 +920,20 @@ export function ProfilePage() {
 
 // ─── Sub-components ─────────────────────────────────────────────────
 
+const STAT_ICONS: Record<string, string> = {
+  Followers: '👥', Following: '➕', Gifts: '🎁', Coins: '💰',
+};
+
 function StatBox({ value, label }: { value: string | number; label: string }) {
+  const displayVal = (value === null || value === undefined || Number.isNaN(Number(value))) ? 0 : value;
   return (
-    <div style={{ textAlign: 'center', flex: 1 }}>
-      <div style={{ color: 'white', fontWeight: 800, fontSize: 16 }}>{value}</div>
-      <div style={{ color: 'rgba(162,155,254,0.5)', fontSize: 10, marginTop: 2 }}>{label}</div>
+    <div style={{ textAlign: 'center', flex: 1, padding: '4px 0' }}>
+      <div style={{ fontSize: 13, marginBottom: 2, lineHeight: 1 }}>{STAT_ICONS[label] ?? '⚡'}</div>
+      <div style={{
+        color: 'white', fontWeight: 800, fontSize: 17, lineHeight: 1,
+        textShadow: '0 0 10px rgba(162,155,254,0.5)',
+      }}>{displayVal}</div>
+      <div style={{ color: 'rgba(162,155,254,0.5)', fontSize: 9, marginTop: 3, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>{label}</div>
     </div>
   );
 }
@@ -932,17 +980,21 @@ const S: Record<string, React.CSSProperties> = {
     flex: 1, textAlign: 'center',
   },
   iconBtn: {
-    background: 'rgba(108,92,231,0.12)', border: '1px solid rgba(108,92,231,0.2)',
-    borderRadius: 12, width: 38, height: 38,
+    background: 'rgba(108,92,231,0.14)',
+    backdropFilter: 'blur(8px)',
+    border: '1px solid rgba(162,155,254,0.2)',
+    borderRadius: 13, width: 40, height: 40,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', flexShrink: 0,
+    transition: 'transform 0.15s ease, background 0.15s ease',
+    boxShadow: '0 2px 8px rgba(108,92,231,0.2)',
   },
   scroll: {
     flex: 1, overflowY: 'auto', paddingBottom: 24,
   },
   banner: {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
-    padding: '20px 24px 16px',
+    padding: '24px 24px 20px', position: 'relative', overflow: 'visible',
   },
   cameraBtn: {
     position: 'absolute', bottom: 2, right: 2,
@@ -952,16 +1004,21 @@ const S: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   displayName: {
-    fontSize: 20, fontWeight: 800, color: 'white',
+    fontSize: 22, fontWeight: 800, color: 'white',
+    textShadow: '0 0 20px rgba(162,155,254,0.4)',
+    letterSpacing: -0.3,
   },
   verifiedBadge: {
-    background: '#1da1f2', color: 'white', fontSize: 11, fontWeight: 700,
+    background: 'linear-gradient(135deg, #1da1f2, #0077cc)',
+    color: 'white', fontSize: 10, fontWeight: 800,
     width: 20, height: 20, borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
+    boxShadow: '0 0 8px rgba(29,161,242,0.6)',
   },
   vipBadge: {
-    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+    fontSize: 10, fontWeight: 800, padding: '4px 12px', borderRadius: 20,
+    letterSpacing: 0.5, boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
   },
   uidBadge: {
     background: 'rgba(108,92,231,0.15)', border: '1px solid rgba(108,92,231,0.25)',
@@ -978,45 +1035,67 @@ const S: Record<string, React.CSSProperties> = {
     display: 'flex', alignItems: 'center', gap: 8, width: '100%', marginTop: 14,
   },
   xpBar: {
-    flex: 1, height: 6, borderRadius: 20, background: 'rgba(108,92,231,0.15)', overflow: 'hidden',
+    flex: 1, height: 7, borderRadius: 20,
+    background: 'rgba(108,92,231,0.15)',
+    overflow: 'hidden',
+    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)',
   },
   xpFill: {
-    height: '100%', borderRadius: 20, transition: 'width 0.5s ease',
+    height: '100%', borderRadius: 20, transition: 'width 0.6s ease',
+    boxShadow: '0 0 8px currentColor',
   },
   xpLabel: {
     fontSize: 10, color: 'rgba(162,155,254,0.5)', fontWeight: 600, flexShrink: 0,
   },
   statsRow: {
     display: 'flex', alignItems: 'center',
-    background: 'rgba(108,92,231,0.08)', borderRadius: 18,
-    margin: '0 16px 16px', padding: '14px 10px',
-    border: '1px solid rgba(108,92,231,0.15)',
+    background: 'rgba(108,92,231,0.10)',
+    backdropFilter: 'blur(16px)',
+    borderRadius: 20,
+    margin: '0 16px 16px', padding: '16px 12px',
+    border: '1px solid rgba(162,155,254,0.18)',
+    boxShadow: '0 4px 24px rgba(108,92,231,0.18), inset 0 1px 0 rgba(255,255,255,0.05)',
   },
   statDivider: {
-    width: 1, height: 30, background: 'rgba(108,92,231,0.2)', flexShrink: 0,
+    width: 1, height: 32,
+    background: 'linear-gradient(180deg, transparent, rgba(162,155,254,0.25), transparent)',
+    flexShrink: 0,
   },
   actionRow: {
     display: 'flex', gap: 10, padding: '0 16px', marginBottom: 16,
   },
   tabBar: {
-    display: 'flex', padding: '0 16px', gap: 6, marginBottom: 16, flexShrink: 0,
+    display: 'flex', gap: 4, flexShrink: 0,
+    background: 'rgba(108,92,231,0.07)',
+    backdropFilter: 'blur(12px)',
+    border: '1px solid rgba(162,155,254,0.1)',
+    borderRadius: 16,
+    margin: '0 16px 16px',
+    padding: '4px',
   },
   tabBtn: {
-    flex: 1, padding: '8px 4px', borderRadius: 12,
-    background: 'rgba(108,92,231,0.06)', border: '1px solid rgba(108,92,231,0.12)',
-    color: 'rgba(162,155,254,0.5)', fontSize: 11, fontWeight: 600,
+    flex: 1, padding: '9px 4px', borderRadius: 13,
+    background: 'transparent', border: '1px solid transparent',
+    color: 'rgba(162,155,254,0.45)', fontSize: 11, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit',
+    transition: 'all 0.2s',
   },
   tabBtnActive: {
-    background: 'rgba(108,92,231,0.2)', border: '1px solid rgba(108,92,231,0.4)',
-    color: '#A29BFE',
+    background: 'linear-gradient(135deg, rgba(108,92,231,0.35), rgba(162,155,254,0.15))',
+    border: '1px solid rgba(162,155,254,0.3)',
+    color: '#fff',
+    boxShadow: '0 2px 12px rgba(108,92,231,0.3)',
   },
   tabContent: {
-    padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 12,
+    padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14,
   },
   card: {
-    background: 'rgba(108,92,231,0.07)', borderRadius: 18,
-    border: '1px solid rgba(108,92,231,0.15)', padding: 16,
+    background: 'rgba(108,92,231,0.08)',
+    backdropFilter: 'blur(12px)',
+    borderRadius: 20,
+    border: '1px solid rgba(162,155,254,0.12)',
+    padding: 18,
+    boxShadow: '0 2px 20px rgba(108,92,231,0.1), inset 0 1px 0 rgba(255,255,255,0.04)',
   },
   cardLabel: {
     color: 'rgba(162,155,254,0.6)', fontSize: 11, fontWeight: 700,
@@ -1048,41 +1127,55 @@ const S: Record<string, React.CSSProperties> = {
     boxSizing: 'border-box',
   },
   btnPrimary: {
-    padding: '12px 20px', borderRadius: 16,
-    background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
+    padding: '13px 20px', borderRadius: 16,
+    background: 'linear-gradient(135deg, #6C5CE7 0%, #8B5CF6 50%, #A29BFE 100%)',
     border: 'none', color: 'white', fontSize: 14, fontWeight: 700,
     cursor: 'pointer', fontFamily: 'inherit',
+    boxShadow: '0 4px 20px rgba(108,92,231,0.45), 0 1px 0 rgba(255,255,255,0.1) inset',
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   btnOutline: {
-    padding: '12px 20px', borderRadius: 16,
-    background: 'rgba(108,92,231,0.1)', border: '1px solid rgba(108,92,231,0.35)',
+    padding: '13px 20px', borderRadius: 16,
+    background: 'rgba(108,92,231,0.1)',
+    border: '1px solid rgba(162,155,254,0.3)',
+    backdropFilter: 'blur(8px)',
     color: '#A29BFE', fontSize: 14, fontWeight: 600,
     cursor: 'pointer', fontFamily: 'inherit',
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+    transition: 'transform 0.15s ease, background 0.15s ease',
   },
   dangerBtn: {
-    padding: '12px 20px', borderRadius: 16,
-    background: 'rgba(231,76,60,0.12)', border: '1px solid rgba(231,76,60,0.35)',
+    padding: '13px 20px', borderRadius: 16,
+    background: 'rgba(231,76,60,0.12)', border: '1px solid rgba(231,76,60,0.3)',
+    backdropFilter: 'blur(8px)',
     color: '#ff7675', fontSize: 14, fontWeight: 600,
     cursor: 'pointer', fontFamily: 'inherit',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+    transition: 'transform 0.15s ease',
   },
   overlay: {
     position: 'absolute', inset: 0,
-    background: 'rgba(0,0,0,0.75)', zIndex: 200,
+    background: 'rgba(0,0,0,0.8)', zIndex: 200,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    backdropFilter: 'blur(4px)',
+    backdropFilter: 'blur(8px)',
   },
   modal: {
-    background: 'linear-gradient(180deg, #1E1040 0%, #150B2A 100%)',
-    border: '1px solid rgba(108,92,231,0.3)', borderRadius: 24,
+    background: 'linear-gradient(160deg, rgba(30,16,64,0.95) 0%, rgba(21,11,42,0.98) 100%)',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(162,155,254,0.2)',
+    borderRadius: 26,
     padding: 28, width: '85%', maxWidth: 320,
+    boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset',
   },
   bottomSheet: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    background: 'linear-gradient(180deg, #1E1040 0%, #150B2A 100%)',
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: '16px 20px 36px',
-    border: '1px solid rgba(108,92,231,0.2)',
+    background: 'linear-gradient(160deg, rgba(30,16,64,0.97) 0%, rgba(21,11,42,0.99) 100%)',
+    backdropFilter: 'blur(20px)',
+    borderTopLeftRadius: 30, borderTopRightRadius: 30,
+    padding: '16px 20px 40px',
+    border: '1px solid rgba(162,155,254,0.15)',
+    boxShadow: '0 -8px 40px rgba(108,92,231,0.2)',
   },
   sheetHandle: {
     width: 36, height: 4, borderRadius: 2,
