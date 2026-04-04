@@ -91,7 +91,7 @@ export function ProfilePage() {
   const xpInfo = profile ? getXpToNextLevel(profile.xp) : { current: 0, needed: 100, pct: 0 };
   const achievements = profile ? getAchievements(profile) : [];
   const agencyStats = profile ? getAgencyStats(profile) : null;
-  const isVerified = profile ? (profile.level >= 5 || profile.totalGiftsReceived >= 50) : false;
+  const isVerified = profile ? ((profile.level ?? 0) >= 5 || (profile.totalGiftsReceived ?? 0) >= 50) : false;
   const isOnline = (profile as any)?.online === true;
 
   // ─── Handlers ────────────────────────────────────────────────────
@@ -264,6 +264,18 @@ export function ProfilePage() {
     );
   }
 
+  // ─── Safe profile (guards undefined Firestore fields) ────────────
+  const safeProfile = {
+    ...profile,
+    followers:          Array.isArray(profile.followers)         ? profile.followers         : [],
+    following:          Array.isArray(profile.following)         ? profile.following         : [],
+    totalGiftsReceived: profile.totalGiftsReceived               ?? 0,
+    totalGiftsSent:     profile.totalGiftsSent                   ?? 0,
+    coins:              profile.coins                            ?? 0,
+    xp:                 profile.xp                              ?? 0,
+    level:              profile.level                            ?? 1,
+  };
+
   // ─── Main Render ──────────────────────────────────────────────────
   return (
     <div style={S.page}>
@@ -378,13 +390,13 @@ export function ProfilePage() {
 
         {/* ── Stats Row ── */}
         <div style={S.statsRow}>
-          <StatBox value={profile.followers.length} label="Followers" />
+          <StatBox value={safeProfile.followers.length} label="Followers" />
           <div style={S.statDivider} />
-          <StatBox value={profile.following.length} label="Following" />
+          <StatBox value={safeProfile.following.length} label="Following" />
           <div style={S.statDivider} />
-          <StatBox value={profile.totalGiftsReceived} label="Gifts" />
+          <StatBox value={safeProfile.totalGiftsReceived} label="Gifts" />
           <div style={S.statDivider} />
-          <StatBox value={profile.coins.toLocaleString()} label="Coins" />
+          <StatBox value={safeProfile.coins.toLocaleString()} label="Coins" />
         </div>
 
         {/* ── Action Buttons (for other user) ── */}
@@ -511,9 +523,9 @@ export function ProfilePage() {
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
                   {[
-                    { icon: '💎', label: 'Diamonds', value: profile.totalGiftsReceived },
-                    { icon: '📤', label: 'Gifts Sent', value: profile.totalGiftsSent },
-                    { icon: '✉️', label: 'Messages', value: Math.floor(profile.xp / 5) },
+                    { icon: '💎', label: 'Diamonds', value: safeProfile.totalGiftsReceived },
+                    { icon: '📤', label: 'Gifts Sent', value: safeProfile.totalGiftsSent },
+                    { icon: '✉️', label: 'Messages', value: Math.floor(safeProfile.xp / 5) },
                   ].map(stat => (
                     <div key={stat.label} style={{ flex: 1, textAlign: 'center', padding: '8px 4px', background: 'rgba(108,92,231,0.08)', borderRadius: 10 }}>
                       <div style={{ fontSize: 18 }}>{stat.icon}</div>
@@ -534,7 +546,7 @@ export function ProfilePage() {
             <div style={{ ...S.card, textAlign: 'center', background: 'linear-gradient(135deg, rgba(255,215,0,0.12), rgba(108,92,231,0.1))' }}>
               <div style={{ fontSize: 40 }}>💰</div>
               <div style={{ fontSize: 32, fontWeight: 800, color: '#ffd700', marginTop: 4 }}>
-                {profile.coins.toLocaleString()}
+                {safeProfile.coins.toLocaleString()}
               </div>
               <div style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12, marginTop: 2 }}>Coin Balance</div>
               <button style={{ ...S.btnPrimary, marginTop: 14, width: '100%', background: 'linear-gradient(135deg, #ffd700, #ffb300)', color: '#333' }}>
@@ -544,7 +556,7 @@ export function ProfilePage() {
 
             {/* Gift History */}
             <div style={S.card}>
-              <div style={S.cardLabel}>🎁 Gifts Received ({profile.totalGiftsReceived})</div>
+              <div style={S.cardLabel}>🎁 Gifts Received ({safeProfile.totalGiftsReceived})</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 10 }}>
                 {GIFTS.slice(0, 8).map(g => (
                   <div key={g.id} style={{
