@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Galaxy Voice",
+    "name": "Galaxy Voice Chat",
     "slug": "galaxy-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "galaxy-mobile",
+    "scheme": "galaxyvoicechat",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -15,10 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.sachin.chalotalk"
+      "bundleIdentifier": "com.sachin.galaxyvoicechat"
     },
     "android": {
-      "package": "com.sachin.chalotalk"
+      "package": "com.sachin.galaxyvoicechat",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#050112"
+      }
     },
     "web": {
       "favicon": "./assets/images/icon.png"
