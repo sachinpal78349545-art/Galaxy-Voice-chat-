@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/galaxy-mobile/"
+title = "Galaxy Voice Mobile"
+version = "1.0.0"
+id = "artifacts/galaxy-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/galaxy-mobile/" ]
+localPort = 23445
+
+[services.development]
+run = "pnpm --filter @workspace/galaxy-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/galaxy-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/galaxy-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "23445"
+BASE_PATH = "/galaxy-mobile/"

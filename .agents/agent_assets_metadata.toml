@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "3vtVmB36V66ZQh_x6cTt9"
+uri = "file://artifacts/galaxy-mobile/assets/images/icon.png"
+type = "image"
+title = "galaxy voice app icon"
+
+[[generated]]
+id = "22IMx1QdEGiv9sVdJIMIv"
+uri = "file://artifacts/galaxy-mobile/assets/images/splash.png"
+type = "image"
+title = "galaxy voice splash screen"
