@@ -1,252 +1,1079 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../lib/context';
-import { updateUserProfile, signOut } from '../lib/fbAuth';
-import { AVATARS, getLevelFromXp, getXpToNextLevel } from '../lib/storage';
-import { Edit2, LogOut, Camera, Check, X, ChevronRight, MapPin, Heart, Calendar, Users, Copy, Trophy } from 'lucide-react';
-import { LeaderboardPage } from './LeaderboardPage';
+import type { AppUser } from '../lib/fbAuth';
+import {
+  listenProfile, updateUserProfile, uploadAvatar,
+  deleteAccount, setUserOffline, toggleProfileVisibility,
+  getVIPTier, VIP_COLORS, VIP_GLOW, getAchievements, getAgencyStats,
+  type VIPTier,
+} from '../services/profileService';
+import { followUser, unfollowUser, isFollowing, blockUser, reportUser } from '../services/followService';
+import { getXpToNextLevel, GIFTS } from '../lib/storage';
+import {
+  Edit2, Camera, Check, X, ArrowLeft, Loader, Shield, Trash2,
+  UserX, Flag, Lock, Unlock, Mic, MicOff, Star, Users, Gift,
+  ChevronRight,
+} from 'lucide-react';
+
+// ─── Types ─────────────────────────────────────────────────────────
+
+type Tab = 'profile' | 'wallet' | 'agency' | 'settings';
+
+// ─── Constants ─────────────────────────────────────────────────────
+
+const STORE_ITEMS = [
+  { id: 'neon_frame',   icon: '💜', name: 'Neon Frame',    price: 500,  locked: false },
+  { id: 'gold_entry',   icon: '✨', name: 'Gold Entry',    price: 2000, locked: true  },
+  { id: 'vip_bubble',   icon: '👑', name: 'VIP Bubble',    price: 800,  locked: true  },
+  { id: 'galaxy_frame', icon: '🌌', name: 'Galaxy Frame',  price: 5000, locked: true  },
+  { id: 'stardust',     icon: '⭐', name: 'Stardust FX',   price: 1200, locked: true  },
+  { id: 'crown_effect', icon: '🔮', name: 'Crown Effect',  price: 3500, locked: true  },
+];
+
+const BACKPACK_DEFAULTS = [
+  { id: 'starter_frame', icon: '🟣', name: 'Starter Frame', equipped: true },
+];
+
+// ─── Component ─────────────────────────────────────────────────────
 
 export function ProfilePage() {
-  const { currentUser, setUser, refreshUser } = useApp();
-  const [editing, setEditing] = useState(false);
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [form, setForm] = useState({ bio: currentUser?.bio || '', displayName: currentUser?.displayName || '' });
-  const [copied, setCopied] = useState(false);
+  const { currentUser, setUser, refreshUser, viewingProfile, setViewingProfile, setActivePage } = useApp();
+
+  const viewedUid = viewingProfile ?? currentUser?.uid ?? '';
+  const isOwnProfile = !viewingProfile || viewingProfile === currentUser?.uid;
+
+  const [profile, setProfile] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>('profile');
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editBio, setEditBio] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const [followingState, setFollowingState] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [privacyPublic, setPrivacyPublic] = useState(true);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReportSheet, setShowReportSheet] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSent, setReportSent] = useState(false);
+  const [cpPartner] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!currentUser) return null;
+  // ─── Listen to Firestore profile ─────────────────────────────────
+  useEffect(() => {
+    if (!viewedUid) return;
+    setLoading(true);
+    const unsub = listenProfile(viewedUid, (data) => {
+      setProfile(data);
+      if (data) {
+        setEditName(data.displayName);
+        setEditBio(data.bio || '');
+        setPrivacyPublic((data as any).isPublic !== false);
+      }
+      setLoading(false);
+    });
+    return unsub;
+  }, [viewedUid]);
 
-  const xpInfo = getXpToNextLevel(currentUser.xp || 0);
+  // ─── Check following state ────────────────────────────────────────
+  useEffect(() => {
+    if (isOwnProfile || !currentUser || !viewedUid) return;
+    isFollowing(currentUser.uid, viewedUid).then(setFollowingState);
+  }, [viewedUid, currentUser, isOwnProfile]);
 
-  async function saveProfile() {
+  // ─── Derived ─────────────────────────────────────────────────────
+  const vipTier: VIPTier = profile ? getVIPTier(profile.level, profile.coins) : 'Bronze';
+  const vipColor = VIP_COLORS[vipTier];
+  const vipGlow = VIP_GLOW[vipTier];
+  const xpInfo = profile ? getXpToNextLevel(profile.xp) : { current: 0, needed: 100, pct: 0 };
+  const achievements = profile ? getAchievements(profile) : [];
+  const agencyStats = profile ? getAgencyStats(profile) : null;
+  const isVerified = profile ? (profile.level >= 5 || profile.totalGiftsReceived >= 50) : false;
+  const isOnline = (profile as any)?.online === true;
+
+  // ─── Handlers ────────────────────────────────────────────────────
+
+  function handleBack() {
+    setViewingProfile(null);
+    if (!isOwnProfile) setActivePage('home');
+  }
+
+  function openEditMode() {
+    setEditMode(true);
+    setEditName(profile?.displayName ?? '');
+    setEditBio(profile?.bio ?? '');
+    setAvatarError('');
+  }
+
+  async function handleSaveProfile() {
+    if (!currentUser || !editName.trim()) return;
     setSaving(true);
-    await updateUserProfile(currentUser.uid, { bio: form.bio, displayName: form.displayName });
-    await refreshUser();
-    setEditing(false);
-    setSaving(false);
+    try {
+      await updateUserProfile(currentUser.uid, {
+        displayName: editName.trim(),
+        bio: editBio.trim(),
+      });
+      refreshUser();
+      setEditMode(false);
+    } catch (err) {
+      console.error('[ProfilePage] save error:', err);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  async function changeAvatar(emoji: string) {
-    await updateUserProfile(currentUser.uid, { photoURL: emoji });
-    await refreshUser();
-    setShowAvatarPicker(false);
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+    if (file.size > 5 * 1024 * 1024) { setAvatarError('Image must be under 5MB'); return; }
+    setUploadingAvatar(true);
+    setAvatarError('');
+    try {
+      const url = await uploadAvatar(currentUser.uid, file);
+      await updateUserProfile(currentUser.uid, { photoURL: url });
+      refreshUser();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('storage')) {
+        setAvatarError('Avatar upload requires Firebase Storage (Blaze plan). Using emoji avatar.');
+      } else {
+        setAvatarError('Upload failed. Try again.');
+      }
+    } finally {
+      setUploadingAvatar(false);
+    }
   }
 
-  function copyUID() {
-    navigator.clipboard.writeText(currentUser.customUID || currentUser.uid).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function handleFollowToggle() {
+    if (!currentUser || !viewedUid) return;
+    setFollowLoading(true);
+    try {
+      if (followingState) {
+        await unfollowUser(currentUser.uid, viewedUid);
+        setFollowingState(false);
+      } else {
+        await followUser(currentUser.uid, currentUser.displayName, viewedUid);
+        setFollowingState(true);
+      }
+    } catch (err) {
+      console.error('[ProfilePage] follow error:', err);
+    } finally {
+      setFollowLoading(false);
+    }
   }
 
-  async function logout() {
-    await signOut();
-    setUser(null);
+  async function handleBlock() {
+    if (!currentUser) return;
+    try {
+      await blockUser(currentUser.uid, viewedUid);
+      setShowBlockConfirm(false);
+      handleBack();
+    } catch (err) {
+      console.error('[ProfilePage] block error:', err);
+    }
   }
 
+  async function handleReport() {
+    if (!currentUser || !reportReason.trim()) return;
+    try {
+      await reportUser(currentUser.uid, viewedUid, reportReason);
+      setReportSent(true);
+      setTimeout(() => { setShowReportSheet(false); setReportSent(false); setReportReason(''); }, 2000);
+    } catch (err) {
+      console.error('[ProfilePage] report error:', err);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!currentUser) return;
+    try {
+      await setUserOffline(currentUser.uid);
+      await deleteAccount(currentUser.uid);
+      setUser(null);
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      console.error('[ProfilePage] delete account error:', err);
+    }
+  }
+
+  async function handlePrivacyToggle() {
+    if (!currentUser) return;
+    const next = !privacyPublic;
+    setPrivacyPublic(next);
+    await toggleProfileVisibility(currentUser.uid, next);
+  }
+
+  // ─── Render helpers ───────────────────────────────────────────────
+
+  function AvatarDisplay({ size = 90 }: { size?: number }) {
+    const src = profile?.photoURL;
+    const isEmoji = src && src.length <= 4 && !src.startsWith('http');
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: '50%',
+        border: `3px solid ${vipColor}`,
+        boxShadow: vipGlow,
+        background: 'rgba(108,92,231,0.2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden', flexShrink: 0, position: 'relative',
+      }}>
+        {src && !isEmoji
+          ? <img src={src} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <span style={{ fontSize: size * 0.5 }}>{src || '🌟'}</span>
+        }
+        {isOnline && (
+          <div style={{
+            position: 'absolute', bottom: 4, right: 4,
+            width: 12, height: 12, borderRadius: '50%',
+            background: '#00e676', border: '2px solid #0F0F1A',
+          }} />
+        )}
+      </div>
+    );
+  }
+
+  // ─── Loading ──────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div style={S.page}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16 }}>
+          <div style={{
+            width: 90, height: 90, borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(108,92,231,0.3), rgba(162,155,254,0.1))',
+            animation: 'shimmer 1.5s ease-in-out infinite',
+          }} />
+          <Loader size={20} color="#6C5CE7" style={{ animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: 'rgba(162,155,254,0.5)', fontSize: 13 }}>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div style={S.page}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
+          <span style={{ fontSize: 48 }}>👤</span>
+          <p style={{ color: 'rgba(162,155,254,0.5)', fontSize: 14 }}>Profile not found</p>
+          <button onClick={handleBack} style={S.btnPrimary}>Go Back</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Main Render ──────────────────────────────────────────────────
   return (
-    <>
-      {showLeaderboard && <LeaderboardPage onClose={() => setShowLeaderboard(false)} />}
+    <div style={S.page}>
+      {/* ── Header ── */}
+      <div style={S.header}>
+        <button onClick={handleBack} style={S.iconBtn}>
+          <ArrowLeft size={20} color="#A29BFE" />
+        </button>
+        <span style={S.headerTitle}>
+          {isOwnProfile ? 'My Profile' : profile.displayName}
+        </span>
+        {isOwnProfile && (
+          <button onClick={openEditMode} style={S.iconBtn}>
+            <Edit2 size={18} color="#A29BFE" />
+          </button>
+        )}
+        {!isOwnProfile && (
+          <button onClick={() => setShowReportSheet(true)} style={S.iconBtn}>
+            <Flag size={18} color="rgba(162,155,254,0.5)" />
+          </button>
+        )}
+      </div>
 
-      {showAvatarPicker && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-end' }}
-          onClick={() => setShowAvatarPicker(false)}>
-          <div onClick={e => e.stopPropagation()} style={{
-            width: '100%', maxWidth: 400, margin: '0 auto',
-            background: 'linear-gradient(180deg, #1e1040, #0F0F1A)',
-            borderRadius: '24px 24px 0 0', border: '1px solid rgba(108,92,231,0.3)',
-            padding: '20px 16px 32px',
-          }}>
-            <h3 style={{ color: 'white', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Choose Avatar</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-              {AVATARS.map(emoji => (
-                <button key={emoji} onClick={() => changeAvatar(emoji)} style={{
-                  fontSize: 36, background: 'rgba(108,92,231,0.1)',
-                  border: `2px solid ${currentUser.photoURL === emoji ? '#A29BFE' : 'rgba(108,92,231,0.2)'}`,
-                  borderRadius: 16, padding: '10px', cursor: 'pointer',
-                  boxShadow: currentUser.photoURL === emoji ? '0 0 12px rgba(162,155,254,0.5)' : 'none',
-                }}>{emoji}</button>
-              ))}
+      {/* ── Scrollable Content ── */}
+      <div style={S.scroll}>
+
+        {/* ── Avatar + Name Banner ── */}
+        <div style={S.banner}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <AvatarDisplay size={92} />
+            {isOwnProfile && editMode && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={S.cameraBtn}
+                disabled={uploadingAvatar}
+              >
+                {uploadingAvatar
+                  ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                  : <Camera size={14} color="white" />
+                }
+              </button>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: 'none' }} />
+          </div>
+
+          {avatarError && <p style={{ color: '#ff7675', fontSize: 11, textAlign: 'center', marginTop: 6 }}>{avatarError}</p>}
+
+          {editMode ? (
+            <div style={{ width: '100%', marginTop: 12 }}>
+              <input
+                style={S.editInput}
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                placeholder="Display name"
+                maxLength={30}
+              />
+              <textarea
+                style={{ ...S.editInput, resize: 'none', height: 60, fontSize: 13 }}
+                value={editBio}
+                onChange={e => setEditBio(e.target.value)}
+                placeholder="Write your bio..."
+                maxLength={150}
+              />
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setEditMode(false)} style={{ ...S.btnOutline, flex: 1 }}>
+                  <X size={14} /> Cancel
+                </button>
+                <button onClick={handleSaveProfile} disabled={saving} style={{ ...S.btnPrimary, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  {saving ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} Save
+                </button>
+              </div>
             </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                <span style={S.displayName}>{profile.displayName}</span>
+                {isVerified && (
+                  <span style={S.verifiedBadge} title="Verified">✓</span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 }}>
+                <span style={{ ...S.vipBadge, background: vipColor, color: vipTier === 'Gold' ? '#333' : '#fff' }}>
+                  {vipTier} VIP
+                </span>
+                <span style={S.uidBadge}>
+                  {profile.customUID}
+                </span>
+                {isOnline
+                  ? <span style={S.onlineBadge}>🟢 Online</span>
+                  : <span style={{ color: 'rgba(162,155,254,0.4)', fontSize: 11 }}>
+                    Last seen {formatLastSeen((profile as any).lastSeen)}
+                  </span>
+                }
+              </div>
+              {profile.bio && (
+                <p style={S.bio}>{profile.bio}</p>
+              )}
+            </>
+          )}
+
+          {/* ── XP Progress Bar ── */}
+          {!editMode && (
+            <div style={S.xpRow}>
+              <span style={S.xpLabel}>Lv.{profile.level}</span>
+              <div style={S.xpBar}>
+                <div style={{ ...S.xpFill, width: `${xpInfo.pct}%`, background: vipColor }} />
+              </div>
+              <span style={S.xpLabel}>Lv.{profile.level + 1}</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── Stats Row ── */}
+        <div style={S.statsRow}>
+          <StatBox value={profile.followers.length} label="Followers" />
+          <div style={S.statDivider} />
+          <StatBox value={profile.following.length} label="Following" />
+          <div style={S.statDivider} />
+          <StatBox value={profile.totalGiftsReceived} label="Gifts" />
+          <div style={S.statDivider} />
+          <StatBox value={profile.coins.toLocaleString()} label="Coins" />
+        </div>
+
+        {/* ── Action Buttons (for other user) ── */}
+        {!isOwnProfile && (
+          <div style={S.actionRow}>
+            <button
+              onClick={handleFollowToggle}
+              disabled={followLoading}
+              style={{
+                ...S.btnPrimary,
+                flex: 1,
+                background: followingState
+                  ? 'rgba(108,92,231,0.15)'
+                  : 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
+                border: followingState ? '1px solid #6C5CE7' : 'none',
+                color: followingState ? '#A29BFE' : 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              {followLoading
+                ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                : <Users size={14} />
+              }
+              {followingState ? 'Following' : 'Follow'}
+            </button>
+            <button style={{ ...S.btnOutline, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Gift size={14} /> Send Gift
+            </button>
+          </div>
+        )}
+
+        {/* ── Tab Bar ── */}
+        <div style={S.tabBar}>
+          {(['profile', 'wallet', 'agency', 'settings'] as Tab[])
+            .filter(t => isOwnProfile || t !== 'settings')
+            .map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                style={{ ...S.tabBtn, ...(tab === t ? S.tabBtnActive : {}) }}
+              >
+                {t === 'profile'  && '👤'}
+                {t === 'wallet'   && '💰'}
+                {t === 'agency'   && '🏢'}
+                {t === 'settings' && '⚙️'}
+                {' '}{t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))
+          }
+        </div>
+
+        {/* ─────────── PROFILE TAB ─────────── */}
+        {tab === 'profile' && (
+          <div style={S.tabContent}>
+            {/* CP / Partner Slot */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>💑 Couple Partner</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, padding: '12px 0' }}>
+                <div style={S.cpSlot}>
+                  <AvatarDisplay size={52} />
+                  <span style={S.cpName}>{isOwnProfile ? 'You' : profile.displayName}</span>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, animation: 'pulse 1.5s ease-in-out infinite' }}>❤️</div>
+                  <span style={{ fontSize: 10, color: 'rgba(162,155,254,0.4)' }}>Intimacy 0</span>
+                </div>
+                <div style={S.cpSlot}>
+                  {cpPartner
+                    ? <span style={{ fontSize: 26 }}>👤</span>
+                    : <div style={S.cpEmpty}>
+                        <span style={{ fontSize: 20 }}>+</span>
+                        <span style={{ fontSize: 10, color: 'rgba(162,155,254,0.4)', marginTop: 2 }}>Add Partner</span>
+                      </div>
+                  }
+                  <span style={S.cpName}>Partner</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bio / About */}
+            {profile.bio && (
+              <div style={S.card}>
+                <div style={S.cardLabel}>📝 About</div>
+                <p style={{ color: 'rgba(162,155,254,0.8)', fontSize: 13, lineHeight: 1.6, marginTop: 8 }}>
+                  {profile.bio}
+                </p>
+              </div>
+            )}
+
+            {/* Achievements */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>🏅 Achievements</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 10 }}>
+                {achievements.map(a => (
+                  <div key={a.id} style={{
+                    textAlign: 'center', padding: '10px 4px', borderRadius: 12,
+                    background: a.earned ? 'rgba(108,92,231,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${a.earned ? 'rgba(108,92,231,0.35)' : 'rgba(255,255,255,0.05)'}`,
+                    opacity: a.earned ? 1 : 0.4,
+                  }}>
+                    <div style={{ fontSize: 22 }}>{a.icon}</div>
+                    <div style={{ fontSize: 9, color: 'rgba(162,155,254,0.7)', marginTop: 4, lineHeight: 1.2 }}>{a.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Level Progress Detail */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>⚡ Level Progress</div>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ color: '#A29BFE', fontSize: 13, fontWeight: 700 }}>Level {profile.level}</span>
+                  <span style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12 }}>
+                    {xpInfo.current.toLocaleString()} / {xpInfo.needed.toLocaleString()} XP
+                  </span>
+                </div>
+                <div style={{ background: 'rgba(108,92,231,0.15)', borderRadius: 20, height: 8, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 20,
+                    background: `linear-gradient(90deg, ${vipColor}, #A29BFE)`,
+                    width: `${xpInfo.pct}%`, transition: 'width 0.5s ease',
+                  }} />
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                  {[
+                    { icon: '💎', label: 'Diamonds', value: profile.totalGiftsReceived },
+                    { icon: '📤', label: 'Gifts Sent', value: profile.totalGiftsSent },
+                    { icon: '✉️', label: 'Messages', value: Math.floor(profile.xp / 5) },
+                  ].map(stat => (
+                    <div key={stat.label} style={{ flex: 1, textAlign: 'center', padding: '8px 4px', background: 'rgba(108,92,231,0.08)', borderRadius: 10 }}>
+                      <div style={{ fontSize: 18 }}>{stat.icon}</div>
+                      <div style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>{stat.value}</div>
+                      <div style={{ color: 'rgba(162,155,254,0.5)', fontSize: 10 }}>{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─────────── WALLET TAB ─────────── */}
+        {tab === 'wallet' && (
+          <div style={S.tabContent}>
+            {/* Coin Balance */}
+            <div style={{ ...S.card, textAlign: 'center', background: 'linear-gradient(135deg, rgba(255,215,0,0.12), rgba(108,92,231,0.1))' }}>
+              <div style={{ fontSize: 40 }}>💰</div>
+              <div style={{ fontSize: 32, fontWeight: 800, color: '#ffd700', marginTop: 4 }}>
+                {profile.coins.toLocaleString()}
+              </div>
+              <div style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12, marginTop: 2 }}>Coin Balance</div>
+              <button style={{ ...S.btnPrimary, marginTop: 14, width: '100%', background: 'linear-gradient(135deg, #ffd700, #ffb300)', color: '#333' }}>
+                💎 Top Up Coins
+              </button>
+            </div>
+
+            {/* Gift History */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>🎁 Gifts Received ({profile.totalGiftsReceived})</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 10 }}>
+                {GIFTS.slice(0, 8).map(g => (
+                  <div key={g.id} style={{
+                    textAlign: 'center', padding: '8px 4px', borderRadius: 10,
+                    background: 'rgba(108,92,231,0.08)',
+                  }}>
+                    <div style={{ fontSize: 22 }}>{g.emoji}</div>
+                    <div style={{ color: 'rgba(162,155,254,0.6)', fontSize: 9, marginTop: 2 }}>{g.name}</div>
+                    <div style={{ color: '#ffd700', fontSize: 9 }}>{g.cost}💰</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Backpack */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>🎒 My Backpack</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
+                {BACKPACK_DEFAULTS.map(item => (
+                  <div key={item.id} style={{
+                    textAlign: 'center', padding: '10px 6px', borderRadius: 12,
+                    background: item.equipped ? 'rgba(108,92,231,0.2)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${item.equipped ? 'rgba(108,92,231,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                  }}>
+                    <div style={{ fontSize: 28 }}>{item.icon}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(162,155,254,0.8)', marginTop: 4 }}>{item.name}</div>
+                    {item.equipped && (
+                      <div style={{ fontSize: 9, color: '#6C5CE7', marginTop: 3, fontWeight: 700 }}>EQUIPPED</div>
+                    )}
+                  </div>
+                ))}
+                <div style={{
+                  textAlign: 'center', padding: '10px 6px', borderRadius: 12,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px dashed rgba(108,92,231,0.2)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+                  onClick={() => setTab('wallet')}
+                >
+                  <span style={{ fontSize: 24, color: 'rgba(108,92,231,0.4)' }}>+</span>
+                  <span style={{ fontSize: 10, color: 'rgba(162,155,254,0.3)', marginTop: 4 }}>Get More</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Store */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>🛍️ Galaxy Store</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
+                {STORE_ITEMS.map(item => (
+                  <div key={item.id} style={{
+                    textAlign: 'center', padding: '10px 6px', borderRadius: 12,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(108,92,231,0.15)',
+                    position: 'relative',
+                  }}>
+                    {item.locked && (
+                      <div style={{
+                        position: 'absolute', inset: 0, borderRadius: 12,
+                        background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <Lock size={16} color="rgba(162,155,254,0.4)" />
+                      </div>
+                    )}
+                    <div style={{ fontSize: 26 }}>{item.icon}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(162,155,254,0.8)', marginTop: 4 }}>{item.name}</div>
+                    <div style={{ color: '#ffd700', fontSize: 10, marginTop: 2 }}>{item.price.toLocaleString()} 💰</div>
+                    {!item.locked && (
+                      <button style={{
+                        background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
+                        border: 'none', color: 'white', fontSize: 9, padding: '4px 8px',
+                        borderRadius: 8, marginTop: 5, cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                        Buy
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─────────── AGENCY TAB ─────────── */}
+        {tab === 'agency' && agencyStats && (
+          <div style={S.tabContent}>
+            {/* Agency Badge */}
+            <div style={{ ...S.card, textAlign: 'center' }}>
+              <div style={{ fontSize: 48 }}>{agencyStats.agencyBadge}</div>
+              <div style={{ color: 'white', fontWeight: 800, fontSize: 16, marginTop: 8 }}>{agencyStats.agencyName}</div>
+              <div style={{
+                display: 'inline-block', marginTop: 8, padding: '4px 14px',
+                background: 'rgba(108,92,231,0.2)', borderRadius: 20,
+                color: '#A29BFE', fontSize: 12, fontWeight: 600,
+                border: '1px solid rgba(108,92,231,0.4)',
+              }}>
+                {agencyStats.rank}
+              </div>
+            </div>
+
+            {/* Live Hours */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>⏱️ Live Hours</div>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ color: '#A29BFE', fontWeight: 700 }}>{agencyStats.liveHours}h</span>
+                  <span style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12 }}>Target: {agencyStats.targetHours}h</span>
+                </div>
+                <div style={{ background: 'rgba(108,92,231,0.15)', borderRadius: 20, height: 10, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 20,
+                    background: 'linear-gradient(90deg, #6C5CE7, #00cec9)',
+                    width: `${Math.min(100, (agencyStats.liveHours / agencyStats.targetHours) * 100)}%`,
+                    transition: 'width 0.5s ease',
+                  }} />
+                </div>
+                <p style={{ color: 'rgba(162,155,254,0.4)', fontSize: 11, marginTop: 8 }}>
+                  {agencyStats.targetHours - agencyStats.liveHours}h remaining to reach target
+                </p>
+              </div>
+            </div>
+
+            {/* Salary */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>💵 Salary Progress</div>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ color: '#ffd700', fontWeight: 700 }}>{agencyStats.salary.toLocaleString()} 💰</span>
+                  <span style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12 }}>
+                    Target: {agencyStats.targetSalary.toLocaleString()} 💰
+                  </span>
+                </div>
+                <div style={{ background: 'rgba(255,215,0,0.1)', borderRadius: 20, height: 10, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 20,
+                    background: 'linear-gradient(90deg, #ffd700, #ffb300)',
+                    width: `${Math.min(100, (agencyStats.salary / agencyStats.targetSalary) * 100)}%`,
+                  }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Performance Stats */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>📊 Performance</div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                {[
+                  { icon: '🎤', label: 'Rooms Hosted', value: Math.floor(agencyStats.liveHours / 2) },
+                  { icon: '💰', label: 'Total Earned', value: agencyStats.salary.toLocaleString() },
+                  { icon: '⭐', label: 'Rating', value: '4.8' },
+                ].map(s => (
+                  <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '10px 4px', background: 'rgba(108,92,231,0.08)', borderRadius: 10 }}>
+                    <div style={{ fontSize: 20 }}>{s.icon}</div>
+                    <div style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{s.value}</div>
+                    <div style={{ color: 'rgba(162,155,254,0.5)', fontSize: 10 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─────────── SETTINGS TAB ─────────── */}
+        {tab === 'settings' && isOwnProfile && (
+          <div style={S.tabContent}>
+            {/* Privacy */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>🔒 Privacy</div>
+              <div style={S.settingRow} onClick={handlePrivacyToggle}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {privacyPublic ? <Unlock size={16} color="#A29BFE" /> : <Lock size={16} color="#A29BFE" />}
+                  <div>
+                    <div style={{ color: 'white', fontSize: 13, fontWeight: 600 }}>
+                      {privacyPublic ? 'Public Profile' : 'Private Profile'}
+                    </div>
+                    <div style={{ color: 'rgba(162,155,254,0.4)', fontSize: 11, marginTop: 2 }}>
+                      {privacyPublic ? 'Anyone can view your profile' : 'Only followers can see your profile'}
+                    </div>
+                  </div>
+                </div>
+                <div style={{
+                  width: 42, height: 24, borderRadius: 12,
+                  background: privacyPublic ? '#6C5CE7' : 'rgba(255,255,255,0.1)',
+                  position: 'relative', transition: 'background 0.2s',
+                  cursor: 'pointer', flexShrink: 0,
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 3,
+                    left: privacyPublic ? 20 : 3,
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: 'white', transition: 'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Account */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>⚙️ Account</div>
+              <div style={S.settingRow}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Shield size={16} color="#A29BFE" />
+                  <div style={{ color: 'white', fontSize: 13 }}>Email</div>
+                </div>
+                <span style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12 }}>{profile.email || 'Not set'}</span>
+              </div>
+              <div style={S.settingRow}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Star size={16} color="#ffd700" />
+                  <div style={{ color: 'white', fontSize: 13 }}>VIP Status</div>
+                </div>
+                <span style={{ color: vipColor, fontSize: 12, fontWeight: 700 }}>{vipTier}</span>
+              </div>
+            </div>
+
+            {/* Danger Zone */}
+            <div style={{ ...S.card, border: '1px solid rgba(231,76,60,0.2)' }}>
+              <div style={{ color: '#ff7675', fontSize: 12, fontWeight: 700, marginBottom: 10, letterSpacing: 0.5 }}>
+                ⚠️ DANGER ZONE
+              </div>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{ ...S.dangerBtn, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <Trash2 size={14} /> Delete Account
+              </button>
+              <p style={{ color: 'rgba(255,118,117,0.5)', fontSize: 11, textAlign: 'center', marginTop: 8 }}>
+                This will permanently delete your account and all data (GDPR/CCPA compliant).
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom spacer */}
+        <div style={{ height: 32 }} />
+      </div>
+
+      {/* ── Block Confirmation Modal ── */}
+      {showBlockConfirm && (
+        <Modal onClose={() => setShowBlockConfirm(false)}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🚫</div>
+          <div style={{ color: 'white', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Block {profile.displayName}?</div>
+          <p style={{ color: 'rgba(162,155,254,0.6)', fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
+            They won't be able to see your profile or send you messages.
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setShowBlockConfirm(false)} style={{ ...S.btnOutline, flex: 1 }}>Cancel</button>
+            <button onClick={handleBlock} style={{ ...S.dangerBtn, flex: 1 }}>Block</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Delete Account Modal ── */}
+      {showDeleteConfirm && (
+        <Modal onClose={() => setShowDeleteConfirm(false)}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>💀</div>
+          <div style={{ color: '#ff7675', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Delete Account?</div>
+          <p style={{ color: 'rgba(162,155,254,0.6)', fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
+            All your data will be permanently deleted. This action cannot be undone.
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setShowDeleteConfirm(false)} style={{ ...S.btnOutline, flex: 1 }}>Cancel</button>
+            <button onClick={handleDeleteAccount} style={{ ...S.dangerBtn, flex: 1 }}>Delete Forever</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Report Sheet ── */}
+      {showReportSheet && (
+        <div style={S.overlay} onClick={() => setShowReportSheet(false)}>
+          <div style={S.bottomSheet} onClick={e => e.stopPropagation()}>
+            <div style={S.sheetHandle} />
+            {reportSent ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 40 }}>✅</div>
+                <p style={{ color: '#A29BFE', marginTop: 10 }}>Report submitted. Thank you.</p>
+              </div>
+            ) : (
+              <>
+                <div style={{ color: 'white', fontWeight: 700, fontSize: 16, marginBottom: 16 }}>
+                  🚩 Report {profile.displayName}
+                </div>
+                {['Spam or fake account', 'Harassment', 'Inappropriate content', 'Scamming', 'Other'].map(reason => (
+                  <button key={reason} onClick={() => setReportReason(reason)} style={{
+                    width: '100%', textAlign: 'left', padding: '12px 14px',
+                    background: reportReason === reason ? 'rgba(108,92,231,0.2)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${reportReason === reason ? 'rgba(108,92,231,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                    borderRadius: 12, color: 'rgba(162,155,254,0.85)', fontSize: 13,
+                    marginBottom: 8, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    {reportReason === reason ? '● ' : '○ '}{reason}
+                  </button>
+                ))}
+                <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                  <button onClick={() => setShowReportSheet(false)} style={{ ...S.btnOutline, flex: 1 }}>Cancel</button>
+                  <button
+                    onClick={handleReport}
+                    disabled={!reportReason}
+                    style={{ ...S.dangerBtn, flex: 1, opacity: reportReason ? 1 : 0.4 }}
+                  >
+                    Submit Report
+                  </button>
+                </div>
+                {!isOwnProfile && (
+                  <button
+                    onClick={() => { setShowReportSheet(false); setShowBlockConfirm(true); }}
+                    style={{ ...S.settingRow, marginTop: 12, justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%' }}
+                  >
+                    <UserX size={14} color="#ff7675" />
+                    <span style={{ color: '#ff7675', fontSize: 13, marginLeft: 6 }}>Block this user instead</span>
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
-
-      <div className="page-content page-transition">
-        {/* Hero */}
-        <div style={{
-          position: 'relative',
-          background: 'linear-gradient(135deg, rgba(108,92,231,0.3) 0%, rgba(26,15,46,0.9) 100%)',
-          padding: '28px 16px 20px', textAlign: 'center',
-          borderBottom: '1px solid rgba(108,92,231,0.2)',
-        }}>
-          <div style={{ position: 'absolute', top: 16, left: 12 }}>
-            <button onClick={() => setShowLeaderboard(true)} style={{
-              width: 34, height: 34, borderRadius: '50%',
-              background: 'rgba(253,203,110,0.15)', border: '1px solid rgba(253,203,110,0.3)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fdcb6e',
-            }}><Trophy size={15} /></button>
-          </div>
-
-          <div style={{ position: 'absolute', top: 16, right: 12, display: 'flex', gap: 6 }}>
-            {editing ? (
-              <>
-                <button onClick={saveProfile} disabled={saving} style={{
-                  width: 34, height: 34, borderRadius: '50%',
-                  background: 'rgba(0,184,148,0.2)', border: '1px solid rgba(0,184,148,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#00b894',
-                }}><Check size={15} /></button>
-                <button onClick={() => setEditing(false)} style={{
-                  width: 34, height: 34, borderRadius: '50%',
-                  background: 'rgba(231,76,60,0.2)', border: '1px solid rgba(231,76,60,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ff7675',
-                }}><X size={15} /></button>
-              </>
-            ) : (
-              <button onClick={() => setEditing(true)} style={{
-                width: 34, height: 34, borderRadius: '50%',
-                background: 'rgba(108,92,231,0.2)', border: '1px solid rgba(108,92,231,0.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#A29BFE',
-              }}><Edit2 size={15} /></button>
-            )}
-          </div>
-
-          {/* Avatar */}
-          <div style={{ position: 'relative', display: 'inline-block', marginBottom: 10 }}>
-            <div style={{
-              width: 88, height: 88, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 42, border: '3px solid rgba(162,155,254,0.6)',
-              boxShadow: '0 0 30px rgba(108,92,231,0.5)',
-            }}>{currentUser.photoURL}</div>
-            <button onClick={() => setShowAvatarPicker(true)} style={{
-              position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
-              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}><Camera size={12} color="white" /></button>
-          </div>
-
-          {/* Name */}
-          {editing ? (
-            <input className="galaxy-input" value={form.displayName}
-              onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))}
-              style={{ textAlign: 'center', maxWidth: 200, margin: '0 auto 8px', display: 'block' }} />
-          ) : (
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: 'white', marginBottom: 4 }}>{currentUser.displayName}</h2>
-          )}
-
-          {/* UID */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 12 }}>
-            <span style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12 }}>{currentUser.customUID || currentUser.uid.slice(0, 12)}</span>
-            <button onClick={copyUID} style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied ? '#00b894' : 'rgba(162,155,254,0.4)', padding: 0 }}>
-              {copied ? <Check size={13} /> : <Copy size={13} />}
-            </button>
-          </div>
-
-          {/* Level + coins */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 12 }}>
-            <span className="level-badge">Lv.{currentUser.level}</span>
-            <span className="coins-badge">💰{(currentUser.coins || 0).toLocaleString()}</span>
-            {currentUser.isAnonymous && (
-              <span style={{ background: 'rgba(253,203,110,0.12)', border: '1px solid rgba(253,203,110,0.25)', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#fdcb6e' }}>
-                Guest
-              </span>
-            )}
-          </div>
-
-          {/* XP bar */}
-          <div style={{ maxWidth: 200, margin: '0 auto 14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(162,155,254,0.5)', marginBottom: 3 }}>
-              <span>{xpInfo.current} XP</span><span>{xpInfo.needed} XP</span>
-            </div>
-            <div style={{ height: 4, background: 'rgba(108,92,231,0.2)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: `${xpInfo.pct}%`,
-                background: 'linear-gradient(90deg, #6C5CE7, #A29BFE)',
-                borderRadius: 4, transition: 'width 0.5s ease',
-              }} />
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 28 }}>
-            <StatBox num={currentUser.followers?.length || 0} label="Followers" />
-            <div style={{ width: 1, background: 'rgba(108,92,231,0.3)' }} />
-            <StatBox num={currentUser.following?.length || 0} label="Following" />
-            <div style={{ width: 1, background: 'rgba(108,92,231,0.3)' }} />
-            <StatBox num={currentUser.totalGiftsReceived || 0} label="Gifts" />
-          </div>
-        </div>
-
-        <div style={{ padding: '14px 16px' }}>
-          {/* Bio */}
-          <div className="glass-card" style={{ padding: 14, marginBottom: 10 }}>
-            <h3 style={{ fontSize: 12, fontWeight: 700, color: 'rgba(162,155,254,0.6)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>About Me</h3>
-            {editing ? (
-              <textarea className="galaxy-input" value={form.bio}
-                onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
-                placeholder="Tell the galaxy about yourself..." rows={3} />
-            ) : (
-              <p style={{ color: currentUser.bio ? 'rgba(255,255,255,0.8)' : 'rgba(162,155,254,0.3)', fontSize: 13, lineHeight: 1.6 }}>
-                {currentUser.bio || 'No bio yet. Tap edit to add one ✨'}
-              </p>
-            )}
-          </div>
-
-          {/* Gift stats */}
-          <div className="glass-card" style={{ padding: 14, marginBottom: 10 }}>
-            <h3 style={{ fontSize: 12, fontWeight: 700, color: 'rgba(162,155,254,0.6)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Gift Stats</h3>
-            <div style={{ display: 'flex', gap: 12 }}>
-              {[
-                { emoji: '🎁', val: currentUser.totalGiftsReceived || 0, label: 'Received' },
-                { emoji: '💝', val: currentUser.totalGiftsSent || 0, label: 'Sent' },
-                { emoji: '💰', val: currentUser.coins || 0, label: 'Coins' },
-              ].map(({ emoji, val, label }) => (
-                <div key={label} style={{ flex: 1, textAlign: 'center', background: 'rgba(108,92,231,0.1)', borderRadius: 12, padding: 12 }}>
-                  <div style={{ fontSize: 22, marginBottom: 4 }}>{emoji}</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: label === 'Coins' ? '#fdcb6e' : 'white' }}>{val.toLocaleString()}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(162,155,254,0.5)' }}>{label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Account type */}
-          {currentUser.isAnonymous && (
-            <div style={{
-              background: 'rgba(253,203,110,0.08)', border: '1px solid rgba(253,203,110,0.25)',
-              borderRadius: 16, padding: '12px 14px', marginBottom: 10,
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <span style={{ fontSize: 20 }}>⚠️</span>
-              <p style={{ fontSize: 12, color: 'rgba(253,203,110,0.8)', lineHeight: 1.4 }}>
-                You're using a guest account. Sign in with Google to save your progress permanently.
-              </p>
-            </div>
-          )}
-
-          {/* Settings */}
-          <div className="glass-card" style={{ padding: 14, marginBottom: 24 }}>
-            <h3 style={{ fontSize: 12, fontWeight: 700, color: 'rgba(162,155,254,0.6)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Settings</h3>
-            <div onClick={logout} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0', cursor: 'pointer',
-            }}>
-              <LogOut size={15} color="#ff7675" />
-              <span style={{ flex: 1, fontSize: 13, color: '#ff7675' }}>Sign Out</span>
-              <ChevronRight size={15} color="rgba(162,155,254,0.4)" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function StatBox({ num, label }: { num: number; label: string }) {
-  return (
-    <div className="stat-box">
-      <span className="stat-num">{num}</span>
-      <span className="stat-label">{label}</span>
     </div>
   );
 }
+
+// ─── Sub-components ─────────────────────────────────────────────────
+
+function StatBox({ value, label }: { value: string | number; label: string }) {
+  return (
+    <div style={{ textAlign: 'center', flex: 1 }}>
+      <div style={{ color: 'white', fontWeight: 800, fontSize: 16 }}>{value}</div>
+      <div style={{ color: 'rgba(162,155,254,0.5)', fontSize: 10, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
+        <div style={{ textAlign: 'center' }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────
+
+function formatLastSeen(ts?: number): string {
+  if (!ts) return 'a while ago';
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────
+
+const S: Record<string, React.CSSProperties> = {
+  page: {
+    width: '100%', maxWidth: 400, height: '100dvh', margin: '0 auto',
+    background: 'linear-gradient(180deg, #1A0F2E 0%, #0F0F1A 100%)',
+    display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    color: 'white', position: 'relative',
+  },
+  header: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '52px 20px 16px', flexShrink: 0,
+  },
+  headerTitle: {
+    fontSize: 16, fontWeight: 700, color: 'white',
+    flex: 1, textAlign: 'center',
+  },
+  iconBtn: {
+    background: 'rgba(108,92,231,0.12)', border: '1px solid rgba(108,92,231,0.2)',
+    borderRadius: 12, width: 38, height: 38,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', flexShrink: 0,
+  },
+  scroll: {
+    flex: 1, overflowY: 'auto', paddingBottom: 24,
+  },
+  banner: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    padding: '20px 24px 16px',
+  },
+  cameraBtn: {
+    position: 'absolute', bottom: 2, right: 2,
+    width: 26, height: 26, borderRadius: '50%',
+    background: '#6C5CE7', border: '2px solid #1A0F2E',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer',
+  },
+  displayName: {
+    fontSize: 20, fontWeight: 800, color: 'white',
+  },
+  verifiedBadge: {
+    background: '#1da1f2', color: 'white', fontSize: 11, fontWeight: 700,
+    width: 20, height: 20, borderRadius: '50%',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  vipBadge: {
+    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+  },
+  uidBadge: {
+    background: 'rgba(108,92,231,0.15)', border: '1px solid rgba(108,92,231,0.25)',
+    borderRadius: 20, padding: '3px 10px', fontSize: 10, color: 'rgba(162,155,254,0.7)',
+  },
+  onlineBadge: {
+    fontSize: 11, color: '#00e676',
+  },
+  bio: {
+    color: 'rgba(162,155,254,0.7)', fontSize: 13, textAlign: 'center',
+    marginTop: 8, lineHeight: 1.5, maxWidth: 280,
+  },
+  xpRow: {
+    display: 'flex', alignItems: 'center', gap: 8, width: '100%', marginTop: 14,
+  },
+  xpBar: {
+    flex: 1, height: 6, borderRadius: 20, background: 'rgba(108,92,231,0.15)', overflow: 'hidden',
+  },
+  xpFill: {
+    height: '100%', borderRadius: 20, transition: 'width 0.5s ease',
+  },
+  xpLabel: {
+    fontSize: 10, color: 'rgba(162,155,254,0.5)', fontWeight: 600, flexShrink: 0,
+  },
+  statsRow: {
+    display: 'flex', alignItems: 'center',
+    background: 'rgba(108,92,231,0.08)', borderRadius: 18,
+    margin: '0 16px 16px', padding: '14px 10px',
+    border: '1px solid rgba(108,92,231,0.15)',
+  },
+  statDivider: {
+    width: 1, height: 30, background: 'rgba(108,92,231,0.2)', flexShrink: 0,
+  },
+  actionRow: {
+    display: 'flex', gap: 10, padding: '0 16px', marginBottom: 16,
+  },
+  tabBar: {
+    display: 'flex', padding: '0 16px', gap: 6, marginBottom: 16, flexShrink: 0,
+  },
+  tabBtn: {
+    flex: 1, padding: '8px 4px', borderRadius: 12,
+    background: 'rgba(108,92,231,0.06)', border: '1px solid rgba(108,92,231,0.12)',
+    color: 'rgba(162,155,254,0.5)', fontSize: 11, fontWeight: 600,
+    cursor: 'pointer', fontFamily: 'inherit',
+  },
+  tabBtnActive: {
+    background: 'rgba(108,92,231,0.2)', border: '1px solid rgba(108,92,231,0.4)',
+    color: '#A29BFE',
+  },
+  tabContent: {
+    padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 12,
+  },
+  card: {
+    background: 'rgba(108,92,231,0.07)', borderRadius: 18,
+    border: '1px solid rgba(108,92,231,0.15)', padding: 16,
+  },
+  cardLabel: {
+    color: 'rgba(162,155,254,0.6)', fontSize: 11, fontWeight: 700,
+    textTransform: 'uppercase', letterSpacing: 0.8,
+  },
+  cpSlot: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+  },
+  cpEmpty: {
+    width: 52, height: 52, borderRadius: '50%',
+    border: '2px dashed rgba(108,92,231,0.3)',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    color: 'rgba(162,155,254,0.4)', cursor: 'pointer',
+    background: 'rgba(108,92,231,0.06)',
+  },
+  cpName: {
+    color: 'rgba(162,155,254,0.6)', fontSize: 10,
+  },
+  settingRow: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '12px 0', borderBottom: '1px solid rgba(108,92,231,0.08)',
+    cursor: 'pointer',
+  },
+  editInput: {
+    width: '100%', background: 'rgba(108,92,231,0.1)',
+    border: '1px solid rgba(108,92,231,0.3)', borderRadius: 12,
+    color: 'white', fontSize: 14, padding: '10px 14px',
+    outline: 'none', fontFamily: 'inherit', marginBottom: 10,
+    boxSizing: 'border-box',
+  },
+  btnPrimary: {
+    padding: '12px 20px', borderRadius: 16,
+    background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
+    border: 'none', color: 'white', fontSize: 14, fontWeight: 700,
+    cursor: 'pointer', fontFamily: 'inherit',
+  },
+  btnOutline: {
+    padding: '12px 20px', borderRadius: 16,
+    background: 'rgba(108,92,231,0.1)', border: '1px solid rgba(108,92,231,0.35)',
+    color: '#A29BFE', fontSize: 14, fontWeight: 600,
+    cursor: 'pointer', fontFamily: 'inherit',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  dangerBtn: {
+    padding: '12px 20px', borderRadius: 16,
+    background: 'rgba(231,76,60,0.12)', border: '1px solid rgba(231,76,60,0.35)',
+    color: '#ff7675', fontSize: 14, fontWeight: 600,
+    cursor: 'pointer', fontFamily: 'inherit',
+  },
+  overlay: {
+    position: 'absolute', inset: 0,
+    background: 'rgba(0,0,0,0.75)', zIndex: 200,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    backdropFilter: 'blur(4px)',
+  },
+  modal: {
+    background: 'linear-gradient(180deg, #1E1040 0%, #150B2A 100%)',
+    border: '1px solid rgba(108,92,231,0.3)', borderRadius: 24,
+    padding: 28, width: '85%', maxWidth: 320,
+  },
+  bottomSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    background: 'linear-gradient(180deg, #1E1040 0%, #150B2A 100%)',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: '16px 20px 36px',
+    border: '1px solid rgba(108,92,231,0.2)',
+  },
+  sheetHandle: {
+    width: 36, height: 4, borderRadius: 2,
+    background: 'rgba(162,155,254,0.2)', margin: '0 auto 20px',
+  },
+};

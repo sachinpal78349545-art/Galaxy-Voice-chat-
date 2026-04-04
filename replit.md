@@ -115,10 +115,58 @@ artifacts/galaxy-voice/src/
 ```
 
 ## Agora Integration
-- SDK imported dynamically to avoid SSR issues
-- Replace `YOUR_AGORA_APP_ID_HERE` in `VoiceRoomPage.tsx` with a real App ID
-- Voice-only (no video), RTC mode, VP8 codec
-- Gracefully falls back to UI-only if Agora unavailable
+- App ID: `5a9957fd6a8047f48310fd0e5545d42c` (configured)
+- `src/services/voiceService.ts` — full Agora RTC wrapper
+  - joinVoiceRoom, leaveVoiceRoom, toggleMic
+  - Volume indicator for speaking detection
+  - syncVoiceState() pushes speaking status to Firestore
+- Voice-only (no video), RTC mode, VP8 codec, null token (test mode)
+
+## Firebase
+- Auth: Google redirect, anonymous, phone OTP
+- Firestore: users collection, notifications, follows, blocks, reports
+- Realtime DB: configured
+- Storage: initialized (avatar uploads — requires Blaze plan)
+- Config hardcoded in `src/lib/firebase.ts`
+
+## Profile System (Ultra Pro)
+All in `src/pages/ProfilePage.tsx` + `src/services/`:
+
+### profileService.ts
+- listenProfile() — real-time Firestore onSnapshot
+- updateUserProfile() — merge updates to users/{uid}
+- uploadAvatar() — Firebase Storage upload with graceful fallback
+- deleteAccount() — GDPR/CCPA: deletes Firestore doc + notifications
+- setUserOnline/Offline() — presence system
+- toggleProfileVisibility() — public/private toggle
+- getVIPTier() — Bronze/Silver/Gold/Platinum/Galactic based on level+coins
+- getAchievements() — 8 achievement medals based on user stats
+- getAgencyStats() — host dashboard data (live hours, salary, rank)
+
+### followService.ts
+- followUser() — updates both users' arrays + sends notification
+- unfollowUser() — cleans up arrays
+- isFollowing() — real-time check
+- blockUser() / unblockUser() / isBlocked()
+- reportUser() — saves to reports collection
+
+### ProfilePage.tsx features
+- Real-time Firestore sync (onSnapshot)
+- VIP avatar frame with tier-specific glow colors
+- Verified badge (blue ✓) for level 5+ or 50+ gifts
+- Online/offline indicator + last seen timestamp
+- XP progress bar with VIP color
+- Stats: followers, following, gifts, coins
+- Follow/Unfollow for other user profiles
+- 4 tabs: Profile | Wallet | Agency | Settings
+  - Profile: CP partner slot, bio, 8 achievements, level detail stats
+  - Wallet: coin balance, gift history, backpack, store (locked/unlocked)
+  - Agency: agency badge, live hours progress, salary progress, performance
+  - Settings: privacy toggle, account info, delete account (GDPR)
+- Edit mode: name, bio, avatar upload
+- Report sheet with reason selection
+- Block confirmation modal
+- Delete account confirmation modal
 
 ## Design System
 - Background: `#1A0F2E → #0F0F1A` gradient

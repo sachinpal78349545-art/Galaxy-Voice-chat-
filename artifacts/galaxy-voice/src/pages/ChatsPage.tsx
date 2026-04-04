@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { sendDM, listenDMs, DMMessage } from '../lib/fbRooms';
 import { useApp } from '../lib/context';
-import { ArrowLeft, Send, MessageCircle, Smile } from 'lucide-react';
+import { ArrowLeft, Send, Smile } from 'lucide-react';
+// 1. Naya Header Import kiya
+import { ChatHeader } from '../components/ChatHeader';
 
 const CHAT_EMOJIS = ['😊', '😂', '❤️', '💜', '✨', '🔥', '👏', '🎵', '🌟', '💫'];
 
@@ -14,7 +16,6 @@ interface ConvPreview {
   unread: number;
 }
 
-// Seed demo conversations since we only have the current user
 const DEMO_CONVOS: Omit<ConvPreview, 'uid'>[] = [
   { name: 'StarGazer', avatar: '🌟', lastMessage: 'Hey! Love your voice! 🌟', ts: Date.now() - 3600000, unread: 2 },
   { name: 'MoonDancer', avatar: '🌙', lastMessage: 'Join my room tonight 🎤', ts: Date.now() - 7200000, unread: 1 },
@@ -27,6 +28,7 @@ export function ChatsPage() {
     DEMO_CONVOS.map((c, i) => ({ ...c, uid: `demo_chat_${i}` }))
   );
 
+  // Jab koi chat open ho
   if (activeChat && currentUser) {
     const conv = convos.find(c => c.uid === activeChat);
     return (
@@ -44,10 +46,10 @@ export function ChatsPage() {
 
   return (
     <div className="page-content page-transition">
-      <div className="page-header" style={{ paddingTop: 24 }}>
-        <h2 className="page-title">Messages 💬</h2>
-      </div>
+      {/* 2. PURANA HEADER HATA KAR NAYA LAGAYA */}
+      <ChatHeader currentUser={currentUser} setActiveChat={setActiveChat} />
 
+      {/* CHAT LIST SECTION */}
       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column' }}>
         {convos.map(conv => (
           <div key={conv.uid} onClick={() => setActiveChat(conv.uid)} style={{
@@ -93,11 +95,8 @@ export function ChatsPage() {
   );
 }
 
-function ChatConversation({ myId, myName, myAvatar, otherId, otherName, otherAvatar, onBack }: {
-  myId: string; myName: string; myAvatar: string;
-  otherId: string; otherName: string; otherAvatar: string;
-  onBack: () => void;
-}) {
+// BAAKI CHAT CONVERSATION LOGIC (NO CHANGE)
+function ChatConversation({ myId, myName, myAvatar, otherId, otherName, otherAvatar, onBack }: any) {
   const [messages, setMessages] = useState<DMMessage[]>([]);
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -105,8 +104,6 @@ function ChatConversation({ myId, myName, myAvatar, otherId, otherName, otherAva
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // For demo accounts (no real Firebase user on both ends), use local state
-    // For real users, this would use listenDMs
     if (otherId.startsWith('demo_chat')) {
       const demoMsgs: DMMessage[] = [
         { id: '1', senderId: otherId, senderName: otherName, senderAvatar: otherAvatar, text: 'Hey! 👋', timestamp: Date.now() - 300000 },
@@ -135,111 +132,51 @@ function ChatConversation({ myId, myName, myAvatar, otherId, otherName, otherAva
     setInput('');
     setShowEmoji(false);
 
-    // Simulate reply
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
-      const replies = ['That\'s so cool! 🌟', 'Totally agree!', 'Love that energy ✨', '💜', '🔥', 'Come join my room! 🎤', 'You\'re amazing! 💫'];
+      const replies = ['That\'s so cool! 🌟', 'Totally agree!', 'Love that energy ✨', 'You\'re amazing! 💫'];
       const reply: DMMessage = {
         id: String(Date.now() + 1), senderId: otherId, senderName: otherName, senderAvatar: otherAvatar,
         text: replies[Math.floor(Math.random() * replies.length)], timestamp: Date.now(),
       };
       setMessages(prev => [...prev, reply]);
-    }, 800 + Math.random() * 1200);
+    }, 1200);
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'linear-gradient(180deg, #1A0F2E 0%, #0F0F1A 100%)' }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '20px 14px 14px',
-        background: 'rgba(26,15,46,0.95)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(108,92,231,0.2)', flexShrink: 0,
-      }}>
-        <button onClick={onBack} style={{
-          width: 34, height: 34, borderRadius: '50%',
-          background: 'rgba(108,92,231,0.2)', border: '1px solid rgba(108,92,231,0.3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#A29BFE',
-        }}><ArrowLeft size={15} /></button>
-        <div style={{
-          width: 36, height: 36, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0,
-        }}>{otherAvatar}</div>
+      {/* HEADER */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 14px 14px', background: 'rgba(26,15,46,0.95)', borderBottom: '1px solid rgba(108,92,231,0.2)', flexShrink: 0 }}>
+        <button onClick={onBack} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(108,92,231,0.2)', border: '1px solid rgba(108,92,231,0.3)', color: '#A29BFE' }}><ArrowLeft size={15} /></button>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{otherAvatar}</div>
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{otherName}</div>
-          <div style={{ fontSize: 11, color: isTyping ? '#A29BFE' : '#00b894', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: isTyping ? '#A29BFE' : '#00b894', display: 'inline-block' }} />
-            {isTyping ? 'typing...' : 'Online'}
-          </div>
+          <div style={{ fontSize: 11, color: isTyping ? '#A29BFE' : '#00b894' }}>{isTyping ? 'typing...' : 'Online'}</div>
         </div>
       </div>
 
-      {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 6, scrollbarWidth: 'none' }}>
-        {messages.map(msg => {
-          const isSent = msg.senderId === myId;
-          return (
-            <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isSent ? 'flex-end' : 'flex-start' }}>
-              <div className={`chat-bubble ${isSent ? 'sent' : 'received'}`}>{msg.text}</div>
-              <span style={{ fontSize: 10, color: 'rgba(162,155,254,0.35)', marginTop: 3, paddingInline: 4 }}>
-                {formatTime(typeof msg.timestamp === 'number' ? msg.timestamp : Date.now())}
-              </span>
-            </div>
-          );
-        })}
-        {isTyping && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0,
-            }}>{otherAvatar}</div>
-            <div style={{
-              background: 'rgba(108,92,231,0.15)', border: '1px solid rgba(108,92,231,0.2)',
-              borderRadius: '18px 18px 18px 4px', padding: '10px 14px',
-            }}>
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                {[0, 1, 2].map(i => (
-                  <div key={i} style={{
-                    width: 6, height: 6, borderRadius: '50%', background: '#A29BFE',
-                    animation: `typing-dot 1.2s ${i * 0.2}s ease-in-out infinite`,
-                  }} />
-                ))}
-              </div>
-            </div>
+      {/* MESSAGES AREA */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {messages.map(msg => (
+          <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.senderId === myId ? 'flex-end' : 'flex-start' }}>
+            <div className={`chat-bubble ${msg.senderId === myId ? 'sent' : 'received'}`}>{msg.text}</div>
+            <span style={{ fontSize: 10, color: 'rgba(162,155,254,0.35)', marginTop: 3 }}>{formatTime(msg.timestamp as any)}</span>
           </div>
-        )}
+        ))}
         <div ref={chatEndRef} />
       </div>
 
+      {/* EMOJI & INPUT */}
       {showEmoji && (
-        <div style={{ display: 'flex', gap: 6, padding: '8px 14px 4px', background: 'rgba(26,15,46,0.9)', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {CHAT_EMOJIS.map(e => (
-            <button key={e} onClick={ev => sendMessage(ev, e)} style={{ fontSize: 22, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>{e}</button>
-          ))}
+        <div style={{ display: 'flex', gap: 6, padding: '8px 14px', background: 'rgba(26,15,46,0.9)', overflowX: 'auto' }}>
+          {CHAT_EMOJIS.map(e => <button key={e} onClick={ev => sendMessage(ev, e)} style={{ fontSize: 22, background: 'none', border: 'none' }}>{e}</button>)}
         </div>
       )}
-
-      <form onSubmit={sendMessage} style={{
-        display: 'flex', gap: 8, padding: '10px 14px 16px',
-        background: 'rgba(26,15,46,0.95)', borderTop: '1px solid rgba(108,92,231,0.15)',
-        alignItems: 'center', flexShrink: 0,
-      }}>
-        <button type="button" onClick={() => setShowEmoji(!showEmoji)} style={{
-          width: 36, height: 36, borderRadius: '50%',
-          background: showEmoji ? 'rgba(108,92,231,0.35)' : 'rgba(108,92,231,0.15)',
-          border: '1px solid rgba(108,92,231,0.3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#A29BFE', flexShrink: 0,
-        }}><Smile size={15} /></button>
+      <form onSubmit={sendMessage} style={{ display: 'flex', gap: 8, padding: '10px 14px 16px', background: 'rgba(26,15,46,0.95)', borderTop: '1px solid rgba(108,92,231,0.15)', alignItems: 'center' }}>
+        <button type="button" onClick={() => setShowEmoji(!showEmoji)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(108,92,231,0.15)', border: 'none', color: '#A29BFE' }}><Smile size={15} /></button>
         <input className="galaxy-input" placeholder="Type a message..." value={input} onChange={e => setInput(e.target.value)} style={{ flex: 1 }} />
-        <button type="submit" style={{
-          width: 40, height: 40, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)',
-          border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'white', flexShrink: 0, boxShadow: '0 0 14px rgba(108,92,231,0.5)',
-        }}><Send size={15} /></button>
+        <button type="submit" style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #6C5CE7, #A29BFE)', border: 'none', color: 'white' }}><Send size={15} /></button>
       </form>
     </div>
   );
