@@ -34,6 +34,106 @@ const BACKPACK_DEFAULTS = [
   { id: 'starter_frame', icon: '🟣', name: 'Starter Frame', equipped: true },
 ];
 
+// ─── VIP Level Definitions ───────────────────────────────────────────
+const VIP_LEVELS = [
+  { level: 1, name: 'Bronze',   icon: '🥉', color: '#cd7f32', bg: 'linear-gradient(135deg,#3d1f00,#cd7f32)', benefit: 'Coin bonus +5%'       },
+  { level: 2, name: 'Silver',   icon: '🥈', color: '#C0C0C0', bg: 'linear-gradient(135deg,#404040,#C0C0C0)', benefit: 'XP boost +10%'         },
+  { level: 3, name: 'Gold',     icon: '🥇', color: '#ffd700', bg: 'linear-gradient(135deg,#6b4c00,#ffd700)', benefit: 'VIP room access'        },
+  { level: 4, name: 'Platinum', icon: '💎', color: '#e5e4e2', bg: 'linear-gradient(135deg,#505050,#e5e4e2)', benefit: 'Custom avatar frame'    },
+  { level: 5, name: 'Diamond',  icon: '🔷', color: '#7df9ff', bg: 'linear-gradient(135deg,#003f7f,#7df9ff)', benefit: 'Priority host queue'    },
+  { level: 6, name: 'Nebula',   icon: '🌌', color: '#da77ff', bg: 'linear-gradient(135deg,#3d006b,#da77ff)', benefit: 'Nebula entry effect'    },
+  { level: 7, name: 'Cosmic',   icon: '✨', color: '#fff0a0', bg: 'linear-gradient(135deg,#7f3500,#fff0a0)', benefit: 'Cosmic golden aura'     },
+];
+
+// ─── Original Medal Definitions ──────────────────────────────────────
+const MEDAL_DEFS = [
+  { id: 'rising_star',      icon: '🌟', name: 'Rising Star',      desc: 'Join 30 rooms'          },
+  { id: 'elite_giver',      icon: '💝', name: 'Elite Giver',      desc: 'Send 50 gifts'          },
+  { id: 'voice_legend',     icon: '🎙️', name: 'Voice Legend',    desc: '100h on-air'            },
+  { id: 'social_magnet',    icon: '🧲', name: 'Social Magnet',    desc: '100 followers'          },
+  { id: 'cosmic_host',      icon: '🌌', name: 'Cosmic Host',      desc: 'Host 30 rooms'          },
+  { id: 'galaxy_guardian',  icon: '🛡️', name: 'Galaxy Guardian', desc: '90 days active'         },
+  { id: 'gift_lord',        icon: '👑', name: 'Gift Lord',        desc: 'Receive 200 gifts'      },
+  { id: 'nebula_citizen',   icon: '🔮', name: 'Nebula Citizen',   desc: 'Reach VIP Nebula'       },
+];
+
+// ─── Circular Progress Indicator ─────────────────────────────────────
+function CircleProgress({
+  value, max, color, label, sublabel, size = 90,
+}: { value: number; max: number; color: string; label: string; sublabel: string; size?: number }) {
+  const r = (size - 18) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = max > 0 ? Math.min(1, value / max) : 0;
+  const arcLen = circ * pct;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke="rgba(255,255,255,0.07)" strokeWidth={8} />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke={color} strokeWidth={8} strokeLinecap="round"
+            strokeDasharray={`${arcLen} ${circ}`}
+            style={{ transition: 'stroke-dasharray 0.9s ease', filter: `drop-shadow(0 0 5px ${color})` }} />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <span style={{ color: 'white', fontWeight: 800, fontSize: 18, lineHeight: 1 }}>{value}</span>
+          <span style={{ color: 'rgba(162,155,254,0.5)', fontSize: 9, marginTop: 2 }}>{sublabel}</span>
+        </div>
+      </div>
+      <div style={{ color: 'rgba(162,155,254,0.75)', fontSize: 11, textAlign: 'center', fontWeight: 600 }}>{label}</div>
+    </div>
+  );
+}
+
+// ─── SVG Avatar Frame ─────────────────────────────────────────────────
+function SVGAvatarFrame({ size, tier }: { size: number; tier: string }) {
+  type FrameDef = { stops: string[]; dash?: string; ornaments: boolean };
+  const FRAMES: Record<string, FrameDef> = {
+    Silver:   { stops: ['#00ffff','#a855f7','#ff00ff'], dash: '5 3', ornaments: true  },
+    Gold:     { stops: ['#ffd700','#ff8c00','#ffd700'], dash: undefined, ornaments: true  },
+    Platinum: { stops: ['#e5e4e2','#a9a9a9','#d3d3d3'], dash: undefined, ornaments: false },
+    Diamond:  { stops: ['#7df9ff','#0077B6','#7df9ff'], dash: '4 2', ornaments: true  },
+    Galactic: { stops: ['#fff0a0','#da77ff','#7df9ff'], dash: '3 2', ornaments: true  },
+  };
+  const f: FrameDef = FRAMES[tier] ?? FRAMES['Silver'];
+  const cx = size / 2, cy = size / 2, r = size / 2 - 2.5;
+  const gradId = `gfr-${tier}-${size}`;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3 }}>
+      <defs>
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          {f.stops.map((c, i) => (
+            <stop key={i} offset={`${Math.round((i / (f.stops.length - 1)) * 100)}%`} stopColor={c} />
+          ))}
+        </linearGradient>
+        <filter id="fglow">
+          <feGaussianBlur stdDeviation="2" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <circle cx={cx} cy={cy} r={r} fill="none"
+        stroke={`url(#${gradId})`} strokeWidth="3.5"
+        strokeDasharray={f.dash}
+        filter="url(#fglow)" />
+      {f.ornaments && [0, 90, 180, 270].map(deg => {
+        const rad = (deg * Math.PI) / 180;
+        const ox = cx + r * Math.cos(rad);
+        const oy = cy + r * Math.sin(rad);
+        return (
+          <polygon key={deg}
+            points={`${ox},${oy - 5} ${ox + 5},${oy} ${ox},${oy + 5} ${ox - 5},${oy}`}
+            fill={f.stops[0]} filter="url(#fglow)" />
+        );
+      })}
+    </svg>
+  );
+}
+
 // ─── Component ─────────────────────────────────────────────────────
 
 export function ProfilePage() {
@@ -211,57 +311,64 @@ export function ProfilePage() {
   function AvatarDisplay({ size = 90 }: { size?: number }) {
     const src = profile?.photoURL;
     const isEmoji = src && src.length <= 4 && !src.startsWith('http');
-    const ringSize = size + 18;
+    const outer = size + 22;
+    const hasSVGFrame = ['Silver','Gold','Platinum','Diamond','Galactic'].includes(vipTier);
     return (
-      <div style={{ position: 'relative', width: ringSize, height: ringSize, flexShrink: 0 }}>
-        {/* Outer pulsing ring */}
+      <div style={{ position: 'relative', width: outer, height: outer, flexShrink: 0 }}>
+        {/* Ambient glow behind */}
+        <div style={{
+          position: 'absolute', inset: -8, borderRadius: '50%',
+          background: `radial-gradient(circle, ${vipColor}30 0%, transparent 70%)`,
+          animation: 'glow-pulse 3s ease-in-out infinite',
+        }} />
+        {/* Outer pulse ring */}
         <div style={{
           position: 'absolute', inset: 0, borderRadius: '50%',
-          border: `2px solid ${vipColor}`,
-          animation: 'avatar-ring-pulse 2.4s ease-in-out infinite',
-          boxShadow: `0 0 18px ${vipColor}88, 0 0 36px ${vipColor}44`,
+          border: `2px solid ${vipColor}99`,
+          animation: 'avatar-ring-pulse 2.6s ease-in-out infinite',
         }} />
-        {/* Mid ring */}
+        {/* Inner clean ring */}
         <div style={{
-          position: 'absolute', inset: 6, borderRadius: '50%',
-          border: `1.5px solid ${vipColor}55`,
+          position: 'absolute', inset: 8, borderRadius: '50%',
+          border: `1px solid ${vipColor}44`,
         }} />
-        {/* Avatar */}
+        {/* Avatar photo area */}
         <div style={{
-          position: 'absolute', inset: 9,
+          position: 'absolute', inset: 11,
           borderRadius: '50%',
-          border: `3px solid ${vipColor}`,
-          boxShadow: vipGlow,
-          background: 'linear-gradient(135deg, rgba(108,92,231,0.3), rgba(26,15,46,0.8))',
+          background: 'linear-gradient(135deg, #1a0b2e, #050112)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
+          boxShadow: vipGlow,
         }}>
           {src && !isEmoji
             ? <img src={src} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ fontSize: (size - 18) * 0.5 }}>{src || '🌟'}</span>
+            : <span style={{ fontSize: (size - 10) * 0.48 }}>{src || '🌟'}</span>
           }
         </div>
-        {/* Online dot */}
-        {isOnline && (
-          <div style={{
-            position: 'absolute', bottom: 10, right: 10,
-            width: 13, height: 13, borderRadius: '50%',
-            background: '#00e676',
-            border: '2.5px solid #0F0F1A',
-            boxShadow: '0 0 6px #00e676',
-            zIndex: 2,
-          }} />
-        )}
-        {/* VIP crown badge */}
-        {vipTier !== 'Bronze' && (
-          <div style={{
-            position: 'absolute', top: 6, right: 6,
-            fontSize: 14, lineHeight: 1, zIndex: 2,
-            filter: 'drop-shadow(0 0 4px rgba(255,215,0,0.8))',
-          }}>
-            {vipTier === 'Galactic' ? '🔮' : vipTier === 'Platinum' ? '💎' : vipTier === 'Gold' ? '👑' : '⭐'}
+        {/* SVG Premium Frame overlay */}
+        {hasSVGFrame && (
+          <div style={{ position: 'absolute', inset: 8 }}>
+            <SVGAvatarFrame size={outer - 16} tier={vipTier} />
           </div>
         )}
+        {/* Online indicator */}
+        {isOnline && (
+          <div style={{
+            position: 'absolute', bottom: 11, right: 11, zIndex: 4,
+            width: 13, height: 13, borderRadius: '50%',
+            background: '#00e676', border: '2.5px solid #050112',
+            boxShadow: '0 0 8px #00e676',
+          }} />
+        )}
+        {/* VIP badge top-right */}
+        <div style={{
+          position: 'absolute', top: 4, right: 4, zIndex: 4,
+          fontSize: 15, lineHeight: 1,
+          filter: `drop-shadow(0 0 5px ${vipColor})`,
+        }}>
+          {VIP_LEVELS.find(v => v.name === vipTier)?.icon ?? '🥉'}
+        </div>
       </div>
     );
   }
@@ -490,27 +597,80 @@ export function ProfilePage() {
         {/* ─────────── PROFILE TAB ─────────── */}
         {tab === 'profile' && (
           <div style={S.tabContent}>
-            {/* CP / Partner Slot */}
-            <div style={S.card}>
-              <div style={S.cardLabel}>💑 Couple Partner</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, padding: '12px 0' }}>
-                <div style={S.cpSlot}>
-                  <AvatarDisplay size={52} />
-                  <span style={S.cpName}>{isOwnProfile ? 'You' : profile.displayName}</span>
+            {/* CP / Partner Slot — Premium */}
+            <div style={{
+              ...S.card,
+              background: 'linear-gradient(135deg, rgba(255,100,130,0.07), rgba(108,92,231,0.07))',
+              border: '1px solid rgba(255,100,130,0.15)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span style={{ ...S.cardLabel, color: 'rgba(255,150,170,0.8)' }}>💑 Partner Link</span>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, color: 'rgba(255,100,130,0.7)',
+                  background: 'rgba(255,100,130,0.1)', borderRadius: 20, padding: '3px 10px',
+                  border: '1px solid rgba(255,100,130,0.2)',
+                }}>CP MODE</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '8px 0' }}>
+                {/* Left avatar */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <div style={{
+                    width: 56, height: 56, borderRadius: '50%',
+                    border: '2px solid rgba(255,100,130,0.5)',
+                    boxShadow: '0 0 12px rgba(255,100,130,0.3)',
+                    overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(255,100,130,0.1)',
+                    fontSize: 26,
+                  }}>
+                    {profile?.photoURL && profile.photoURL.startsWith('http')
+                      ? <img src={profile.photoURL} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : (profile?.photoURL || '🌟')}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'white', fontWeight: 600 }}>
+                    {isOwnProfile ? 'You' : profile.displayName?.split(' ')[0]}
+                  </span>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, animation: 'pulse 1.5s ease-in-out infinite' }}>❤️</div>
-                  <span style={{ fontSize: 10, color: 'rgba(162,155,254,0.4)' }}>Intimacy 0</span>
+                {/* Heart connector */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
+                  <div style={{
+                    fontSize: 28,
+                    animation: 'cp-heart-beat 1.8s ease-in-out infinite',
+                    display: 'inline-block',
+                  }}>💗</div>
+                  {/* Intimacy bar */}
+                  <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', width: '15%', borderRadius: 2,
+                      background: 'linear-gradient(90deg, #ff6482, #ff93a8)',
+                      boxShadow: '0 0 6px rgba(255,100,130,0.7)',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 9, color: 'rgba(255,150,170,0.6)', fontWeight: 600 }}>
+                    INTIMACY · 15 pts
+                  </span>
                 </div>
-                <div style={S.cpSlot}>
+                {/* Right slot */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   {cpPartner
-                    ? <span style={{ fontSize: 26 }}>👤</span>
-                    : <div style={S.cpEmpty}>
-                        <span style={{ fontSize: 20 }}>+</span>
-                        <span style={{ fontSize: 10, color: 'rgba(162,155,254,0.4)', marginTop: 2 }}>Add Partner</span>
+                    ? <div style={{
+                        width: 56, height: 56, borderRadius: '50%',
+                        border: '2px solid rgba(255,100,130,0.5)',
+                        background: 'rgba(255,100,130,0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
+                      }}>👤</div>
+                    : <div style={{
+                        width: 56, height: 56, borderRadius: '50%',
+                        border: '2px dashed rgba(255,100,130,0.3)',
+                        background: 'rgba(255,100,130,0.05)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', gap: 2,
+                      }}>
+                        <span style={{ fontSize: 20, color: 'rgba(255,100,130,0.5)' }}>+</span>
+                        <span style={{ fontSize: 8, color: 'rgba(255,150,170,0.4)' }}>Invite</span>
                       </div>
                   }
-                  <span style={S.cpName}>Partner</span>
+                  <span style={{ fontSize: 11, color: 'rgba(162,155,254,0.5)' }}>Partner</span>
                 </div>
               </div>
             </div>
@@ -525,21 +685,44 @@ export function ProfilePage() {
               </div>
             )}
 
-            {/* Achievements */}
+            {/* Medal Wall */}
             <div style={S.card}>
-              <div style={S.cardLabel}>🏅 Achievements</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 10 }}>
-                {achievements.map(a => (
-                  <div key={a.id} style={{
-                    textAlign: 'center', padding: '10px 4px', borderRadius: 12,
-                    background: a.earned ? 'rgba(108,92,231,0.15)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${a.earned ? 'rgba(108,92,231,0.35)' : 'rgba(255,255,255,0.05)'}`,
-                    opacity: a.earned ? 1 : 0.4,
-                  }}>
-                    <div style={{ fontSize: 22 }}>{a.icon}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(162,155,254,0.7)', marginTop: 4, lineHeight: 1.2 }}>{a.label}</div>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span style={S.cardLabel}>🏅 Medal Wall</span>
+                <span style={{ fontSize: 10, color: 'rgba(162,155,254,0.4)' }}>
+                  {MEDAL_DEFS.filter((_, i) => i < 3).length} / {MEDAL_DEFS.length} earned
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                {MEDAL_DEFS.map((m, i) => {
+                  const earned = i < 2;
+                  return (
+                    <div key={m.id} style={{
+                      textAlign: 'center', padding: '10px 4px', borderRadius: 14,
+                      background: earned
+                        ? 'linear-gradient(135deg, rgba(255,215,0,0.12), rgba(108,92,231,0.1))'
+                        : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${earned ? 'rgba(255,215,0,0.25)' : 'rgba(255,255,255,0.05)'}`,
+                      opacity: earned ? 1 : 0.38,
+                      animation: earned ? `medal-pop 0.4s ease ${i * 0.08}s both` : undefined,
+                      position: 'relative', overflow: 'hidden',
+                    }}>
+                      {earned && (
+                        <div style={{
+                          position: 'absolute', inset: 0, borderRadius: 14,
+                          background: 'linear-gradient(135deg, rgba(255,215,0,0.06), transparent)',
+                          pointerEvents: 'none',
+                        }} />
+                      )}
+                      <div style={{ fontSize: 22 }}>{m.icon}</div>
+                      <div style={{
+                        fontSize: 8, color: earned ? 'rgba(255,215,0,0.8)' : 'rgba(162,155,254,0.5)',
+                        marginTop: 4, lineHeight: 1.3, fontWeight: 600,
+                      }}>{m.name}</div>
+                      <div style={{ fontSize: 7, color: 'rgba(162,155,254,0.3)', marginTop: 2 }}>{m.desc}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -581,8 +764,53 @@ export function ProfilePage() {
         {/* ─────────── WALLET TAB ─────────── */}
         {tab === 'wallet' && (
           <div style={S.tabContent}>
+
+            {/* VIP Center Banner */}
+            <div style={S.card}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={S.cardLabel}>👑 VIP Center</span>
+                <span style={{
+                  fontSize: 10, fontWeight: 700,
+                  background: `linear-gradient(135deg, ${vipColor}, #A29BFE)`,
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                }}>Current: {vipTier}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                {VIP_LEVELS.map(v => {
+                  const isCurrent = v.name === vipTier;
+                  return (
+                    <div key={v.level} style={{
+                      flexShrink: 0, width: 88, borderRadius: 16,
+                      background: isCurrent ? v.bg : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isCurrent ? v.color : 'rgba(255,255,255,0.06)'}`,
+                      padding: '12px 8px', textAlign: 'center',
+                      boxShadow: isCurrent ? `0 0 16px ${v.color}55` : 'none',
+                      transition: 'all 0.2s',
+                    }}>
+                      <div style={{ fontSize: 22 }}>{v.icon}</div>
+                      <div style={{
+                        fontSize: 11, fontWeight: 800, marginTop: 4,
+                        color: isCurrent ? 'white' : v.color,
+                      }}>{v.name}</div>
+                      <div style={{
+                        fontSize: 8, color: isCurrent ? 'rgba(255,255,255,0.7)' : 'rgba(162,155,254,0.4)',
+                        marginTop: 4, lineHeight: 1.4,
+                      }}>{v.benefit}</div>
+                      {isCurrent && (
+                        <div style={{
+                          fontSize: 8, fontWeight: 700, color: 'white',
+                          background: 'rgba(255,255,255,0.2)', borderRadius: 20,
+                          padding: '2px 6px', marginTop: 6, display: 'inline-block',
+                        }}>ACTIVE</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Coin Balance */}
-            <div style={{ ...S.card, textAlign: 'center', background: 'linear-gradient(135deg, rgba(255,215,0,0.12), rgba(108,92,231,0.1))' }}>
+            <div style={{ ...S.card, textAlign: 'center', background: 'linear-gradient(135deg, rgba(255,215,0,0.10), rgba(255,255,255,0.03))' }}>
               <div style={{ fontSize: 40 }}>💰</div>
               <div style={{ fontSize: 32, fontWeight: 800, color: '#ffd700', marginTop: 4 }}>
                 {safeProfile.coins.toLocaleString()}
@@ -680,81 +908,137 @@ export function ProfilePage() {
           </div>
         )}
 
-        {/* ─────────── AGENCY TAB ─────────── */}
+        {/* ─────────── AGENCY / EARNING DASHBOARD TAB ─────────── */}
         {tab === 'agency' && agencyStats && (
           <div style={S.tabContent}>
-            {/* Agency Badge */}
-            <div style={{ ...S.card, textAlign: 'center' }}>
-              <div style={{ fontSize: 48 }}>{agencyStats.agencyBadge}</div>
-              <div style={{ color: 'white', fontWeight: 800, fontSize: 16, marginTop: 8 }}>{agencyStats.agencyName}</div>
+
+            {/* Agency Identity Card */}
+            <div style={{
+              ...S.card,
+              background: 'linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,180,200,0.08))',
+              border: '1px solid rgba(108,92,231,0.25)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 52 }}>{agencyStats.agencyBadge}</div>
+              <div style={{ color: 'white', fontWeight: 800, fontSize: 17, marginTop: 8, letterSpacing: -0.3 }}>
+                {agencyStats.agencyName}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 }}>
+                <span style={{
+                  padding: '4px 14px', background: 'rgba(108,92,231,0.2)',
+                  border: '1px solid rgba(108,92,231,0.4)', borderRadius: 20,
+                  color: '#A29BFE', fontSize: 12, fontWeight: 700,
+                }}>{agencyStats.rank}</span>
+                <span style={{
+                  padding: '4px 14px', background: 'rgba(0,200,200,0.1)',
+                  border: '1px solid rgba(0,200,200,0.25)', borderRadius: 20,
+                  color: '#00cec9', fontSize: 12, fontWeight: 700,
+                }}>Host ⭐ 4.8</span>
+              </div>
+            </div>
+
+            {/* Monthly Earning Dashboard — Circular Progress */}
+            <div style={S.card}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                <span style={S.cardLabel}>📊 Monthly Dashboard</span>
+                <span style={{
+                  fontSize: 9, color: 'rgba(0,200,200,0.7)', fontWeight: 700,
+                  background: 'rgba(0,200,200,0.08)', border: '1px solid rgba(0,200,200,0.2)',
+                  padding: '2px 8px', borderRadius: 20,
+                }}>LIVE TRACKING</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-start' }}>
+                <CircleProgress
+                  value={agencyStats.salary}
+                  max={agencyStats.targetSalary}
+                  color="#ffd700"
+                  label="Monthly Beans"
+                  sublabel="beans"
+                  size={92}
+                />
+                <CircleProgress
+                  value={Math.min(28, Math.floor(agencyStats.liveHours / 3))}
+                  max={28}
+                  color="#00e676"
+                  label="Valid Days"
+                  sublabel="days"
+                  size={92}
+                />
+                <CircleProgress
+                  value={agencyStats.liveHours}
+                  max={agencyStats.targetHours}
+                  color="#7df9ff"
+                  label="Live Hours"
+                  sublabel="hours"
+                  size={92}
+                />
+              </div>
+              {/* Progress summary row */}
               <div style={{
-                display: 'inline-block', marginTop: 8, padding: '4px 14px',
-                background: 'rgba(108,92,231,0.2)', borderRadius: 20,
-                color: '#A29BFE', fontSize: 12, fontWeight: 600,
-                border: '1px solid rgba(108,92,231,0.4)',
+                marginTop: 18, padding: '10px 14px', borderRadius: 12,
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
-                {agencyStats.rank}
-              </div>
-            </div>
-
-            {/* Live Hours */}
-            <div style={S.card}>
-              <div style={S.cardLabel}>⏱️ Live Hours</div>
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ color: '#A29BFE', fontWeight: 700 }}>{agencyStats.liveHours}h</span>
-                  <span style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12 }}>Target: {agencyStats.targetHours}h</span>
+                <div>
+                  <div style={{ fontSize: 11, color: 'rgba(162,155,254,0.5)', marginBottom: 2 }}>Remaining to target</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#ffd700' }}>
+                    {Math.max(0, agencyStats.targetSalary - agencyStats.salary).toLocaleString()} beans
+                  </div>
                 </div>
-                <div style={{ background: 'rgba(108,92,231,0.15)', borderRadius: 20, height: 10, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 20,
-                    background: 'linear-gradient(90deg, #6C5CE7, #00cec9)',
-                    width: `${Math.min(100, (agencyStats.liveHours / agencyStats.targetHours) * 100)}%`,
-                    transition: 'width 0.5s ease',
-                  }} />
-                </div>
-                <p style={{ color: 'rgba(162,155,254,0.4)', fontSize: 11, marginTop: 8 }}>
-                  {agencyStats.targetHours - agencyStats.liveHours}h remaining to reach target
-                </p>
-              </div>
-            </div>
-
-            {/* Salary */}
-            <div style={S.card}>
-              <div style={S.cardLabel}>💵 Salary Progress</div>
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ color: '#ffd700', fontWeight: 700 }}>{agencyStats.salary.toLocaleString()} 💰</span>
-                  <span style={{ color: 'rgba(162,155,254,0.5)', fontSize: 12 }}>
-                    Target: {agencyStats.targetSalary.toLocaleString()} 💰
-                  </span>
-                </div>
-                <div style={{ background: 'rgba(255,215,0,0.1)', borderRadius: 20, height: 10, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 20,
-                    background: 'linear-gradient(90deg, #ffd700, #ffb300)',
-                    width: `${Math.min(100, (agencyStats.salary / agencyStats.targetSalary) * 100)}%`,
-                  }} />
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: 'rgba(162,155,254,0.5)', marginBottom: 2 }}>Live hours left</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#7df9ff' }}>
+                    {Math.max(0, agencyStats.targetHours - agencyStats.liveHours)}h
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Performance Stats */}
+            {/* Performance Grid */}
             <div style={S.card}>
-              <div style={S.cardLabel}>📊 Performance</div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+              <div style={S.cardLabel}>⚡ Performance</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 14 }}>
                 {[
-                  { icon: '🎤', label: 'Rooms Hosted', value: Math.floor(agencyStats.liveHours / 2) },
-                  { icon: '💰', label: 'Total Earned', value: agencyStats.salary.toLocaleString() },
-                  { icon: '⭐', label: 'Rating', value: '4.8' },
+                  { icon: '🎤', label: 'Rooms Hosted', value: Math.floor(agencyStats.liveHours / 2), color: '#A29BFE' },
+                  { icon: '💰', label: 'Total Earned', value: agencyStats.salary.toLocaleString(), color: '#ffd700' },
+                  { icon: '⭐', label: 'Host Rating', value: '4.8', color: '#00e676' },
+                  { icon: '👥', label: 'Peak Listeners', value: Math.floor(safeProfile.followers.length * 1.3 + 12), color: '#7df9ff' },
+                  { icon: '🔥', label: 'Streak Days', value: Math.min(30, Math.floor(agencyStats.liveHours / 4)), color: '#ff7675' },
+                  { icon: '🏆', label: 'Agency Rank', value: `#${Math.max(1, 50 - agencyStats.liveHours)}`, color: '#da77ff' },
                 ].map(s => (
-                  <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '10px 4px', background: 'rgba(108,92,231,0.08)', borderRadius: 10 }}>
+                  <div key={s.label} style={{
+                    textAlign: 'center', padding: '12px 6px', borderRadius: 14,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                  }}>
                     <div style={{ fontSize: 20 }}>{s.icon}</div>
-                    <div style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{s.value}</div>
-                    <div style={{ color: 'rgba(162,155,254,0.5)', fontSize: 10 }}>{s.label}</div>
+                    <div style={{ color: s.color, fontWeight: 800, fontSize: 15, marginTop: 4 }}>{s.value}</div>
+                    <div style={{ color: 'rgba(162,155,254,0.45)', fontSize: 9, marginTop: 3 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Salary linear bar */}
+            <div style={S.card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={S.cardLabel}>💵 Salary Progress</span>
+                <span style={{ color: '#ffd700', fontWeight: 700, fontSize: 14 }}>
+                  {agencyStats.salary.toLocaleString()} / {agencyStats.targetSalary.toLocaleString()}
+                </span>
+              </div>
+              <div style={{ background: 'rgba(255,215,0,0.07)', borderRadius: 20, height: 10, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 20,
+                  background: 'linear-gradient(90deg, #ffb300, #ffd700)',
+                  width: `${Math.min(100, (agencyStats.salary / agencyStats.targetSalary) * 100)}%`,
+                  transition: 'width 0.8s ease',
+                  boxShadow: '0 0 10px rgba(255,215,0,0.5)',
+                }} />
+              </div>
+              <p style={{ color: 'rgba(162,155,254,0.35)', fontSize: 11, marginTop: 10 }}>
+                Complete {Math.max(0, agencyStats.targetHours - agencyStats.liveHours)}h more live to unlock full salary payout.
+              </p>
             </div>
           </div>
         )}
@@ -966,7 +1250,7 @@ function formatLastSeen(ts?: number): string {
 const S: Record<string, React.CSSProperties> = {
   page: {
     width: '100%', maxWidth: 400, height: '100dvh', margin: '0 auto',
-    background: 'linear-gradient(180deg, #1A0F2E 0%, #0F0F1A 100%)',
+    background: 'linear-gradient(180deg, #050112 0%, #0e0520 40%, #1a0b2e 100%)',
     display: 'flex', flexDirection: 'column', overflow: 'hidden',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     color: 'white', position: 'relative',
@@ -1090,12 +1374,12 @@ const S: Record<string, React.CSSProperties> = {
     padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14,
   },
   card: {
-    background: 'rgba(108,92,231,0.08)',
-    backdropFilter: 'blur(12px)',
+    background: 'rgba(255,255,255,0.03)',
+    backdropFilter: 'blur(16px)',
     borderRadius: 20,
-    border: '1px solid rgba(162,155,254,0.12)',
+    border: '1px solid rgba(255,255,255,0.07)',
     padding: 18,
-    boxShadow: '0 2px 20px rgba(108,92,231,0.1), inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow: '0 4px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)',
   },
   cardLabel: {
     color: 'rgba(162,155,254,0.6)', fontSize: 11, fontWeight: 700,

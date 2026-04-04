@@ -109,4 +109,6 @@ export async function likeMessage(chatId: string, messageId: string) {
       }
     );
   } catch (err) {
-    console
+    console.error('likeMessage error:', err);
+  }
+}
