@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { UserProfile, incrementStat } from "../lib/userService";
-import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, setTyping, subscribeTyping, markRead, seedConversations } from "../lib/chatService";
+import { UserProfile, incrementStat, getUser, followUser, unfollowUser } from "../lib/userService";
+import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, setTyping, subscribeTyping, markRead } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
 
 interface Props { user: UserProfile; }
@@ -22,17 +22,13 @@ export default function ChatsPage({ user }: Props) {
   const [typing, setTypingState] = useState<Record<string, boolean>>({});
   const msgEnd = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const typingTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
-    const unsub = subscribeConversations(user.uid, (c) => {
-      if (typeof c === "function") {
-        setConvs(c as any);
-      } else {
-        setConvs(c);
-        setLoading(false);
-      }
+    const unsub = subscribeConversations(user.uid, (c: Conversation[]) => {
+      setConvs(c);
+      setLoading(false);
     });
     return unsub;
   }, [user.uid]);
@@ -84,8 +80,44 @@ export default function ChatsPage({ user }: Props) {
 
   const otherTyping = active ? Object.entries(typing).some(([k, v]) => k !== user.uid && v) : false;
 
+  const [otherOnline, setOtherOnline] = useState<boolean | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  useEffect(() => {
+    if (!active) return;
+    const otherId = active.participants[0] === user.uid ? active.participants[1] : active.participants[0];
+    setIsFollowing((user.followingList || []).includes(otherId));
+    getUser(otherId).then(u => {
+      if (u) setOtherOnline(u.online ?? false);
+    }).catch(() => {});
+  }, [active?.id, user.followingList]);
+
+  const handleFollow = async () => {
+    if (!active || followLoading) return;
+    const otherId = active.participants[0] === user.uid ? active.participants[1] : active.participants[0];
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await unfollowUser(user.uid, otherId);
+        setIsFollowing(false);
+        showToast("Unfollowed", "info");
+      } else {
+        await followUser(user.uid, otherId);
+        setIsFollowing(true);
+        showToast("Following!", "success", "\u2764\uFE0F");
+      }
+    } catch {
+      showToast("Action failed", "error");
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   if (active) {
     const otherIdx = active.participants[0] === user.uid ? 1 : 0;
+    const statusText = otherTyping ? "typing..." : otherOnline ? "\u25CF Online" : "\u25CB Offline";
+    const statusColor = otherTyping ? "#A29BFE" : otherOnline ? "#00e676" : "rgba(162,155,254,0.4)";
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         <div style={{
@@ -103,10 +135,18 @@ export default function ChatsPage({ user }: Props) {
           }}>{active.participantAvatars[otherIdx]}</div>
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: 800, fontSize: 15 }}>{active.participantNames[otherIdx]}</p>
-            <p style={{ fontSize: 11, color: otherTyping ? "#A29BFE" : "#00e676" }}>
-              {otherTyping ? "typing..." : "\u25CF Online"}
+            <p style={{ fontSize: 11, color: statusColor }}>
+              {statusText}
             </p>
           </div>
+          <button
+            className={`btn btn-sm ${isFollowing ? "btn-ghost" : "btn-primary"}`}
+            style={{ fontSize: 11, padding: "5px 12px", borderRadius: 14 }}
+            onClick={handleFollow}
+            disabled={followLoading}
+          >
+            {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
+          </button>
           <button className="btn btn-ghost btn-sm" style={{ fontSize: 18, width: 38, height: 38, padding: 0, borderRadius: 12 }}>{"\u{1F4DE}"}</button>
         </div>
 

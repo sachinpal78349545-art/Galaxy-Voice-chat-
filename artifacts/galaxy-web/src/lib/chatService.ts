@@ -69,12 +69,13 @@ export async function seedConversations(userId: string, userName: string, userAv
 export function subscribeConversations(userId: string, cb: (convs: Conversation[]) => void): () => void {
   const r = ref(db, `userConvs/${userId}`);
   let convUnsubs: (() => void)[] = [];
+  let currentConvs: Conversation[] = [];
 
   const handler = onValue(r, async snap => {
     convUnsubs.forEach(u => u());
     convUnsubs = [];
 
-    if (!snap.exists()) { cb([]); return; }
+    if (!snap.exists()) { currentConvs = []; cb([]); return; }
     const convIds = Object.keys(snap.val());
     const convs: Conversation[] = [];
 
@@ -85,6 +86,7 @@ export function subscribeConversations(userId: string, cb: (convs: Conversation[
       }
     }
     convs.sort((a, b) => (b.lastTime || 0) - (a.lastTime || 0));
+    currentConvs = convs;
     cb(convs);
 
     for (const cid of convIds) {
@@ -92,17 +94,16 @@ export function subscribeConversations(userId: string, cb: (convs: Conversation[
       onValue(cRef, cSnap => {
         if (!cSnap.exists()) return;
         const updated = { ...cSnap.val(), id: cid };
-        cb(prev => {
-          const arr = Array.isArray(prev) ? prev : convs;
-          const idx = arr.findIndex(c => c.id === cid);
-          if (idx >= 0) {
-            const n = [...arr];
-            n[idx] = updated;
-            n.sort((a, b) => (b.lastTime || 0) - (a.lastTime || 0));
-            return n;
-          }
-          return [...arr, updated].sort((a, b) => (b.lastTime || 0) - (a.lastTime || 0));
-        });
+        const idx = currentConvs.findIndex(c => c.id === cid);
+        if (idx >= 0) {
+          const n = [...currentConvs];
+          n[idx] = updated;
+          n.sort((a, b) => (b.lastTime || 0) - (a.lastTime || 0));
+          currentConvs = n;
+        } else {
+          currentConvs = [...currentConvs, updated].sort((a, b) => (b.lastTime || 0) - (a.lastTime || 0));
+        }
+        cb(currentConvs);
       });
       convUnsubs.push(() => off(cRef));
     }
