@@ -1,91 +1,126 @@
 import React, { useState } from "react";
-import { storage, User } from "../lib/storage";
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { auth } from "../lib/firebase";
 
-interface Props { onLogin: (user: User) => void; }
+interface Props { onDone: () => void; }
 
-export default function AuthPage({ onLogin }: Props) {
-  const [tab, setTab] = useState<"login" | "signup">("login");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function AuthPage({ onDone }: Props) {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+  const signInWithGoogle = async () => {
+    setLoading(true);
     setError("");
-    const user = storage.login(email, password);
-    if (user) onLogin(user);
-    else setError("Invalid email or password");
-  };
-
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (!username.trim() || !email.trim() || password.length < 6) {
-      setError("Fill all fields. Password must be 6+ chars.");
-      return;
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    try {
+      await signInWithPopup(auth, provider);
+      onDone();
+    } catch (e: any) {
+      // Fallback to redirect in iframe environments
+      if (e.code === "auth/popup-blocked" || e.code === "auth/popup-closed-by-user") {
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch (e2: any) {
+          setError("Sign in failed. Please try opening the app in a new tab.");
+        }
+      } else if (e.code === "auth/cancelled-popup-request") {
+        setLoading(false);
+        return;
+      } else {
+        setError(e.message || "Sign in failed. Check Firebase console.");
+      }
+      setLoading(false);
     }
-    const user = storage.signup(username.trim(), email.trim(), password);
-    onLogin(user);
   };
 
   return (
     <div style={{
-      flex: 1, display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      padding: "32px 24px", gap: 32, minHeight: "100vh",
+      height: "100%", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", padding: "32px 24px", gap: 28,
     }}>
       {/* Logo */}
-      <div style={{ textAlign: "center", animation: "float 3s ease-in-out infinite" }}>
-        <div style={{ fontSize: 64, marginBottom: 8 }}>🌌</div>
-        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5 }}>Galaxy Voice</h1>
-        <p style={{ color: "rgba(162,155,254,0.6)", fontSize: 13, marginTop: 4 }}>
-          Find your galaxy ✨
+      <div style={{ textAlign: "center", animation: "float 3.5s ease-in-out infinite" }}>
+        <div style={{ fontSize: 72, marginBottom: 10, filter: "drop-shadow(0 0 20px rgba(108,92,231,0.6))" }}>🌌</div>
+        <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: -1,
+          background: "linear-gradient(135deg,#A29BFE,#6C5CE7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          ChaloTalk
+        </h1>
+        <p style={{ color: "rgba(162,155,254,0.5)", fontSize: 14, marginTop: 6 }}>
+          Find your voice, find your galaxy ✨
         </p>
       </div>
 
-      {/* Tab switcher */}
-      <div style={{
-        display: "flex", background: "rgba(255,255,255,0.05)",
-        borderRadius: 14, padding: 4, width: "100%",
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}>
-        {(["login", "signup"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            flex: 1, padding: "10px 0", borderRadius: 11, border: "none",
-            background: tab === t ? "rgba(108,92,231,0.35)" : "transparent",
-            color: tab === t ? "#A29BFE" : "rgba(162,155,254,0.45)",
-            fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: "pointer",
-            boxShadow: tab === t ? "0 0 12px rgba(108,92,231,0.3)" : "none",
-            transition: "all 0.2s",
+      {/* Features */}
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
+        {[
+          { icon: "🎤", text: "Live voice rooms with real people" },
+          { icon: "🌟", text: "Level up, earn coins & VIP badges" },
+          { icon: "💬", text: "Chat & connect with the community" },
+        ].map(f => (
+          <div key={f.text} style={{
+            display: "flex", alignItems: "center", gap: 12,
+            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(108,92,231,0.12)",
+            borderRadius: 14, padding: "12px 16px",
           }}>
-            {t === "login" ? "Log In" : "Sign Up"}
-          </button>
+            <span style={{ fontSize: 22 }}>{f.icon}</span>
+            <span style={{ fontSize: 13, color: "rgba(162,155,254,0.7)", fontWeight: 500 }}>{f.text}</span>
+          </div>
         ))}
       </div>
 
-      {/* Form */}
-      <form onSubmit={tab === "login" ? handleLogin : handleSignup}
-        style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
-        {tab === "signup" && (
-          <input className="input-field" placeholder="Username" value={username}
-            onChange={e => setUsername(e.target.value)} />
-        )}
-        <input className="input-field" placeholder="Email" type="email" value={email}
-          onChange={e => setEmail(e.target.value)} />
-        <input className="input-field" placeholder="Password" type="password" value={password}
-          onChange={e => setPassword(e.target.value)} />
-        {error && (
-          <p style={{ color: "#ff6482", fontSize: 12, textAlign: "center" }}>{error}</p>
-        )}
-        <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: 4, padding: "14px 0", fontSize: 15 }}>
-          {tab === "login" ? "🚀 Enter the Galaxy" : "✨ Create Account"}
+      {/* Google Sign In */}
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+        <button
+          onClick={signInWithGoogle}
+          disabled={loading}
+          style={{
+            width: "100%", padding: "16px", borderRadius: 22, border: "none", cursor: loading ? "not-allowed" : "pointer",
+            background: loading ? "rgba(255,255,255,0.08)" : "white",
+            color: "#1A0F2E", display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+            fontSize: 15, fontWeight: 800, fontFamily: "inherit",
+            boxShadow: loading ? "none" : "0 4px 24px rgba(255,255,255,0.15)",
+            transition: "all 0.2s",
+          }}
+        >
+          {loading ? (
+            <>
+              <div style={{ width: 20, height: 20, borderRadius: 10, border: "2.5px solid rgba(108,92,231,0.3)", borderTopColor: "#6C5CE7", animation: "spin 0.8s linear infinite" }} />
+              <span style={{ color: "rgba(162,155,254,0.7)" }}>Signing in...</span>
+            </>
+          ) : (
+            <>
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </>
+          )}
         </button>
-      </form>
 
-      {/* Demo hint */}
-      <p style={{ color: "rgba(162,155,254,0.3)", fontSize: 11, textAlign: "center", lineHeight: 1.5 }}>
-        No real backend — all data stored locally.<br />Voice powered by Agora (add your App ID to enable).
+        {error && (
+          <div style={{
+            background: "rgba(255,100,130,0.1)", border: "1px solid rgba(255,100,130,0.25)",
+            borderRadius: 14, padding: "12px 16px", fontSize: 13, color: "#ff6482", textAlign: "center", lineHeight: 1.5,
+          }}>
+            {error}
+            {error.includes("new tab") && (
+              <div style={{ marginTop: 8 }}>
+                <a href={window.location.href} target="_blank" rel="noreferrer"
+                  style={{ color: "#A29BFE", textDecoration: "underline" }}>
+                  Open in new tab →
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <p style={{ color: "rgba(162,155,254,0.25)", fontSize: 11, textAlign: "center" }}>
+        By continuing, you agree to ChaloTalk's Terms of Service
       </p>
     </div>
   );
