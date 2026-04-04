@@ -1,0 +1,158 @@
+Create a complete mobile-first voice chat web app using HTML, CSS, JavaScript, and basic Agora Web SDK integration.
+
+========================
+🚀 APP GOAL
+
+Build a premium dark purple galaxy-themed voice chat app that looks like a real mobile app (not a website) and includes UI + basic functionality + voice chat demo.
+
+========================
+🎨 GLOBAL DESIGN
+
+- Gradient background:
+  Top: #1A0F2E
+  Bottom: #0F0F1A
+- Galaxy/star effect background
+- Colors: #6C5CE7, #A29BFE
+- Rounded corners (20px+)
+- Glow effects, shadows
+- Max-width: 400px centered mobile layout
+
+========================
+📱 NAVIGATION
+
+Bottom Navigation:
+
+- Home
+- Rooms
+- Chats
+- Profile
+  Active tab glow
+
+========================
+🔐 AUTH SYSTEM
+
+- Login & Signup UI
+- Store users in localStorage
+- Auto login if user exists
+- Logout button
+
+========================
+🏠 HOME SCREEN
+
+- Tabs: Hot | New | Follow
+- Room cards:
+  - Avatar
+  - Room name
+  - User count
+  - Click → open room
+
+========================
+🎧 ROOMS SCREEN
+
+- List of rooms
+- Create room button
+- Join room button
+
+========================
+🎤 VOICE ROOM (MAIN)
+
+- Room title + leave button
+- Grid: 3 columns (9–10 seats)
+- Each seat:
+  - Avatar
+  - Mic icon
+  - Locked seats
+- Bottom:
+  - Chat messages
+  - Input + send
+  - Buttons:
+    - 🎤 Mic (center glowing)
+    - 🎁 Gift
+    - 😊 Emoji
+    - 🔊 Sound
+
+========================
+💬 CHAT SYSTEM
+
+- Chat list page
+- Message bubbles (left/right)
+- Store messages in localStorage
+
+========================
+👤 PROFILE (FULL ADVANCED)
+
+Top:
+
+- Avatar (upload/change)
+- Username (editable)
+- Unique ID
+- Level system (Lv.1–10)
+- Coins system
+
+User Info:
+
+- Nickname
+- Gender
+- Birthday → auto age
+- Location
+- Relationship
+
+Extra:
+
+- About Me (bio)
+- Interests/tags
+- Followers/Following
+- Friends list button
+
+Settings:
+
+- Edit profile
+- Change avatar
+- Dark mode toggle
+- Logout
+
+========================
+🎤 VOICE CHAT (AGORA BASIC)
+
+- Integrate Agora Web SDK
+- Join channel on room open
+- Mic on/off button
+- Leave channel button
+- Use placeholder App ID (user will replace)
+
+========================
+⚙️ FUNCTIONALITY
+
+- Navigation working
+- Page switching smooth
+- Store data in localStorage:
+  - Users
+  - Profile
+  - Chat
+  - Rooms
+- Basic fake online users
+
+========================
+✨ UI QUALITY
+
+- Smooth animations
+- Glow effects on buttons
+- Modern mobile app feel
+- NOT like desktop website
+
+========================
+📦 OUTPUT
+
+- Provide full working code:
+  - index.html
+  - style.css
+  - script.js
+- Clean structured code
+- Ready to run in browser
+
+========================
+⚠️ IMPORTANT
+
+- Focus on UI + working demo
+- Keep code simple but modern
+- Must look like real mobile app
