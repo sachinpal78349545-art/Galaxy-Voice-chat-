@@ -83,6 +83,10 @@ export interface UserProfile {
     showOnline: boolean;
     allowMessages: "everyone" | "friends" | "nobody";
     allowGifts: boolean;
+    pushNotifications?: boolean;
+    messageNotifications?: boolean;
+    giftNotifications?: boolean;
+    roomInviteNotifications?: boolean;
   };
   dailyTasks?: Record<string, { progress: number; completed: boolean; claimedAt?: number }>;
   lastTaskReset?: number;

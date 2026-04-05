@@ -1,18 +1,34 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { UserProfile } from "../lib/userService";
 import { Room, subscribeRooms } from "../lib/roomService";
+import { getGiftLeaderboard, LeaderboardEntry } from "../lib/giftService";
 
 interface Props { user: UserProfile; onJoinRoom: (room: Room) => void; }
 type Tab = "Hot" | "New" | "Following";
 
 const FAKE_USERS_ONLINE = [
-  { name: "StarGazer", avatar: "\u{1F31F}" }, { name: "CosmicDJ", avatar: "\u{1F3B5}" },
-  { name: "LunaRose", avatar: "\u{1F319}" }, { name: "NightOwl", avatar: "\u{1F989}" },
-  { name: "VoidWalk", avatar: "\u{1F30C}" }, { name: "NebulaDev", avatar: "\u{1F4BB}" },
-  { name: "RocketX", avatar: "\u{1F680}" }, { name: "ArcKnight", avatar: "\u26A1" },
+  { name: "StarGazer", avatar: "\u{1F31F}", status: "In Room" },
+  { name: "CosmicDJ", avatar: "\u{1F3B5}", status: "Online" },
+  { name: "LunaRose", avatar: "\u{1F319}", status: "Chilling" },
+  { name: "NightOwl", avatar: "\u{1F989}", status: "Online" },
+  { name: "VoidWalk", avatar: "\u{1F30C}", status: "In Room" },
+  { name: "NebulaDev", avatar: "\u{1F4BB}", status: "Online" },
+  { name: "RocketX", avatar: "\u{1F680}", status: "Singing" },
+  { name: "ArcKnight", avatar: "\u26A1", status: "Online" },
+];
+
+const QUICK_CATEGORIES = [
+  { emoji: "\u{1F3B5}", label: "Music", topic: "Music" },
+  { emoji: "\u{1F4AC}", label: "Chat", topic: "Chill" },
+  { emoji: "\u{1F3AE}", label: "Gaming", topic: "Gaming" },
+  { emoji: "\u{1F602}", label: "Comedy", topic: "Comedy" },
+  { emoji: "\u{1F4DA}", label: "Study", topic: "Study" },
+  { emoji: "\u{1F5E3}", label: "Debate", topic: "Debate" },
 ];
 
 const PAGE_SIZE = 8;
+
+const MEDAL_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
 
 export default function HomePage({ user, onJoinRoom }: Props) {
   const [tab, setTab] = useState<Tab>("Hot");
@@ -21,6 +37,8 @@ export default function HomePage({ user, onJoinRoom }: Props) {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [topGifters, setTopGifters] = useState<LeaderboardEntry[]>([]);
+  const [quickFilter, setQuickFilter] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,6 +47,12 @@ export default function HomePage({ user, onJoinRoom }: Props) {
       setLoading(false);
     });
     return unsub;
+  }, []);
+
+  useEffect(() => {
+    getGiftLeaderboard("weekly", "senders")
+      .then(lb => setTopGifters(lb.slice(0, 5)))
+      .catch(() => setTopGifters([]));
   }, []);
 
   const handleScroll = useCallback(() => {
@@ -47,6 +71,9 @@ export default function HomePage({ user, onJoinRoom }: Props) {
       const matchTopic = r.topic.toLowerCase().includes(q);
       if (!matchName && !matchTag && !matchTopic) return false;
     }
+    if (quickFilter) {
+      if (r.topic !== quickFilter) return false;
+    }
     if (tab === "Hot") return r.listeners > 5;
     if (tab === "New") return Date.now() - r.createdAt < 7200000;
     return true;
@@ -55,13 +82,22 @@ export default function HomePage({ user, onJoinRoom }: Props) {
   const trending = [...rooms].sort((a, b) => b.listeners - a.listeners).slice(0, 3);
   const visible = filtered.slice(0, visibleCount);
 
+  const handleQuickJoin = (topic: string) => {
+    const match = rooms.find(r => r.topic === topic && r.isLive);
+    if (match) {
+      onJoinRoom(match);
+    } else {
+      setQuickFilter(quickFilter === topic ? null : topic);
+    }
+  };
+
   return (
     <div className="page-scroll" ref={scrollRef} onScroll={handleScroll}>
       <div style={{ padding: "54px 16px 10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(108,92,231,0.15)", border: "1px solid rgba(108,92,231,0.3)", borderRadius: 20, padding: "6px 10px" }}>
             <span>{"\u{1F48E}"}</span>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{user.coins}</span>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{user.coins.toLocaleString()}</span>
           </div>
           <div style={{ background: "rgba(255,215,0,0.12)", border: "1px solid rgba(255,215,0,0.28)", borderRadius: 20, padding: "6px 10px" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: "#FFD700" }}>Lv.{user.level}</span>
@@ -87,6 +123,27 @@ export default function HomePage({ user, onJoinRoom }: Props) {
         </div>
       )}
 
+      <div style={{ padding: "0 16px 12px" }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+          {QUICK_CATEGORIES.map(cat => (
+            <button
+              key={cat.label}
+              onClick={() => handleQuickJoin(cat.topic)}
+              style={{
+                flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                padding: "10px 14px", borderRadius: 16,
+                background: quickFilter === cat.topic ? "rgba(108,92,231,0.25)" : "rgba(255,255,255,0.03)",
+                border: quickFilter === cat.topic ? "1px solid rgba(108,92,231,0.5)" : "1px solid rgba(255,255,255,0.06)",
+                cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", minWidth: 56,
+              }}
+            >
+              <span style={{ fontSize: 22 }}>{cat.emoji}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: quickFilter === cat.topic ? "#A29BFE" : "rgba(162,155,254,0.5)" }}>{cat.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div style={{ padding: "0 16px 10px", display: "flex", gap: 12, overflowX: "auto" }}>
         {FAKE_USERS_ONLINE.map(u => (
           <div key={u.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
@@ -103,18 +160,59 @@ export default function HomePage({ user, onJoinRoom }: Props) {
         ))}
       </div>
 
+      {topGifters.length > 0 && !search && (
+        <div style={{ padding: "0 16px 12px" }}>
+          <h3 style={{ fontSize: 13, fontWeight: 800, color: "rgba(162,155,254,0.6)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>{"\u{1F451}"} Top Gifters This Week</h3>
+          <div style={{
+            display: "flex", gap: 8, overflowX: "auto",
+            background: "rgba(255,215,0,0.04)", border: "1px solid rgba(255,215,0,0.12)",
+            borderRadius: 16, padding: "12px 14px",
+          }}>
+            {topGifters.map((g, i) => (
+              <div key={g.uid} style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, padding: "4px 8px" }}>
+                <div style={{ position: "relative" }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 18, fontSize: 18,
+                    background: "rgba(108,92,231,0.15)",
+                    border: `2px solid ${MEDAL_COLORS[i] || "rgba(108,92,231,0.3)"}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: i < 3 ? `0 0 10px ${MEDAL_COLORS[i]}33` : "none",
+                  }}>{g.avatar}</div>
+                  {i < 3 && (
+                    <div style={{
+                      position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: 8,
+                      background: MEDAL_COLORS[i], display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 8, fontWeight: 900, color: i === 0 ? "#000" : "#fff",
+                      border: "1.5px solid #0F0F1A",
+                    }}>{i + 1}</div>
+                  )}
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{g.name}</p>
+                  <p style={{ fontSize: 9, color: "#FFD700", fontWeight: 700 }}>{"\u{1F48E}"} {g.totalCoins.toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+            {topGifters.length === 0 && (
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", padding: 8 }}>No gifts sent this week yet</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {!search && trending.length > 0 && (
         <div style={{ padding: "0 16px 12px" }}>
           <h3 style={{ fontSize: 13, fontWeight: 800, color: "rgba(162,155,254,0.6)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>{"\u{1F525}"} Trending Now</h3>
           <div style={{ display: "flex", gap: 10, overflowX: "auto" }}>
             {trending.map(r => (
               <div key={r.id} onClick={() => onJoinRoom(r)} style={{
-                flexShrink: 0, width: 140, background: "rgba(108,92,231,0.08)",
-                border: "1px solid rgba(108,92,231,0.2)", borderRadius: 16, padding: 12,
+                flexShrink: 0, width: 150, background: "rgba(108,92,231,0.08)",
+                border: "1px solid rgba(108,92,231,0.2)", borderRadius: 16, padding: 14,
                 cursor: "pointer", transition: "all 0.2s",
               }}>
                 <div style={{ fontSize: 32, marginBottom: 6 }}>{r.coverEmoji || "\u{1F3A4}"}</div>
                 <p style={{ fontSize: 12, fontWeight: 800, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
+                <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 6 }}>by {r.host}</p>
                 <div style={{ display: "flex", gap: 6 }}>
                   <span className="badge badge-live" style={{ fontSize: 9 }}><span className="live-dot"/>{r.listeners}</span>
                   <span className="badge badge-accent" style={{ fontSize: 9 }}>{r.topic}</span>
@@ -127,7 +225,7 @@ export default function HomePage({ user, onJoinRoom }: Props) {
 
       <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "0 16px" }}>
         {(["Hot", "New", "Following"] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
+          <button key={t} onClick={() => { setTab(t); setQuickFilter(null); }} style={{
             background: "none", border: "none", cursor: "pointer", padding: "10px 14px",
             fontFamily: "inherit", fontSize: 14, fontWeight: 700,
             color: tab === t ? "#A29BFE" : "rgba(162,155,254,0.35)",
@@ -136,6 +234,13 @@ export default function HomePage({ user, onJoinRoom }: Props) {
           }}>{t}</button>
         ))}
         <div style={{ flex: 1 }} />
+        {quickFilter && (
+          <button onClick={() => setQuickFilter(null)} style={{
+            background: "rgba(108,92,231,0.15)", border: "1px solid rgba(108,92,231,0.3)",
+            borderRadius: 12, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit",
+            fontSize: 10, color: "#A29BFE", fontWeight: 600, marginRight: 6,
+          }}>{"\u2715"} {quickFilter}</button>
+        )}
         <div className="badge badge-live" style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span className="live-dot" />
           <span>{rooms.filter(r => r.isLive).length} Live</span>
@@ -174,7 +279,10 @@ export default function HomePage({ user, onJoinRoom }: Props) {
             {filtered.length === 0 && (
               <div style={{ textAlign: "center", padding: "48px 0", color: "rgba(162,155,254,0.3)" }}>
                 <div style={{ fontSize: 48 }}>{"\u{1F30C}"}</div>
-                <p style={{ marginTop: 10, fontWeight: 600 }}>{search ? "No rooms match your search" : "No rooms in this tab yet"}</p>
+                <p style={{ marginTop: 10, fontWeight: 600 }}>{search ? "No rooms match your search" : quickFilter ? `No ${quickFilter} rooms live` : "No rooms in this tab yet"}</p>
+                {quickFilter && (
+                  <button onClick={() => setQuickFilter(null)} className="btn btn-ghost btn-sm" style={{ marginTop: 10 }}>Clear Filter</button>
+                )}
               </div>
             )}
           </>

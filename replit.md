@@ -49,8 +49,9 @@ artifacts/galaxy-web/src/
   pages/
     AuthPage.tsx           — Google sign-in, Phone OTP login (demo), Guest login,
                              galaxy theme with feature cards
-    HomePage.tsx           — Search bar, trending section, Firebase rooms, skeleton loading,
-                             infinite scroll, online users strip, Hot/New/Following tabs
+    supportService.ts      — Feedback form (bug/suggestion/feedback), help center articles (8)
+    HomePage.tsx           — Gift leaderboard, quick-join category buttons, trending rooms,
+                             search, infinite scroll, online users strip, Hot/New/Following tabs
     RoomsPage.tsx          — Firebase room list, create room modal, real-time updates
     VoiceRoomPage.tsx      — 12-seat 4-column grid, real Agora voice (join/leave/mute),
                              co-host controls, animated gift system (fly/reveal/bounce),
@@ -63,8 +64,9 @@ artifacts/galaxy-web/src/
     ProfilePage.tsx        — Achievements modal, daily reward card with streak,
                              transaction history, wallet/recharge, XP bar,
                              friend requests panel, friends list, blocked users,
-                             search users, report modal, privacy settings toggles,
-                             daily tasks UI with progress bars
+                             search users, report modal, privacy & notification settings,
+                             daily tasks UI with progress bars, feedback form,
+                             help center with 8 articles
     EditProfilePage.tsx    — Photo upload with progress bar, emoji avatar picker,
                              form validation, confetti success animation
 ```
@@ -92,6 +94,10 @@ artifacts/galaxy-web/src/
 - **Real-time Chat**: Firebase-powered with typing indicators, image upload
 - **Online Presence**: Firebase onDisconnect for live status tracking
 - **Toast Notifications**: Global system for all user feedback
+- **Gift Leaderboard on Home**: Weekly top gifters shown on home page
+- **Quick Join Categories**: One-tap category buttons (Music, Chat, Gaming, etc.)
+- **Support System**: Feedback form (bug/suggestion/general), Help center with 8 articles
+- **Notification Settings**: Toggle push, message, gift, room invite notifications
 - **Chat Unread Badge**: Live unread count on Chats tab
 - **Page Transitions**: Fade/slide animations between pages
 - **Skeleton Loading**: Shimmer placeholders for rooms, chats, etc.

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers } from "../lib/userService";
+import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { useToast } from "../lib/toastContext";
 
 interface Props {
@@ -19,10 +20,12 @@ const MENU_ITEMS = [
   { icon: "\u{1F91D}", label: "Friend Requests", action: "friendRequests" },
   { icon: "\u{1F465}", label: "Friends List", action: "friendsList" },
   { icon: "\u{1F3C6}", label: "Achievements", action: "achievements" },
-  { icon: "\u{1F512}", label: "Privacy Settings", action: "privacy" },
+  { icon: "\u{1F512}", label: "Privacy & Settings", action: "privacy" },
   { icon: "\u{1F6AB}", label: "Blocked Users", action: "blocked" },
   { icon: "\u{1F50D}", label: "Find Users", action: "search" },
-  { icon: "\u26A0\uFE0F", label: "Report Issue", action: "report" },
+  { icon: "\u{1F4AC}", label: "Send Feedback", action: "feedback" },
+  { icon: "\u2753", label: "Help Center", action: "help" },
+  { icon: "\u26A0\uFE0F", label: "Report a Problem", action: "report" },
 ];
 
 const RECHARGE_PACKAGES = [
@@ -45,6 +48,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   const [showFriendsList, setShowFriendsList] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showHelpArticle, setShowHelpArticle] = useState<string | null>(null);
+  const [feedbackType, setFeedbackType] = useState<"feedback" | "bug" | "suggestion">("feedback");
+  const [feedbackSubject, setFeedbackSubject] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackSending, setFeedbackSending] = useState(false);
   const [recharging, setRecharging] = useState<number | null>(null);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendProfiles, setFriendProfiles] = useState<UserProfile[]>([]);
@@ -54,8 +64,9 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   const [reportTarget, setReportTarget] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-  const [privacy, setPrivacy] = useState(user.privacy || {
-    profileVisible: true, showOnline: true, allowMessages: "everyone" as const, allowGifts: true,
+  const [privacy, setPrivacy] = useState<NonNullable<UserProfile["privacy"]>>(user.privacy || {
+    profileVisible: true, showOnline: true, allowMessages: "everyone", allowGifts: true,
+    pushNotifications: true, messageNotifications: true, giftNotifications: true, roomInviteNotifications: true,
   });
   const { showToast } = useToast();
 
@@ -97,13 +108,18 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
 
   const handleRecharge = async (coins: number, idx: number) => {
     setRecharging(idx);
-    await new Promise(r => setTimeout(r, 1200));
-    await addCoins(user.uid, coins);
-    await addTransaction(user.uid, { type: "recharge", amount: coins, description: `Recharged ${coins} coins` });
-    onUpdate({ ...user, coins: user.coins + coins });
-    setRecharging(null);
-    setShowWallet(false);
-    showToast(`+${coins} coins added!`, "success", "\u{1F48E}");
+    try {
+      await new Promise(r => setTimeout(r, 1200));
+      await addCoins(user.uid, coins);
+      await addTransaction(user.uid, { type: "recharge", amount: coins, description: `Recharged ${coins} coins` });
+      onUpdate({ ...user, coins: user.coins + coins });
+      setShowWallet(false);
+      showToast(`+${coins} coins added!`, "success", "\u{1F48E}");
+    } catch {
+      showToast("Recharge failed. Try again.", "error");
+    } finally {
+      setRecharging(null);
+    }
   };
 
   const handleDailyReward = async () => {
@@ -133,19 +149,27 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   };
 
   const handleSavePrivacy = async () => {
-    await updatePrivacy(user.uid, privacy);
-    showToast("Privacy settings saved", "success");
-    setShowPrivacy(false);
+    try {
+      await updatePrivacy(user.uid, privacy);
+      showToast("Settings saved", "success");
+      setShowPrivacy(false);
+    } catch {
+      showToast("Failed to save settings. Try again.", "error");
+    }
   };
 
   const handleReport = async () => {
     if (!reportReason) { showToast("Please select a reason", "warning"); return; }
-    await reportUser(user.uid, reportTarget || "general", reportReason, reportDetails);
-    showToast("Report submitted. Thank you!", "success");
-    setShowReport(false);
-    setReportReason("");
-    setReportDetails("");
-    setReportTarget("");
+    try {
+      await reportUser(user.uid, reportTarget || "general", reportReason, reportDetails);
+      showToast("Report submitted. Thank you!", "success");
+      setShowReport(false);
+      setReportReason("");
+      setReportDetails("");
+      setReportTarget("");
+    } catch {
+      showToast("Failed to submit report. Try again.", "error");
+    }
   };
 
   const handleSearch = async () => {
@@ -157,6 +181,25 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   const handleAddFriend = async (target: UserProfile) => {
     await sendFriendRequest(user.uid, user.name, user.avatar, target.uid);
     showToast(`Friend request sent to ${target.name}!`, "success");
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackSubject.trim() || !feedbackMessage.trim()) {
+      showToast("Please fill in all fields", "warning");
+      return;
+    }
+    setFeedbackSending(true);
+    try {
+      await submitFeedback(user.uid, user.name, feedbackType, feedbackSubject.trim(), feedbackMessage.trim());
+      showToast("Thank you for your feedback!", "success");
+      setShowFeedback(false);
+      setFeedbackSubject("");
+      setFeedbackMessage("");
+      setFeedbackType("feedback");
+    } catch {
+      showToast("Failed to send feedback. Try again.", "error");
+    }
+    setFeedbackSending(false);
   };
 
   const handleMenu = (action: string) => {
@@ -171,6 +214,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
     if (action === "friendsList") { setShowFriendsList(true); loadFriends(); }
     if (action === "report") setShowReport(true);
     if (action === "search") setShowSearch(true);
+    if (action === "feedback") setShowFeedback(true);
+    if (action === "help") setShowHelp(true);
   };
 
   return (
@@ -446,10 +491,11 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
       {showPrivacy && (
         <BottomSheet onClose={() => setShowPrivacy(false)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F512}"} Privacy Settings</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F512}"} Privacy & Settings</h2>
             <button onClick={() => setShowPrivacy(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <p style={{ fontSize: 12, fontWeight: 800, color: "rgba(162,155,254,0.5)", textTransform: "uppercase", letterSpacing: 1 }}>Privacy</p>
             <PrivacyToggle label="Profile Visible" value={privacy.profileVisible} onChange={v => setPrivacy({ ...privacy, profileVisible: v })} />
             <PrivacyToggle label="Show Online Status" value={privacy.showOnline} onChange={v => setPrivacy({ ...privacy, showOnline: v })} />
             <PrivacyToggle label="Allow Gifts" value={privacy.allowGifts} onChange={v => setPrivacy({ ...privacy, allowGifts: v })} />
@@ -466,6 +512,12 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
                 ))}
               </div>
             </div>
+            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+            <p style={{ fontSize: 12, fontWeight: 800, color: "rgba(162,155,254,0.5)", textTransform: "uppercase", letterSpacing: 1 }}>Notifications</p>
+            <PrivacyToggle label="Push Notifications" value={privacy.pushNotifications !== false} onChange={v => setPrivacy({ ...privacy, pushNotifications: v })} />
+            <PrivacyToggle label="Message Notifications" value={privacy.messageNotifications !== false} onChange={v => setPrivacy({ ...privacy, messageNotifications: v })} />
+            <PrivacyToggle label="Gift Notifications" value={privacy.giftNotifications !== false} onChange={v => setPrivacy({ ...privacy, giftNotifications: v })} />
+            <PrivacyToggle label="Room Invite Notifications" value={privacy.roomInviteNotifications !== false} onChange={v => setPrivacy({ ...privacy, roomInviteNotifications: v })} />
           </div>
           <button className="btn btn-primary btn-full" style={{ marginTop: 20 }} onClick={handleSavePrivacy}>Save Settings</button>
         </BottomSheet>
@@ -607,6 +659,101 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
                 </div>
               );
             })}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showFeedback && (
+        <BottomSheet onClose={() => setShowFeedback(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F4AC}"} Send Feedback</h2>
+            <button onClick={() => setShowFeedback(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              {(["feedback", "bug", "suggestion"] as const).map(t => (
+                <button key={t} onClick={() => setFeedbackType(t)} style={{
+                  flex: 1, padding: "10px 0", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit",
+                  background: feedbackType === t ? "rgba(108,92,231,0.3)" : "rgba(255,255,255,0.04)",
+                  color: feedbackType === t ? "#A29BFE" : "rgba(162,155,254,0.4)",
+                  fontSize: 12, fontWeight: 700, textTransform: "capitalize",
+                }}>
+                  {t === "feedback" ? "\u{1F4DD}" : t === "bug" ? "\u{1F41B}" : "\u{1F4A1}"} {t}
+                </button>
+              ))}
+            </div>
+            <input
+              className="input-field"
+              placeholder="Subject"
+              value={feedbackSubject}
+              onChange={e => setFeedbackSubject(e.target.value)}
+              style={{ borderRadius: 14, padding: "12px 14px" }}
+            />
+            <textarea
+              className="input-field"
+              placeholder="Tell us what's on your mind..."
+              value={feedbackMessage}
+              onChange={e => setFeedbackMessage(e.target.value)}
+              rows={4}
+              style={{ borderRadius: 14, padding: "12px 14px", resize: "none", fontFamily: "inherit" }}
+            />
+            <button className="btn btn-primary btn-full" onClick={handleSubmitFeedback} disabled={feedbackSending}>
+              {feedbackSending ? "Sending..." : "Submit Feedback"}
+            </button>
+          </div>
+        </BottomSheet>
+      )}
+
+      {showHelp && (
+        <BottomSheet onClose={() => { setShowHelp(false); setShowHelpArticle(null); }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            {showHelpArticle ? (
+              <button onClick={() => setShowHelpArticle(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#A29BFE", fontWeight: 600, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                {"\u2039"} Back
+              </button>
+            ) : (
+              <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u2753"} Help Center</h2>
+            )}
+            <button onClick={() => { setShowHelp(false); setShowHelpArticle(null); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {showHelpArticle ? (() => {
+              const article = HELP_ARTICLES.find(a => a.id === showHelpArticle);
+              if (!article) return null;
+              return (
+                <div style={{ padding: "0 4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                    <span style={{ fontSize: 32 }}>{article.icon}</span>
+                    <h3 style={{ fontSize: 17, fontWeight: 800 }}>{article.title}</h3>
+                  </div>
+                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.8 }}>{article.content}</p>
+                </div>
+              );
+            })() : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {HELP_ARTICLES.map(article => (
+                  <button key={article.id} onClick={() => setShowHelpArticle(article.id)} style={{
+                    display: "flex", alignItems: "center", gap: 14, padding: "14px 12px",
+                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: 14, cursor: "pointer", fontFamily: "inherit", width: "100%", transition: "background 0.15s",
+                    textAlign: "left",
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(108,92,231,0.08)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  >
+                    <span style={{ fontSize: 22, width: 28, textAlign: "center" }}>{article.icon}</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>{article.title}</span>
+                    <span style={{ color: "rgba(162,155,254,0.3)", fontSize: 14 }}>{"\u203A"}</span>
+                  </button>
+                ))}
+                <div style={{ textAlign: "center", padding: "16px 0" }}>
+                  <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)" }}>Need more help? Send us feedback!</p>
+                  <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, fontSize: 11 }} onClick={() => { setShowHelp(false); setShowFeedback(true); }}>
+                    {"\u{1F4AC}"} Send Feedback
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </BottomSheet>
       )}
