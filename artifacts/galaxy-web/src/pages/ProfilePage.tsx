@@ -221,16 +221,17 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   return (
     <div className="page-scroll">
       <div style={{
-        padding: "52px 16px 20px",
-        background: "linear-gradient(180deg, rgba(108,92,231,0.14) 0%, transparent 100%)",
+        padding: "52px 16px 24px",
+        background: "linear-gradient(180deg, rgba(108,92,231,0.14) 0%, rgba(108,92,231,0.02) 60%, transparent 100%)",
       }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-          <div style={{ position: "relative", animation: "float 4s ease-in-out infinite" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <div style={{ position: "relative" }}>
             <div style={{
               width: 100, height: 100, borderRadius: 50, fontSize: 50,
               display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(108,92,231,0.2)", border: "3px solid rgba(108,92,231,0.5)",
-              boxShadow: "0 0 32px rgba(108,92,231,0.45), 0 0 64px rgba(108,92,231,0.15)",
+              background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
+              border: "3px solid rgba(108,92,231,0.5)",
+              boxShadow: "0 0 32px rgba(108,92,231,0.4), 0 8px 32px rgba(0,0,0,0.3)",
               cursor: "pointer", overflow: "hidden",
             }} onClick={onEditProfile}>
               {user.avatar.startsWith("http") ? (
@@ -238,12 +239,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
               ) : user.avatar}
             </div>
             {user.online && (
-              <div style={{ position: "absolute", bottom: 6, right: 6, width: 16, height: 16, borderRadius: 8, background: "#00e676", border: "2.5px solid #0F0F1A" }} />
+              <div style={{ position: "absolute", bottom: 6, right: 6, width: 16, height: 16, borderRadius: 8, background: "#00e676", border: "2.5px solid #0F0F1A", boxShadow: "0 0 8px rgba(0,230,118,0.4)" }} />
             )}
             <div style={{
               position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14,
-              background: "#6C5CE7", border: "2px solid #0F0F1A", cursor: "pointer",
+              background: "linear-gradient(135deg, #6C5CE7, #8B7CF6)", border: "2px solid #0F0F1A", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
+              boxShadow: "0 2px 8px rgba(108,92,231,0.4)",
             }} onClick={onEditProfile}>{"\u270F\uFE0F"}</div>
           </div>
 
@@ -252,38 +254,38 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
               <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.name}</h2>
               {user.vip && <span className="badge badge-vip">{"\u{1F451}"} VIP</span>}
             </div>
-            <p style={{ fontSize: 12, color: "rgba(162,155,254,0.4)", marginBottom: 6 }}>
+            <p style={{ fontSize: 12, color: "rgba(162,155,254,0.35)", marginBottom: 8, fontFamily: "monospace", letterSpacing: 0.5 }}>
               UID: {user.uid.slice(0, 14).toUpperCase()}
             </p>
             <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-              <span className="badge badge-accent" style={{ fontSize: 11 }}>{"\u2B50"} Lv.{user.level}</span>
-              <span className="badge badge-gold" style={{ fontSize: 11 }}>{"\u{1F3C6}"} {unlockedCount}/{achievements.length}</span>
+              <span className="badge badge-accent" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u2B50"} Lv.{user.level}</span>
+              <span className="badge badge-gold" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u{1F3C6}"} {unlockedCount}/{achievements.length}</span>
             </div>
           </div>
 
           <div style={{ width: "100%", marginTop: 4 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 5 }}>
-              <span>Level {user.level}</span><span>{user.xp}/{user.level * 1000} XP</span>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 6 }}>
+              <span>Level {user.level}</span><span>{user.xp.toLocaleString()}/{(user.level * 1000).toLocaleString()} XP</span>
             </div>
-            <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.07)" }}>
+            <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)" }}>
               <div style={{
                 height: "100%", borderRadius: 3, width: `${xpPct}%`,
-                background: "linear-gradient(90deg,#6C5CE7,#A29BFE)",
-                boxShadow: "0 0 8px rgba(108,92,231,0.45)", transition: "width 0.5s",
+                background: "linear-gradient(90deg,#6C5CE7,#A29BFE,#8B7CF6)",
+                boxShadow: "0 0 10px rgba(108,92,231,0.5)", transition: "width 0.6s ease",
               }} />
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 24, marginTop: 6 }}>
+          <div style={{ display: "flex", gap: 20, marginTop: 8, width: "100%", justifyContent: "center" }}>
             {[
               { label: "Followers", val: (user.followers || 0).toLocaleString() },
               { label: "Following", val: (user.following || 0).toLocaleString() },
               { label: "Friends", val: (user.friends || 0).toLocaleString() },
-              { label: "\u{1F48E} Coins", val: user.coins.toLocaleString() },
+              { label: "Coins", val: user.coins.toLocaleString(), icon: "\u{1F48E}" },
             ].map(s => (
-              <div key={s.label} style={{ textAlign: "center" }}>
-                <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1 }}>{s.val}</p>
-                <p style={{ fontSize: 10, color: "rgba(162,155,254,0.45)", marginTop: 3 }}>{s.label}</p>
+              <div key={s.label} style={{ textAlign: "center", flex: 1 }}>
+                <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1 }}>{"icon" in s && s.icon ? `${s.icon} ` : ""}{s.val}</p>
+                <p style={{ fontSize: 10, color: "rgba(162,155,254,0.45)", marginTop: 4 }}>{s.label}</p>
               </div>
             ))}
           </div>

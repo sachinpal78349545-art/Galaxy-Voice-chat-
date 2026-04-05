@@ -12,3 +12,9 @@ id = "22IMx1QdEGiv9sVdJIMIv"
 uri = "file://artifacts/galaxy-mobile/assets/images/splash.png"
 type = "image"
 title = "galaxy voice splash screen"
+
+[[generated]]
+id = "ZTbTzhEA3fqGUAN7sVCIZ"
+uri = "file://artifacts/galaxy-web/public/logo.png"
+type = "image"
+title = "generated_image"

@@ -107,9 +107,9 @@ function AppContent() {
       <div className="app-wrapper">
         <div className="stars" />
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, color: "rgba(162,155,254,0.7)" }}>
-          <div style={{ fontSize: 56, animation: "float 2s ease-in-out infinite" }}>{"\u{1F30C}"}</div>
+          <img src="/logo.png" alt="Galaxy Voice Chat" style={{ width: 64, height: 64, borderRadius: 18, animation: "float 2s ease-in-out infinite, logoGlow 3s ease-in-out infinite" }} />
           <div style={{ width: 36, height: 36, borderRadius: 18, border: "3px solid rgba(108,92,231,0.2)", borderTopColor: "#6C5CE7", animation: "spin 0.8s linear infinite" }} />
-          <p style={{ fontSize: 13, fontWeight: 600 }}>Loading ChaloTalk...</p>
+          <p style={{ fontSize: 13, fontWeight: 600 }}>Loading Galaxy Voice Chat...</p>
         </div>
       </div>
     );

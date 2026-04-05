@@ -311,8 +311,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
         </div>
       </div>
 
-      <div style={{ padding: "10px 8px 6px", flexShrink: 0 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
+      <div style={{ padding: "12px 12px 8px", flexShrink: 0 }}>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10,
+          background: "rgba(108,92,231,0.04)", borderRadius: 20, padding: "16px 8px",
+          border: "1px solid rgba(108,92,231,0.08)",
+        }}>
           {room.seats.map((seat, i) => (
             <SeatCell
               key={i}
@@ -333,15 +337,23 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
       </div>
 
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 14px" }}>
-        <div style={{ flex: 1, overflowY: "auto", paddingTop: 6, paddingBottom: 4 }}>
+        <div style={{ flex: 1, overflowY: "auto", paddingTop: 8, paddingBottom: 6 }}>
           {messages.map(msg => (
-            <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 6, animation: "slide-up 0.2s ease" }}>
-              <span style={{ fontSize: 14, flexShrink: 0 }}>{msg.avatar}</span>
-              <div>
-                <span style={{ fontSize: 10, color: "rgba(162,155,254,0.45)", marginRight: 5, fontWeight: 600 }}>{msg.username}</span>
+            <div key={msg.id} style={{
+              display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8,
+              animation: "slide-up 0.2s ease",
+              padding: "4px 8px", borderRadius: 12,
+              background: msg.type === "gift" ? "rgba(255,215,0,0.06)" : msg.type === "system" ? "rgba(0,230,118,0.04)" : "transparent",
+            }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: 12, fontSize: 13, flexShrink: 0,
+                background: "rgba(108,92,231,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>{msg.avatar}</div>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginRight: 6, fontWeight: 700 }}>{msg.username}</span>
                 <span style={{
-                  fontSize: 13,
-                  color: msg.type === "gift" ? "#FFD700" : msg.type === "system" ? "#00e676" : msg.userId === user.uid ? "#A29BFE" : "rgba(255,255,255,0.7)",
+                  fontSize: 13, lineHeight: 1.4,
+                  color: msg.type === "gift" ? "#FFD700" : msg.type === "system" ? "#00e676" : msg.userId === user.uid ? "#A29BFE" : "rgba(255,255,255,0.75)",
                   fontWeight: msg.type === "gift" ? 700 : 400,
                 }}>{msg.text}</span>
               </div>
@@ -552,62 +564,70 @@ interface SeatCellProps {
 
 function SeatCell({ seat, isHost, isMe, hasControl, isSpeaking, onTap }: SeatCellProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: hasControl && seat.userId && !isMe ? "pointer" : "default" }} onClick={onTap}>
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+      cursor: hasControl && seat.userId && !isMe ? "pointer" : "default",
+      transition: "transform 0.15s ease",
+    }} onClick={onTap}>
       <div style={{ position: "relative" }}>
         {isSpeaking && (
           <>
             <div style={{
-              position: "absolute", inset: -7, borderRadius: "50%",
-              border: "2px solid rgba(0,230,118,0.55)",
+              position: "absolute", inset: -8, borderRadius: "50%",
+              border: "2.5px solid rgba(0,230,118,0.6)",
               animation: "speaking-ring 1s ease-in-out infinite", pointerEvents: "none",
             }} />
             <div style={{
-              position: "absolute", inset: -12, borderRadius: "50%",
+              position: "absolute", inset: -14, borderRadius: "50%",
               border: "1.5px solid rgba(0,230,118,0.25)",
               animation: "speaking-ring 1.3s ease-in-out infinite 0.2s", pointerEvents: "none",
             }} />
           </>
         )}
         <div style={{
-          width: 50, height: 50, borderRadius: 25, fontSize: 22,
+          width: 56, height: 56, borderRadius: 28, fontSize: 26,
           display: "flex", alignItems: "center", justifyContent: "center",
-          background: seat.userId ? (isMe ? "rgba(108,92,231,0.25)" : "rgba(108,92,231,0.14)") : "rgba(255,255,255,0.03)",
-          border: seat.isLocked ? "2px solid rgba(255,215,0,0.3)"
-            : isSpeaking ? "2px solid rgba(0,230,118,0.7)"
-            : seat.userId ? "2px solid rgba(108,92,231,0.4)"
-            : "2px dashed rgba(255,255,255,0.1)",
-          boxShadow: isHost && seat.userId ? "0 0 16px rgba(255,215,0,0.28)"
-            : isSpeaking ? "0 0 24px rgba(0,230,118,0.4), 0 0 48px rgba(0,230,118,0.15)" : "none",
-          transition: "all 0.3s",
+          background: seat.userId
+            ? (isMe ? "linear-gradient(135deg, rgba(108,92,231,0.3), rgba(108,92,231,0.15))" : "linear-gradient(135deg, rgba(108,92,231,0.18), rgba(108,92,231,0.08))")
+            : "rgba(255,255,255,0.02)",
+          border: seat.isLocked ? "2.5px solid rgba(255,215,0,0.3)"
+            : isSpeaking ? "2.5px solid rgba(0,230,118,0.7)"
+            : seat.userId ? "2.5px solid rgba(108,92,231,0.4)"
+            : "2.5px dashed rgba(255,255,255,0.08)",
+          boxShadow: isHost && seat.userId ? "0 0 20px rgba(255,215,0,0.3), 0 4px 16px rgba(108,92,231,0.2)"
+            : isSpeaking ? "0 0 28px rgba(0,230,118,0.45), 0 0 56px rgba(0,230,118,0.15)"
+            : seat.userId ? "0 4px 16px rgba(108,92,231,0.15)" : "none",
+          transition: "all 0.3s ease",
         }}>
           {seat.isLocked ? "\u{1F512}" : seat.userId ? seat.avatar : (
-            <span style={{ fontSize: 16, color: "rgba(255,255,255,0.15)" }}>+</span>
+            <span style={{ fontSize: 18, color: "rgba(255,255,255,0.12)" }}>+</span>
           )}
         </div>
         {isHost && seat.userId && (
-          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", fontSize: 12 }}>{"\u{1F451}"}</div>
+          <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", fontSize: 14, filter: "drop-shadow(0 1px 4px rgba(255,215,0,0.5))" }}>{"\u{1F451}"}</div>
         )}
         {seat.isCoHost && !isHost && seat.userId && (
-          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", fontSize: 10 }}>{"\u{1F396}\uFE0F"}</div>
+          <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", fontSize: 12 }}>{"\u{1F396}\uFE0F"}</div>
         )}
         {seat.userId && seat.isMuted && (
           <div style={{
-            position: "absolute", bottom: -1, right: -1, width: 16, height: 16, borderRadius: 8,
-            background: "rgba(255,100,130,0.95)", border: "1.5px solid #0F0F1A",
-            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8,
+            position: "absolute", bottom: -2, right: -2, width: 18, height: 18, borderRadius: 9,
+            background: "rgba(255,100,130,0.95)", border: "2px solid #0F0F1A",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
           }}>{"\u{1F507}"}</div>
         )}
         {seat.handRaised && (
           <div style={{
-            position: "absolute", top: -6, right: -4, fontSize: 14,
+            position: "absolute", top: -7, right: -5, fontSize: 16,
             animation: "handWave 0.8s ease-in-out infinite",
+            filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))",
           }}>{"\u270B"}</div>
         )}
       </div>
       <span style={{
-        fontSize: 9, fontWeight: 600, textAlign: "center",
-        color: seat.userId ? (isMe ? "#A29BFE" : "rgba(255,255,255,0.75)") : "rgba(255,255,255,0.18)",
-        maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        fontSize: 10, fontWeight: 600, textAlign: "center",
+        color: seat.userId ? (isMe ? "#A29BFE" : "rgba(255,255,255,0.75)") : "rgba(255,255,255,0.15)",
+        maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
       }}>
         {seat.isLocked ? "Locked" : seat.username || "Empty"}
       </span>

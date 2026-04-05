@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInAnonymously } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import logoUrl from "/logo.png?url";
 
 interface Props { onDone: () => void; }
 
@@ -73,7 +74,6 @@ export default function AuthPage({ onDone }: Props) {
       await signInAnonymously(auth);
       onDone();
     } catch (e: any) {
-      console.warn("Guest login error:", e?.code, e?.message);
       if (e?.code === "auth/admin-restricted-operation" || e?.code === "auth/operation-not-allowed") {
         setError("Guest login is not enabled. Please use Google or Phone login.");
       } else {
@@ -91,20 +91,20 @@ export default function AuthPage({ onDone }: Props) {
       }}>
         <button onClick={() => { setShowOTP(false); setOtpSent(false); setError(""); }} style={{
           position: "absolute", top: 52, left: 16, background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, width: 38, height: 38,
-          cursor: "pointer", fontSize: 18, color: "#fff",
+          border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, width: 40, height: 40,
+          cursor: "pointer", fontSize: 18, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
         }}>{"\u2039"}</button>
 
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 52, marginBottom: 10 }}>{"\u{1F4F1}"}</div>
           <h2 style={{ fontSize: 22, fontWeight: 900 }}>{otpSent ? "Enter Code" : "Phone Login"}</h2>
-          <p style={{ color: "rgba(162,155,254,0.5)", fontSize: 13, marginTop: 6 }}>
+          <p style={{ color: "rgba(162,155,254,0.5)", fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
             {otpSent ? `We sent a code to ${phone}` : "Enter your phone number to get started"}
           </p>
         </div>
 
         {!otpSent ? (
-          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 14 }}>
             <input
               className="input-field"
               placeholder="+1 234 567 8900"
@@ -113,17 +113,13 @@ export default function AuthPage({ onDone }: Props) {
               style={{ borderRadius: 22, padding: "16px 18px", fontSize: 16, textAlign: "center", letterSpacing: 1 }}
               type="tel"
             />
-            <button onClick={handleSendOTP} disabled={otpLoading} style={{
-              width: "100%", padding: "16px", borderRadius: 22, border: "none", cursor: otpLoading ? "not-allowed" : "pointer",
-              background: "linear-gradient(135deg,#6C5CE7,#A29BFE)", color: "#fff",
-              fontSize: 15, fontWeight: 800, fontFamily: "inherit",
-              boxShadow: "0 4px 24px rgba(108,92,231,0.4)",
-            }}>
+            <button onClick={handleSendOTP} disabled={otpLoading} className="btn btn-primary btn-full"
+              style={{ padding: "16px", borderRadius: 22, fontSize: 15, fontWeight: 800 }}>
               {otpLoading ? "Sending..." : "Send Code"}
             </button>
           </div>
         ) : (
-          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
               {[0, 1, 2, 3, 4, 5].map(i => (
                 <input
@@ -143,19 +139,18 @@ export default function AuthPage({ onDone }: Props) {
                     }
                   }}
                   style={{
-                    width: 44, height: 52, borderRadius: 14, border: "1px solid rgba(108,92,231,0.3)",
+                    width: 46, height: 54, borderRadius: 14, border: "1.5px solid rgba(108,92,231,0.3)",
                     background: "rgba(255,255,255,0.04)", color: "#fff", fontSize: 22, fontWeight: 800,
-                    textAlign: "center", fontFamily: "inherit",
+                    textAlign: "center", fontFamily: "inherit", outline: "none",
+                    transition: "border-color 0.2s, box-shadow 0.2s",
                   }}
+                  onFocus={e => { e.target.style.borderColor = "rgba(108,92,231,0.7)"; e.target.style.boxShadow = "0 0 0 3px rgba(108,92,231,0.15)"; }}
+                  onBlur={e => { e.target.style.borderColor = "rgba(108,92,231,0.3)"; e.target.style.boxShadow = "none"; }}
                 />
               ))}
             </div>
-            <button onClick={handleVerifyOTP} disabled={otpLoading} style={{
-              width: "100%", padding: "16px", borderRadius: 22, border: "none", cursor: otpLoading ? "not-allowed" : "pointer",
-              background: "linear-gradient(135deg,#6C5CE7,#A29BFE)", color: "#fff",
-              fontSize: 15, fontWeight: 800, fontFamily: "inherit",
-              boxShadow: "0 4px 24px rgba(108,92,231,0.4)",
-            }}>
+            <button onClick={handleVerifyOTP} disabled={otpLoading} className="btn btn-primary btn-full"
+              style={{ padding: "16px", borderRadius: 22, fontSize: 15, fontWeight: 800 }}>
               {otpLoading ? "Verifying..." : "Verify"}
             </button>
             <p style={{ fontSize: 12, color: "rgba(162,155,254,0.4)", textAlign: "center" }}>
@@ -167,7 +162,7 @@ export default function AuthPage({ onDone }: Props) {
         {error && (
           <div style={{
             background: "rgba(255,100,130,0.1)", border: "1px solid rgba(255,100,130,0.25)",
-            borderRadius: 14, padding: "12px 16px", fontSize: 13, color: "#ff6482", textAlign: "center", width: "100%",
+            borderRadius: 16, padding: "12px 16px", fontSize: 13, color: "#ff6482", textAlign: "center", width: "100%", lineHeight: 1.5,
           }}>{error}</div>
         )}
       </div>
@@ -179,13 +174,18 @@ export default function AuthPage({ onDone }: Props) {
       height: "100%", display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", padding: "32px 24px", gap: 28,
     }}>
-      <div style={{ textAlign: "center", animation: "float 3.5s ease-in-out infinite" }}>
-        <div style={{ fontSize: 72, marginBottom: 10, filter: "drop-shadow(0 0 20px rgba(108,92,231,0.6))" }}>{"\u{1F30C}"}</div>
-        <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: -1,
-          background: "linear-gradient(135deg,#A29BFE,#6C5CE7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          ChaloTalk
+      <div style={{ textAlign: "center" }}>
+        <div style={{ animation: "logoGlow 3s ease-in-out infinite", marginBottom: 16 }}>
+          <img src={logoUrl} alt="Galaxy Voice Chat" style={{
+            width: 96, height: 96, borderRadius: 28,
+            boxShadow: "0 8px 40px rgba(108,92,231,0.5)",
+          }} />
+        </div>
+        <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: -0.5,
+          background: "linear-gradient(135deg,#A29BFE,#6C5CE7,#8B7CF6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          Galaxy Voice Chat
         </h1>
-        <p style={{ color: "rgba(162,155,254,0.5)", fontSize: 14, marginTop: 6 }}>
+        <p style={{ color: "rgba(162,155,254,0.5)", fontSize: 14, marginTop: 8, lineHeight: 1.5 }}>
           Find your voice, find your galaxy {"\u2728"}
         </p>
       </div>
@@ -195,14 +195,15 @@ export default function AuthPage({ onDone }: Props) {
           { icon: "\u{1F3A4}", text: "Live voice rooms with real people" },
           { icon: "\u{1F31F}", text: "Level up, earn coins & VIP badges" },
           { icon: "\u{1F4AC}", text: "Chat & connect with the community" },
-        ].map(f => (
+        ].map((f, i) => (
           <div key={f.text} style={{
-            display: "flex", alignItems: "center", gap: 12,
+            display: "flex", alignItems: "center", gap: 14,
             background: "rgba(255,255,255,0.04)", border: "1px solid rgba(108,92,231,0.12)",
-            borderRadius: 14, padding: "12px 16px",
+            borderRadius: 16, padding: "14px 18px",
+            animation: `slide-up 0.4s ease ${0.1 + i * 0.1}s both`,
           }}>
-            <span style={{ fontSize: 22 }}>{f.icon}</span>
-            <span style={{ fontSize: 13, color: "rgba(162,155,254,0.7)", fontWeight: 500 }}>{f.text}</span>
+            <span style={{ fontSize: 24, filter: "drop-shadow(0 2px 8px rgba(108,92,231,0.3))" }}>{f.icon}</span>
+            <span style={{ fontSize: 14, color: "rgba(162,155,254,0.7)", fontWeight: 500 }}>{f.text}</span>
           </div>
         ))}
       </div>
@@ -212,7 +213,7 @@ export default function AuthPage({ onDone }: Props) {
           onClick={signInWithGoogle}
           disabled={loading}
           style={{
-            width: "100%", padding: "16px", borderRadius: 22, border: "none", cursor: loading ? "not-allowed" : "pointer",
+            width: "100%", padding: "16px", borderRadius: 24, border: "none", cursor: loading ? "not-allowed" : "pointer",
             background: loading ? "rgba(255,255,255,0.08)" : "white",
             color: "#1A0F2E", display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
             fontSize: 15, fontWeight: 800, fontFamily: "inherit",
@@ -239,20 +240,20 @@ export default function AuthPage({ onDone }: Props) {
         </button>
 
         <button onClick={() => setShowOTP(true)} style={{
-          width: "100%", padding: "16px", borderRadius: 22,
-          border: "1px solid rgba(108,92,231,0.3)", cursor: "pointer",
-          background: "rgba(108,92,231,0.1)", color: "#A29BFE",
+          width: "100%", padding: "16px", borderRadius: 24,
+          border: "1.5px solid rgba(108,92,231,0.3)", cursor: "pointer",
+          background: "linear-gradient(135deg, rgba(108,92,231,0.12), rgba(108,92,231,0.06))", color: "#A29BFE",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          fontSize: 15, fontWeight: 800, fontFamily: "inherit",
+          fontSize: 15, fontWeight: 800, fontFamily: "inherit", transition: "all 0.2s",
         }}>
           {"\u{1F4F1}"} Login with Phone
         </button>
 
         <button onClick={handleGuestLogin} disabled={loading} style={{
-          width: "100%", padding: "14px", borderRadius: 22,
+          width: "100%", padding: "14px", borderRadius: 24,
           border: "1px solid rgba(255,255,255,0.08)", cursor: loading ? "not-allowed" : "pointer",
           background: "rgba(255,255,255,0.03)", color: "rgba(162,155,254,0.6)",
-          fontSize: 13, fontWeight: 600, fontFamily: "inherit",
+          fontSize: 13, fontWeight: 600, fontFamily: "inherit", transition: "all 0.2s",
         }}>
           Continue as Guest
         </button>
@@ -260,7 +261,7 @@ export default function AuthPage({ onDone }: Props) {
         {error && (
           <div style={{
             background: "rgba(255,100,130,0.1)", border: "1px solid rgba(255,100,130,0.25)",
-            borderRadius: 14, padding: "12px 16px", fontSize: 13, color: "#ff6482", textAlign: "center", lineHeight: 1.5,
+            borderRadius: 16, padding: "12px 16px", fontSize: 13, color: "#ff6482", textAlign: "center", lineHeight: 1.5,
           }}>
             {error}
             {error.includes("new tab") && (
@@ -276,7 +277,7 @@ export default function AuthPage({ onDone }: Props) {
       </div>
 
       <p style={{ color: "rgba(162,155,254,0.25)", fontSize: 11, textAlign: "center" }}>
-        By continuing, you agree to ChaloTalk's Terms of Service
+        By continuing, you agree to Galaxy Voice Chat's Terms of Service
       </p>
     </div>
   );

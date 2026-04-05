@@ -103,7 +103,10 @@ export default function HomePage({ user, onJoinRoom }: Props) {
             <span style={{ fontSize: 11, fontWeight: 800, color: "#FFD700" }}>Lv.{user.level}</span>
           </div>
         </div>
-        <h1 style={{ fontSize: 17, fontWeight: 900, letterSpacing: -0.3, color: "#A29BFE" }}>ChaloTalk {"\u2728"}</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <img src="/logo.png" alt="" style={{ width: 28, height: 28, borderRadius: 8 }} />
+          <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: -0.3, background: "linear-gradient(135deg,#A29BFE,#6C5CE7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Galaxy</span>
+        </div>
         <div style={{ display: "flex", gap: 5 }}>
           <button className="btn btn-ghost btn-sm" style={{ width: 35, height: 35, padding: 0, borderRadius: 11, fontSize: 16 }}>{"\u{1F514}"}</button>
           <button className="btn btn-ghost btn-sm" style={{ width: 35, height: 35, padding: 0, borderRadius: 11, fontSize: 16 }} onClick={() => setShowSearch(!showSearch)}>{"\u{1F50D}"}</button>
@@ -144,75 +147,86 @@ export default function HomePage({ user, onJoinRoom }: Props) {
         </div>
       </div>
 
-      <div style={{ padding: "0 16px 10px", display: "flex", gap: 12, overflowX: "auto" }}>
-        {FAKE_USERS_ONLINE.map(u => (
-          <div key={u.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+      <div style={{ padding: "0 16px 14px", display: "flex", gap: 10, overflowX: "auto" }}>
+        {FAKE_USERS_ONLINE.map((u, i) => (
+          <div key={u.name} style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flexShrink: 0,
+            animation: `slide-up 0.3s ease ${i * 0.05}s both`,
+          }}>
             <div style={{ position: "relative" }}>
               <div style={{
-                width: 46, height: 46, borderRadius: 23, fontSize: 22,
-                background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.3)",
+                width: 50, height: 50, borderRadius: 25, fontSize: 24,
+                background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.08))",
+                border: "2px solid rgba(108,92,231,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 2px 12px rgba(108,92,231,0.15)",
               }}>{u.avatar}</div>
-              <div style={{ position: "absolute", bottom: 1, right: 1, width: 10, height: 10, borderRadius: 5, background: "#00e676", border: "1.5px solid #0F0F1A" }} />
+              <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11, borderRadius: 6, background: "#00e676", border: "2px solid #0F0F1A" }} />
             </div>
-            <span style={{ fontSize: 9, color: "rgba(162,155,254,0.5)", width: 46, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</span>
+            <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(162,155,254,0.55)", width: 50, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</span>
           </div>
         ))}
       </div>
 
       {topGifters.length > 0 && !search && (
-        <div style={{ padding: "0 16px 12px" }}>
-          <h3 style={{ fontSize: 13, fontWeight: 800, color: "rgba(162,155,254,0.6)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>{"\u{1F451}"} Top Gifters This Week</h3>
+        <div style={{ padding: "0 16px 14px" }}>
+          <h3 style={{ fontSize: 12, fontWeight: 800, color: "rgba(162,155,254,0.5)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1.5 }}>{"\u{1F451}"} Top Gifters This Week</h3>
           <div style={{
-            display: "flex", gap: 8, overflowX: "auto",
-            background: "rgba(255,215,0,0.04)", border: "1px solid rgba(255,215,0,0.12)",
-            borderRadius: 16, padding: "12px 14px",
+            display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2,
+            background: "linear-gradient(160deg, rgba(255,215,0,0.06), rgba(108,92,231,0.04))",
+            border: "1px solid rgba(255,215,0,0.15)",
+            borderRadius: 18, padding: "14px 12px",
+            boxShadow: "0 2px 16px rgba(255,215,0,0.05)",
           }}>
             {topGifters.map((g, i) => (
-              <div key={g.uid} style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, padding: "4px 8px" }}>
+              <div key={g.uid} style={{
+                display: "flex", alignItems: "center", gap: 10, flexShrink: 0, padding: "6px 10px",
+                background: i === 0 ? "rgba(255,215,0,0.08)" : "transparent",
+                borderRadius: 14,
+              }}>
                 <div style={{ position: "relative" }}>
                   <div style={{
-                    width: 36, height: 36, borderRadius: 18, fontSize: 18,
+                    width: 40, height: 40, borderRadius: 20, fontSize: 20,
                     background: "rgba(108,92,231,0.15)",
-                    border: `2px solid ${MEDAL_COLORS[i] || "rgba(108,92,231,0.3)"}`,
+                    border: `2.5px solid ${MEDAL_COLORS[i] || "rgba(108,92,231,0.3)"}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    boxShadow: i < 3 ? `0 0 10px ${MEDAL_COLORS[i]}33` : "none",
+                    boxShadow: i < 3 ? `0 0 14px ${MEDAL_COLORS[i]}40` : "none",
                   }}>{g.avatar}</div>
                   {i < 3 && (
                     <div style={{
-                      position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: 8,
+                      position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: 9,
                       background: MEDAL_COLORS[i], display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 8, fontWeight: 900, color: i === 0 ? "#000" : "#fff",
-                      border: "1.5px solid #0F0F1A",
+                      fontSize: 9, fontWeight: 900, color: i === 0 ? "#000" : "#fff",
+                      border: "2px solid #0F0F1A", boxShadow: `0 2px 6px ${MEDAL_COLORS[i]}55`,
                     }}>{i + 1}</div>
                   )}
                 </div>
                 <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{g.name}</p>
-                  <p style={{ fontSize: 9, color: "#FFD700", fontWeight: 700 }}>{"\u{1F48E}"} {g.totalCoins.toLocaleString()}</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{g.name}</p>
+                  <p style={{ fontSize: 10, color: "#FFD700", fontWeight: 700 }}>{"\u{1F48E}"} {g.totalCoins.toLocaleString()}</p>
                 </div>
               </div>
             ))}
-            {topGifters.length === 0 && (
-              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", padding: 8 }}>No gifts sent this week yet</p>
-            )}
           </div>
         </div>
       )}
 
       {!search && trending.length > 0 && (
-        <div style={{ padding: "0 16px 12px" }}>
-          <h3 style={{ fontSize: 13, fontWeight: 800, color: "rgba(162,155,254,0.6)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>{"\u{1F525}"} Trending Now</h3>
-          <div style={{ display: "flex", gap: 10, overflowX: "auto" }}>
-            {trending.map(r => (
+        <div style={{ padding: "0 16px 14px" }}>
+          <h3 style={{ fontSize: 12, fontWeight: 800, color: "rgba(162,155,254,0.5)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1.5 }}>{"\u{1F525}"} Trending Now</h3>
+          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2 }}>
+            {trending.map((r, i) => (
               <div key={r.id} onClick={() => onJoinRoom(r)} style={{
-                flexShrink: 0, width: 150, background: "rgba(108,92,231,0.08)",
-                border: "1px solid rgba(108,92,231,0.2)", borderRadius: 16, padding: 14,
+                flexShrink: 0, width: 156,
+                background: "linear-gradient(160deg, rgba(108,92,231,0.12), rgba(108,92,231,0.04))",
+                border: "1px solid rgba(108,92,231,0.2)", borderRadius: 18, padding: "16px 14px",
                 cursor: "pointer", transition: "all 0.2s",
+                boxShadow: "0 4px 16px rgba(108,92,231,0.08)",
+                animation: `slide-up 0.3s ease ${i * 0.08}s both`,
               }}>
-                <div style={{ fontSize: 32, marginBottom: 6 }}>{r.coverEmoji || "\u{1F3A4}"}</div>
-                <p style={{ fontSize: 12, fontWeight: 800, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
-                <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 6 }}>by {r.host}</p>
+                <div style={{ fontSize: 34, marginBottom: 8, filter: "drop-shadow(0 2px 6px rgba(108,92,231,0.3))" }}>{r.coverEmoji || "\u{1F3A4}"}</div>
+                <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
+                <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 8 }}>by {r.host}</p>
                 <div style={{ display: "flex", gap: 6 }}>
                   <span className="badge badge-live" style={{ fontSize: 9 }}><span className="live-dot"/>{r.listeners}</span>
                   <span className="badge badge-accent" style={{ fontSize: 9 }}>{r.topic}</span>

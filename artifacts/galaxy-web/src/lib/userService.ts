@@ -93,7 +93,7 @@ export interface UserProfile {
 }
 
 export const DEFAULT_PROFILE: Partial<UserProfile> = {
-  bio: "Hi there! I'm using ChaloTalk \u{1F31F}",
+  bio: "Hi there! I'm on Galaxy Voice Chat \u{1F31F}",
   gender: "Male",
   birthday: "",
   coins: 500,

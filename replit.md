@@ -3,11 +3,11 @@
 ## Overview
 Two parallel apps sharing Firebase project (`chalotalk-67106`):
 1. **Galaxy Mobile** (`artifacts/galaxy-mobile/`) — React Native (Expo) voice chat app with Agora RTC, Midnight Nebula theme
-2. **Galaxy Web / ChaloTalk** (`artifacts/galaxy-web/`) — React + Vite web app, mobile-first (max-width 400px), dark galaxy theme, multi-auth, Firebase Realtime DB
+2. **Galaxy Web** (`artifacts/galaxy-web/`) — React + Vite web app, mobile-first (max-width 400px), dark galaxy theme, multi-auth, Firebase Realtime DB
 
 ---
 
-## Galaxy Web / ChaloTalk (Production)
+## Galaxy Web (Production)
 
 ### Architecture
 - **Framework**: React + Vite + TypeScript
@@ -22,8 +22,10 @@ Two parallel apps sharing Firebase project (`chalotalk-67106`):
 artifacts/galaxy-web/src/
   App.tsx                  — Root: auth flow, page routing, ToastProvider, online presence,
                              notification bell + panel, chat unread badge
-  index.css                — Global styles, animations (giftFly, giftReveal, giftBounce),
-                             skeleton, toast
+  index.css                — Global styles, Inter font, button animations (scale+ripple),
+                             card hover/press states, skeleton shimmer, page transitions,
+                             animations (giftFly, giftReveal, giftBounce, logoGlow,
+                             speaking-ring, handWave, float, confetti, etc.)
   lib/
     firebase.ts            — Firebase SDK init (auth, db, storage)
     voiceService.ts        — Agora RTC: join/leave/mute, AEC/ANS/AGC, volume monitoring,
