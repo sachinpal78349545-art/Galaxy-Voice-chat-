@@ -1,4 +1,4 @@
-import { ref, set, get, update, push, onValue, off, remove, serverTimestamp } from "firebase/database";
+import { ref, set, get, update, push, onValue, off } from "firebase/database";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage as fbStorage } from "./firebase";
 
@@ -7,8 +7,12 @@ export interface ChatMessage {
   senderId: string;
   text: string;
   timestamp: number;
-  type?: "text" | "image" | "emoji";
+  type?: "text" | "image" | "emoji" | "voice";
   imageUrl?: string;
+  voiceUrl?: string;
+  voiceDuration?: number;
+  status?: "sent" | "delivered" | "seen";
+  reactions?: Record<string, string>;
 }
 
 export interface Conversation {
@@ -20,22 +24,23 @@ export interface Conversation {
   lastTime: number;
   unread: Record<string, number>;
   typing?: Record<string, boolean>;
+  lastSeen?: Record<string, number>;
 }
 
 const FAKE_CONTACTS = [
-  { id: "fake_1", name: "StarGazer", avatar: "🌟", lastMsg: "Hey! Let's voice chat 🎤" },
-  { id: "fake_2", name: "CosmicDJ", avatar: "🎵", lastMsg: "That room was fire 🔥" },
-  { id: "fake_3", name: "LunaRose", avatar: "🌙", lastMsg: "Want to collab? 💫" },
-  { id: "fake_4", name: "NightOwl", avatar: "🦉", lastMsg: "GM! Good energy today 🌟" },
-  { id: "fake_5", name: "VoidWalker", avatar: "🌌", lastMsg: "Thanks for the gift! ❤️" },
-  { id: "fake_6", name: "NebulaDev", avatar: "💻", lastMsg: "Let me know when you're online" },
+  { id: "fake_1", name: "StarGazer", avatar: "\u{1F31F}", lastMsg: "Hey! Let's voice chat \u{1F3A4}" },
+  { id: "fake_2", name: "CosmicDJ", avatar: "\u{1F3B5}", lastMsg: "That room was fire \u{1F525}" },
+  { id: "fake_3", name: "LunaRose", avatar: "\u{1F319}", lastMsg: "Want to collab? \u{1F4AB}" },
+  { id: "fake_4", name: "NightOwl", avatar: "\u{1F989}", lastMsg: "GM! Good energy today \u{1F31F}" },
+  { id: "fake_5", name: "VoidWalker", avatar: "\u{1F30C}", lastMsg: "Thanks for the gift! \u2764\uFE0F" },
+  { id: "fake_6", name: "NebulaDev", avatar: "\u{1F4BB}", lastMsg: "Let me know when you're online" },
 ];
 
 const AUTO_REPLIES = [
-  "That's so cool! 🔥", "Haha agreed! 😂", "Send me the link!", "For real? 🤯",
-  "Totally vibe with that ✨", "Let's do it! 🚀", "❤️", "💯", "Sounds good!",
-  "I'm in! 🎉", "What time? ⏰", "Miss you in the room!", "Omg yes! 🙌",
-  "Can't wait! 🌟", "That's amazing 💎",
+  "That's so cool! \u{1F525}", "Haha agreed! \u{1F602}", "Send me the link!", "For real? \u{1F92F}",
+  "Totally vibe with that \u2728", "Let's do it! \u{1F680}", "\u2764\uFE0F", "\u{1F4AF}", "Sounds good!",
+  "I'm in! \u{1F389}", "What time? \u23F0", "Miss you in the room!", "Omg yes! \u{1F64C}",
+  "Can't wait! \u{1F31F}", "That's amazing \u{1F48E}",
 ];
 
 export async function seedConversations(userId: string, userName: string, userAvatar: string): Promise<void> {
@@ -62,6 +67,7 @@ export async function seedConversations(userId: string, userName: string, userAv
       text: fc.lastMsg,
       timestamp: conv.lastTime,
       type: "text",
+      status: "delivered",
     });
   }
 }
@@ -129,7 +135,14 @@ export function subscribeMessages(convId: string, cb: (msgs: ChatMessage[]) => v
 
 export async function sendMessage(convId: string, senderId: string, text: string, type: "text" | "emoji" = "text"): Promise<void> {
   const msgRef = push(ref(db, `messages/${convId}`));
-  await set(msgRef, { senderId, text, timestamp: Date.now(), type });
+  await set(msgRef, { senderId, text, timestamp: Date.now(), type, status: "sent" });
+
+  setTimeout(async () => {
+    try {
+      await update(ref(db, `messages/${convId}/${msgRef.key}`), { status: "delivered" });
+    } catch (e) { console.warn("Status update error:", e); }
+  }, 800);
+
   await update(ref(db, `conversations/${convId}`), {
     lastMessage: type === "emoji" ? text : text.slice(0, 60),
     lastTime: Date.now(),
@@ -147,9 +160,13 @@ export async function sendMessage(convId: string, senderId: string, text: string
 
     if (otherId && otherId.startsWith("fake_")) {
       setTimeout(async () => {
+        await update(ref(db, `messages/${convId}/${msgRef.key}`), { status: "seen" });
+      }, 1000);
+
+      setTimeout(async () => {
         const reply = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)];
         const replyRef = push(ref(db, `messages/${convId}`));
-        await set(replyRef, { senderId: otherId, text: reply, timestamp: Date.now(), type: "text" });
+        await set(replyRef, { senderId: otherId, text: reply, timestamp: Date.now(), type: "text", status: "delivered" });
         await update(ref(db, `conversations/${convId}`), {
           lastMessage: reply, lastTime: Date.now(),
           [`unread/${senderId}`]: ((conv.unread || {})[senderId] || 0) + 1,
@@ -166,8 +183,74 @@ export async function sendImageMessage(convId: string, senderId: string, file: F
   const url = await getDownloadURL(sRef);
 
   const msgRef = push(ref(db, `messages/${convId}`));
-  await set(msgRef, { senderId, text: "📷 Photo", timestamp: Date.now(), type: "image", imageUrl: url });
-  await update(ref(db, `conversations/${convId}`), { lastMessage: "📷 Photo", lastTime: Date.now() });
+  await set(msgRef, { senderId, text: "\u{1F4F7} Photo", timestamp: Date.now(), type: "image", imageUrl: url, status: "sent" });
+  await update(ref(db, `conversations/${convId}`), { lastMessage: "\u{1F4F7} Photo", lastTime: Date.now() });
+
+  setTimeout(async () => {
+    try {
+      await update(ref(db, `messages/${convId}/${msgRef.key}`), { status: "delivered" });
+    } catch (e) { console.warn("Status update error:", e); }
+  }, 800);
+}
+
+export async function sendVoiceMessage(convId: string, senderId: string, audioBlob: Blob, duration: number): Promise<void> {
+  const path = `chatVoice/${convId}/${Date.now()}.webm`;
+  const sRef = storageRef(fbStorage, path);
+  await uploadBytes(sRef, audioBlob);
+  const url = await getDownloadURL(sRef);
+
+  const msgRef = push(ref(db, `messages/${convId}`));
+  await set(msgRef, {
+    senderId,
+    text: "\u{1F3A4} Voice message",
+    timestamp: Date.now(),
+    type: "voice",
+    voiceUrl: url,
+    voiceDuration: Math.round(duration),
+    status: "sent",
+  });
+  await update(ref(db, `conversations/${convId}`), { lastMessage: "\u{1F3A4} Voice message", lastTime: Date.now() });
+
+  const convSnap = await get(ref(db, `conversations/${convId}`));
+  if (convSnap.exists()) {
+    const conv = convSnap.val();
+    const otherId = conv.participants.find((p: string) => p !== senderId);
+    if (otherId) {
+      const unread = conv.unread || {};
+      unread[otherId] = (unread[otherId] || 0) + 1;
+      await update(ref(db, `conversations/${convId}`), { unread });
+    }
+  }
+
+  setTimeout(async () => {
+    try {
+      await update(ref(db, `messages/${convId}/${msgRef.key}`), { status: "delivered" });
+    } catch (e) { console.warn("Status update error:", e); }
+  }, 800);
+}
+
+export async function addReaction(convId: string, msgId: string, userId: string, emoji: string): Promise<void> {
+  await update(ref(db, `messages/${convId}/${msgId}/reactions`), { [userId]: emoji });
+}
+
+export async function removeReaction(convId: string, msgId: string, userId: string): Promise<void> {
+  await set(ref(db, `messages/${convId}/${msgId}/reactions/${userId}`), null);
+}
+
+export async function markMessagesSeen(convId: string, userId: string): Promise<void> {
+  const snap = await get(ref(db, `messages/${convId}`));
+  if (!snap.exists()) return;
+  const val = snap.val();
+  const updates: Record<string, string> = {};
+  Object.keys(val).forEach(k => {
+    const msg = val[k];
+    if (msg.senderId !== userId && msg.status !== "seen") {
+      updates[`messages/${convId}/${k}/status`] = "seen";
+    }
+  });
+  if (Object.keys(updates).length > 0) {
+    await update(ref(db), updates);
+  }
 }
 
 export async function setTyping(convId: string, userId: string, typing: boolean): Promise<void> {
@@ -189,6 +272,7 @@ export function subscribeTyping(convId: string, cb: (typing: Record<string, bool
 export async function markRead(convId: string, userId: string): Promise<void> {
   try {
     await update(ref(db, `conversations/${convId}/unread`), { [userId]: 0 });
+    await markMessagesSeen(convId, userId);
   } catch (err) {
     console.warn("Mark read error:", err);
   }
@@ -206,7 +290,7 @@ export async function getOrCreateConversation(
     participants: [userId, otherId],
     participantNames: [userName, otherName],
     participantAvatars: [userAvatar, otherAvatar],
-    lastMessage: "Say hello! 👋",
+    lastMessage: "Say hello! \u{1F44B}",
     lastTime: Date.now(),
     unread: { [userId]: 0, [otherId]: 0 },
   };

@@ -1,9 +1,9 @@
-import { ref, set, get, update, onValue, off, onDisconnect, runTransaction } from "firebase/database";
+import { ref, set, get, update, onValue, off, onDisconnect, runTransaction, push } from "firebase/database";
 import { db } from "./firebase";
 
 export interface Transaction {
   id: string;
-  type: "recharge" | "gift_sent" | "gift_received" | "daily_reward" | "xp_reward";
+  type: "recharge" | "gift_sent" | "gift_received" | "daily_reward" | "xp_reward" | "task_reward" | "earnings";
   amount: number;
   description: string;
   timestamp: number;
@@ -16,6 +16,34 @@ export interface Achievement {
   description: string;
   unlocked: boolean;
   unlockedAt?: number;
+}
+
+export interface FriendRequest {
+  id: string;
+  fromUid: string;
+  fromName: string;
+  fromAvatar: string;
+  toUid: string;
+  status: "pending" | "accepted" | "rejected";
+  timestamp: number;
+}
+
+export interface Report {
+  id: string;
+  reporterUid: string;
+  reportedUid: string;
+  reason: string;
+  details: string;
+  timestamp: number;
+}
+
+export interface DailyTask {
+  id: string;
+  title: string;
+  icon: string;
+  reward: number;
+  target: number;
+  field: string;
 }
 
 export interface UserProfile {
@@ -42,10 +70,22 @@ export interface UserProfile {
   };
   followingList?: string[];
   followersList?: string[];
+  friendsList?: string[];
+  blockedList?: string[];
   transactions?: Record<string, Transaction>;
   achievements?: Record<string, Achievement>;
   roomsJoined?: number;
   messagesSent?: number;
+  giftsGiven?: number;
+  totalEarnings?: number;
+  privacy?: {
+    profileVisible: boolean;
+    showOnline: boolean;
+    allowMessages: "everyone" | "friends" | "nobody";
+    allowGifts: boolean;
+  };
+  dailyTasks?: Record<string, { progress: number; completed: boolean; claimedAt?: number }>;
+  lastTaskReset?: number;
 }
 
 export const DEFAULT_PROFILE: Partial<UserProfile> = {
@@ -63,6 +103,14 @@ export const DEFAULT_PROFILE: Partial<UserProfile> = {
   lastSeen: Date.now(),
   roomsJoined: 0,
   messagesSent: 0,
+  giftsGiven: 0,
+  totalEarnings: 0,
+  privacy: {
+    profileVisible: true,
+    showOnline: true,
+    allowMessages: "everyone",
+    allowGifts: true,
+  },
 };
 
 export const AVATAR_LIST = [
@@ -83,6 +131,13 @@ const ALL_ACHIEVEMENTS: Achievement[] = [
   { id: "streak_7", title: "Dedicated", icon: "\u{1F525}", description: "7-day login streak", unlocked: false },
   { id: "gift_sender", title: "Generous", icon: "\u{1F381}", description: "Send your first gift", unlocked: false },
   { id: "follower_10", title: "Popular", icon: "\u{1F31F}", description: "Get 10 followers", unlocked: false },
+];
+
+export const DAILY_TASKS: DailyTask[] = [
+  { id: "join_room", title: "Join a Voice Room", icon: "\u{1F3A4}", reward: 30, target: 1, field: "roomsJoined" },
+  { id: "send_messages", title: "Send 10 Messages", icon: "\u{1F4AC}", reward: 25, target: 10, field: "messagesSent" },
+  { id: "send_gift", title: "Send a Gift", icon: "\u{1F381}", reward: 40, target: 1, field: "giftsGiven" },
+  { id: "login_daily", title: "Daily Login", icon: "\u2705", reward: 20, target: 1, field: "loginToday" },
 ];
 
 export async function initUser(uid: string, name: string, email: string, avatar: string): Promise<UserProfile> {
@@ -190,6 +245,153 @@ export async function unfollowUser(myUid: string, targetUid: string): Promise<vo
   });
 }
 
+export async function blockUser(myUid: string, targetUid: string): Promise<void> {
+  const snap = await get(ref(db, `users/${myUid}/blockedList`));
+  const blocked: string[] = snap.exists() ? snap.val() : [];
+  if (blocked.includes(targetUid)) return;
+  blocked.push(targetUid);
+  await update(ref(db, `users/${myUid}`), { blockedList: blocked });
+  await unfollowUser(myUid, targetUid);
+  await unfollowUser(targetUid, myUid);
+}
+
+export async function unblockUser(myUid: string, targetUid: string): Promise<void> {
+  const snap = await get(ref(db, `users/${myUid}/blockedList`));
+  const blocked: string[] = snap.exists() ? snap.val() : [];
+  await update(ref(db, `users/${myUid}`), { blockedList: blocked.filter(id => id !== targetUid) });
+}
+
+export function isBlocked(profile: UserProfile, targetUid: string): boolean {
+  return (profile.blockedList || []).includes(targetUid);
+}
+
+export async function sendFriendRequest(fromUid: string, fromName: string, fromAvatar: string, toUid: string): Promise<void> {
+  const reqRef = push(ref(db, `friendRequests/${toUid}`));
+  await set(reqRef, {
+    id: reqRef.key,
+    fromUid,
+    fromName,
+    fromAvatar,
+    toUid,
+    status: "pending",
+    timestamp: Date.now(),
+  });
+}
+
+export function subscribeFriendRequests(uid: string, cb: (reqs: FriendRequest[]) => void): () => void {
+  const r = ref(db, `friendRequests/${uid}`);
+  onValue(r, snap => {
+    if (!snap.exists()) { cb([]); return; }
+    const val = snap.val();
+    const reqs: FriendRequest[] = Object.keys(val).map(k => ({ ...val[k], id: k }));
+    reqs.sort((a, b) => b.timestamp - a.timestamp);
+    cb(reqs.filter(r => r.status === "pending"));
+  });
+  return () => off(r);
+}
+
+export async function respondFriendRequest(myUid: string, reqId: string, accept: boolean): Promise<void> {
+  const reqSnap = await get(ref(db, `friendRequests/${myUid}/${reqId}`));
+  if (!reqSnap.exists()) return;
+  const req = reqSnap.val() as FriendRequest;
+
+  await update(ref(db, `friendRequests/${myUid}/${reqId}`), { status: accept ? "accepted" : "rejected" });
+
+  if (accept) {
+    const mySnap = await get(ref(db, `users/${myUid}/friendsList`));
+    const theirSnap = await get(ref(db, `users/${req.fromUid}/friendsList`));
+    const myFriends: string[] = mySnap.exists() ? mySnap.val() : [];
+    const theirFriends: string[] = theirSnap.exists() ? theirSnap.val() : [];
+
+    if (!myFriends.includes(req.fromUid)) myFriends.push(req.fromUid);
+    if (!theirFriends.includes(myUid)) theirFriends.push(myUid);
+
+    await update(ref(db, `users/${myUid}`), { friendsList: myFriends, friends: myFriends.length });
+    await update(ref(db, `users/${req.fromUid}`), { friendsList: theirFriends, friends: theirFriends.length });
+    await followUser(myUid, req.fromUid);
+    await followUser(req.fromUid, myUid);
+  }
+}
+
+export async function removeFriend(myUid: string, friendUid: string): Promise<void> {
+  const mySnap = await get(ref(db, `users/${myUid}/friendsList`));
+  const theirSnap = await get(ref(db, `users/${friendUid}/friendsList`));
+  const myFriends: string[] = mySnap.exists() ? mySnap.val().filter((id: string) => id !== friendUid) : [];
+  const theirFriends: string[] = theirSnap.exists() ? theirSnap.val().filter((id: string) => id !== myUid) : [];
+
+  await update(ref(db, `users/${myUid}`), { friendsList: myFriends, friends: myFriends.length });
+  await update(ref(db, `users/${friendUid}`), { friendsList: theirFriends, friends: theirFriends.length });
+}
+
+export async function reportUser(reporterUid: string, reportedUid: string, reason: string, details: string): Promise<void> {
+  const rRef = push(ref(db, "reports"));
+  await set(rRef, {
+    id: rRef.key,
+    reporterUid,
+    reportedUid,
+    reason,
+    details,
+    timestamp: Date.now(),
+  });
+}
+
+export async function updatePrivacy(uid: string, privacy: UserProfile["privacy"]): Promise<void> {
+  await update(ref(db, `users/${uid}`), { privacy });
+}
+
+export function getDailyTaskProgress(profile: UserProfile): Array<DailyTask & { progress: number; completed: boolean }> {
+  const today = new Date().toDateString();
+  const lastReset = profile.lastTaskReset ? new Date(profile.lastTaskReset).toDateString() : "";
+  const tasks = profile.dailyTasks || {};
+
+  return DAILY_TASKS.map(task => {
+    if (lastReset !== today) {
+      return { ...task, progress: task.id === "login_daily" ? 1 : 0, completed: false };
+    }
+    const t = tasks[task.id];
+    return {
+      ...task,
+      progress: t?.progress ?? (task.id === "login_daily" ? 1 : 0),
+      completed: t?.completed ?? false,
+    };
+  });
+}
+
+export async function updateDailyTaskProgress(uid: string, taskId: string, increment: number = 1): Promise<void> {
+  const today = new Date().toDateString();
+  const snap = await get(ref(db, `users/${uid}`));
+  if (!snap.exists()) return;
+  const profile = snap.val() as UserProfile;
+
+  const lastReset = profile.lastTaskReset ? new Date(profile.lastTaskReset).toDateString() : "";
+  let tasks = profile.dailyTasks || {};
+
+  if (lastReset !== today) {
+    tasks = {};
+    await update(ref(db, `users/${uid}`), { lastTaskReset: Date.now(), dailyTasks: tasks });
+  }
+
+  const task = DAILY_TASKS.find(t => t.id === taskId);
+  if (!task) return;
+
+  const current = tasks[taskId] || { progress: 0, completed: false };
+  if (current.completed) return;
+
+  const newProgress = Math.min(current.progress + increment, task.target);
+  const completed = newProgress >= task.target;
+
+  const updateData: Record<string, unknown> = { progress: newProgress, completed };
+  if (completed) updateData.claimedAt = Date.now();
+
+  await update(ref(db, `users/${uid}/dailyTasks/${taskId}`), updateData);
+
+  if (completed && !current.completed) {
+    const coinsRef = ref(db, `users/${uid}/coins`);
+    await runTransaction(coinsRef, (c: number | null) => (c ?? 0) + task.reward);
+    await addTransaction(uid, { type: "task_reward", amount: task.reward, description: `Task: ${task.title}` });
+  }
+}
+
 export async function claimDailyReward(uid: string, _profile: UserProfile): Promise<{ coins: number; streak: number } | null> {
   const now = Date.now();
 
@@ -223,6 +425,8 @@ export async function claimDailyReward(uid: string, _profile: UserProfile): Prom
     description: `Day ${streak} reward (+${bonusCoins} streak bonus)`,
   });
 
+  await updateDailyTaskProgress(uid, "login_daily");
+
   const updatedSnap = await get(ref(db, `users/${uid}`));
   if (updatedSnap.exists()) {
     await checkAchievements(uid, { ...updatedSnap.val(), uid });
@@ -249,6 +453,9 @@ export async function sendGift(senderUid: string, _senderProfile: UserProfile, r
 
   await addTransaction(senderUid, { type: "gift_sent", amount: -cost, description: `Sent ${giftEmoji} gift` });
 
+  const giftsRef = ref(db, `users/${senderUid}/giftsGiven`);
+  await runTransaction(giftsRef, (c: number | null) => (c ?? 0) + 1);
+
   if (recipientUid) {
     const recipientCoinsRef = ref(db, `users/${recipientUid}/coins`);
     const creditAmount = Math.floor(cost * 0.8);
@@ -256,7 +463,12 @@ export async function sendGift(senderUid: string, _senderProfile: UserProfile, r
       return (currentCoins ?? 0) + creditAmount;
     });
     await addTransaction(recipientUid, { type: "gift_received", amount: creditAmount, description: `Received ${giftEmoji} gift` });
+
+    const earningsRef = ref(db, `users/${recipientUid}/totalEarnings`);
+    await runTransaction(earningsRef, (c: number | null) => (c ?? 0) + creditAmount);
   }
+
+  await updateDailyTaskProgress(senderUid, "send_gift");
 
   const freshSnap = await get(ref(db, `users/${senderUid}`));
   if (freshSnap.exists()) {
@@ -270,6 +482,12 @@ export async function incrementStat(uid: string, stat: "roomsJoined" | "messages
   await runTransaction(statRef, (current: number | null) => {
     return (current ?? 0) + 1;
   });
+
+  if (stat === "roomsJoined") {
+    await updateDailyTaskProgress(uid, "join_room");
+  } else if (stat === "messagesSent") {
+    await updateDailyTaskProgress(uid, "send_messages");
+  }
 }
 
 export async function checkAchievements(uid: string, profile: UserProfile): Promise<string[]> {
@@ -286,6 +504,7 @@ export async function checkAchievements(uid: string, profile: UserProfile): Prom
     messages_500: (profile.messagesSent || 0) >= 500,
     rooms_10: (profile.roomsJoined || 0) >= 10,
     streak_7: (profile.dailyReward?.streak || 0) >= 7,
+    gift_sender: (profile.giftsGiven || 0) >= 1,
     follower_10: (profile.followers || 0) >= 10,
   };
 
@@ -302,4 +521,14 @@ export async function checkAchievements(uid: string, profile: UserProfile): Prom
 export function getAchievementsList(profile: UserProfile): Achievement[] {
   if (!profile.achievements) return ALL_ACHIEVEMENTS;
   return ALL_ACHIEVEMENTS.map(a => profile.achievements?.[a.id] || a);
+}
+
+export async function searchUsers(query: string): Promise<UserProfile[]> {
+  const snap = await get(ref(db, "users"));
+  if (!snap.exists()) return [];
+  const val = snap.val();
+  const q = query.toLowerCase();
+  return Object.values(val)
+    .filter((u: any) => u.name?.toLowerCase().includes(q))
+    .slice(0, 20) as UserProfile[];
 }

@@ -212,5 +212,21 @@ textarea.input-field { resize: none; line-height: 1.5; }
   50%     { opacity: 1; transform: translateY(-3px); }
 }
 
+@keyframes giftFly {
+  0%   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+  40%  { opacity: 1; transform: translateY(-120px) scale(1.5) rotate(15deg); }
+  100% { opacity: 0; transform: translateY(-320px) scale(0.5) rotate(-30deg); }
+}
+@keyframes giftReveal {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.3); }
+  20%  { opacity: 1; transform: translateX(-50%) scale(1.1); }
+  80%  { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+}
+@keyframes giftBounce {
+  0%,100% { transform: scale(1) rotate(-5deg); }
+  50%     { transform: scale(1.15) rotate(5deg); }
+}
+
 .anim-slide-up { animation: slide-up 0.3s ease forwards; }
 .anim-pop-in   { animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }

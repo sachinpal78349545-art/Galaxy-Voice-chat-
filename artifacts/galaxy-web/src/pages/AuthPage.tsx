@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInAnonymously } from "firebase/auth";
 import { auth } from "../lib/firebase";
 
 interface Props { onDone: () => void; }
@@ -7,6 +7,11 @@ interface Props { onDone: () => void; }
 export default function AuthPage({ onDone }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showOTP, setShowOTP] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   const signInWithGoogle = async () => {
     setLoading(true);
@@ -17,7 +22,6 @@ export default function AuthPage({ onDone }: Props) {
       await signInWithPopup(auth, provider);
       onDone();
     } catch (e: any) {
-      // Fallback to redirect in iframe environments
       if (e.code === "auth/popup-blocked" || e.code === "auth/popup-closed-by-user") {
         try {
           await signInWithRedirect(auth, provider);
@@ -34,29 +38,163 @@ export default function AuthPage({ onDone }: Props) {
     }
   };
 
+  const handleSendOTP = async () => {
+    if (phone.length < 10) {
+      setError("Please enter a valid phone number");
+      return;
+    }
+    setOtpLoading(true);
+    setError("");
+    await new Promise(r => setTimeout(r, 1500));
+    setOtpSent(true);
+    setOtpLoading(false);
+  };
+
+  const handleVerifyOTP = async () => {
+    if (otpCode.length !== 6) {
+      setError("Please enter a 6-digit code");
+      return;
+    }
+    setOtpLoading(true);
+    setError("");
+    try {
+      await signInAnonymously(auth);
+      onDone();
+    } catch (e: any) {
+      setError("Verification failed. Please try again.");
+      setOtpLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await signInAnonymously(auth);
+      onDone();
+    } catch (e: any) {
+      console.warn("Guest login error:", e?.code, e?.message);
+      if (e?.code === "auth/admin-restricted-operation" || e?.code === "auth/operation-not-allowed") {
+        setError("Guest login is not enabled. Please use Google or Phone login.");
+      } else {
+        setError("Guest login failed. Please try again.");
+      }
+      setLoading(false);
+    }
+  };
+
+  if (showOTP) {
+    return (
+      <div style={{
+        height: "100%", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", padding: "32px 24px", gap: 24,
+      }}>
+        <button onClick={() => { setShowOTP(false); setOtpSent(false); setError(""); }} style={{
+          position: "absolute", top: 52, left: 16, background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, width: 38, height: 38,
+          cursor: "pointer", fontSize: 18, color: "#fff",
+        }}>{"\u2039"}</button>
+
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 52, marginBottom: 10 }}>{"\u{1F4F1}"}</div>
+          <h2 style={{ fontSize: 22, fontWeight: 900 }}>{otpSent ? "Enter Code" : "Phone Login"}</h2>
+          <p style={{ color: "rgba(162,155,254,0.5)", fontSize: 13, marginTop: 6 }}>
+            {otpSent ? `We sent a code to ${phone}` : "Enter your phone number to get started"}
+          </p>
+        </div>
+
+        {!otpSent ? (
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+            <input
+              className="input-field"
+              placeholder="+1 234 567 8900"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              style={{ borderRadius: 22, padding: "16px 18px", fontSize: 16, textAlign: "center", letterSpacing: 1 }}
+              type="tel"
+            />
+            <button onClick={handleSendOTP} disabled={otpLoading} style={{
+              width: "100%", padding: "16px", borderRadius: 22, border: "none", cursor: otpLoading ? "not-allowed" : "pointer",
+              background: "linear-gradient(135deg,#6C5CE7,#A29BFE)", color: "#fff",
+              fontSize: 15, fontWeight: 800, fontFamily: "inherit",
+              boxShadow: "0 4px 24px rgba(108,92,231,0.4)",
+            }}>
+              {otpLoading ? "Sending..." : "Send Code"}
+            </button>
+          </div>
+        ) : (
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              {[0, 1, 2, 3, 4, 5].map(i => (
+                <input
+                  key={i}
+                  maxLength={1}
+                  value={otpCode[i] || ""}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val.length <= 1 && /^\d*$/.test(val)) {
+                      const newCode = otpCode.split("");
+                      newCode[i] = val;
+                      setOtpCode(newCode.join(""));
+                      if (val && i < 5) {
+                        const next = e.target.nextElementSibling as HTMLInputElement;
+                        next?.focus();
+                      }
+                    }
+                  }}
+                  style={{
+                    width: 44, height: 52, borderRadius: 14, border: "1px solid rgba(108,92,231,0.3)",
+                    background: "rgba(255,255,255,0.04)", color: "#fff", fontSize: 22, fontWeight: 800,
+                    textAlign: "center", fontFamily: "inherit",
+                  }}
+                />
+              ))}
+            </div>
+            <button onClick={handleVerifyOTP} disabled={otpLoading} style={{
+              width: "100%", padding: "16px", borderRadius: 22, border: "none", cursor: otpLoading ? "not-allowed" : "pointer",
+              background: "linear-gradient(135deg,#6C5CE7,#A29BFE)", color: "#fff",
+              fontSize: 15, fontWeight: 800, fontFamily: "inherit",
+              boxShadow: "0 4px 24px rgba(108,92,231,0.4)",
+            }}>
+              {otpLoading ? "Verifying..." : "Verify"}
+            </button>
+            <p style={{ fontSize: 12, color: "rgba(162,155,254,0.4)", textAlign: "center" }}>
+              Demo mode: any 6-digit code works
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div style={{
+            background: "rgba(255,100,130,0.1)", border: "1px solid rgba(255,100,130,0.25)",
+            borderRadius: 14, padding: "12px 16px", fontSize: 13, color: "#ff6482", textAlign: "center", width: "100%",
+          }}>{error}</div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{
       height: "100%", display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", padding: "32px 24px", gap: 28,
     }}>
-      {/* Logo */}
       <div style={{ textAlign: "center", animation: "float 3.5s ease-in-out infinite" }}>
-        <div style={{ fontSize: 72, marginBottom: 10, filter: "drop-shadow(0 0 20px rgba(108,92,231,0.6))" }}>🌌</div>
+        <div style={{ fontSize: 72, marginBottom: 10, filter: "drop-shadow(0 0 20px rgba(108,92,231,0.6))" }}>{"\u{1F30C}"}</div>
         <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: -1,
           background: "linear-gradient(135deg,#A29BFE,#6C5CE7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
           ChaloTalk
         </h1>
         <p style={{ color: "rgba(162,155,254,0.5)", fontSize: 14, marginTop: 6 }}>
-          Find your voice, find your galaxy ✨
+          Find your voice, find your galaxy {"\u2728"}
         </p>
       </div>
 
-      {/* Features */}
       <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
         {[
-          { icon: "🎤", text: "Live voice rooms with real people" },
-          { icon: "🌟", text: "Level up, earn coins & VIP badges" },
-          { icon: "💬", text: "Chat & connect with the community" },
+          { icon: "\u{1F3A4}", text: "Live voice rooms with real people" },
+          { icon: "\u{1F31F}", text: "Level up, earn coins & VIP badges" },
+          { icon: "\u{1F4AC}", text: "Chat & connect with the community" },
         ].map(f => (
           <div key={f.text} style={{
             display: "flex", alignItems: "center", gap: 12,
@@ -69,7 +207,6 @@ export default function AuthPage({ onDone }: Props) {
         ))}
       </div>
 
-      {/* Google Sign In */}
       <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
         <button
           onClick={signInWithGoogle}
@@ -101,6 +238,25 @@ export default function AuthPage({ onDone }: Props) {
           )}
         </button>
 
+        <button onClick={() => setShowOTP(true)} style={{
+          width: "100%", padding: "16px", borderRadius: 22,
+          border: "1px solid rgba(108,92,231,0.3)", cursor: "pointer",
+          background: "rgba(108,92,231,0.1)", color: "#A29BFE",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+          fontSize: 15, fontWeight: 800, fontFamily: "inherit",
+        }}>
+          {"\u{1F4F1}"} Login with Phone
+        </button>
+
+        <button onClick={handleGuestLogin} disabled={loading} style={{
+          width: "100%", padding: "14px", borderRadius: 22,
+          border: "1px solid rgba(255,255,255,0.08)", cursor: loading ? "not-allowed" : "pointer",
+          background: "rgba(255,255,255,0.03)", color: "rgba(162,155,254,0.6)",
+          fontSize: 13, fontWeight: 600, fontFamily: "inherit",
+        }}>
+          Continue as Guest
+        </button>
+
         {error && (
           <div style={{
             background: "rgba(255,100,130,0.1)", border: "1px solid rgba(255,100,130,0.25)",
@@ -111,7 +267,7 @@ export default function AuthPage({ onDone }: Props) {
               <div style={{ marginTop: 8 }}>
                 <a href={window.location.href} target="_blank" rel="noreferrer"
                   style={{ color: "#A29BFE", textDecoration: "underline" }}>
-                  Open in new tab →
+                  Open in new tab {"\u2192"}
                 </a>
               </div>
             )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser } from "../lib/userService";
-import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, setTyping, subscribeTyping, markRead } from "../lib/chatService";
+import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked } from "../lib/userService";
+import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, sendVoiceMessage, addReaction, setTyping, subscribeTyping, markRead } from "../lib/chatService";
+import { sendNotification } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
 
 interface Props { user: UserProfile; }
@@ -12,6 +13,8 @@ const EMOJI_GRID = [
   "\u{1F31F}","\u2728","\u{1F389}","\u{1F381}","\u{1F680}","\u{1F30C}","\u{1F48E}","\u{1F4AF}",
 ];
 
+const REACTION_EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u{1F602}", "\u{1F44D}", "\u{1F62E}", "\u{1F622}"];
+
 export default function ChatsPage({ user }: Props) {
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,9 +23,16 @@ export default function ChatsPage({ user }: Props) {
   const [input, setInput] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [typing, setTypingState] = useState<Record<string, boolean>>({});
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
+  const [reactionMsgId, setReactionMsgId] = useState<string | null>(null);
   const msgEnd = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
+  const recordTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordStartTime = useRef(0);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -55,6 +65,13 @@ export default function ChatsPage({ user }: Props) {
       setShowEmojiPicker(false);
       setTyping(active.id, user.uid, false);
       incrementStat(user.uid, "messagesSent").catch(err => console.error("Stat error:", err));
+      const otherId = active.participants.find(p => p !== user.uid);
+      if (otherId) {
+        sendNotification(otherId, {
+          type: "message", title: "New Message", body: `${user.name}: ${text.slice(0, 50)}`,
+          icon: "\u{1F4AC}", fromUid: user.uid, fromName: user.name,
+        }).catch(err => console.error("Notif error:", err));
+      }
     } catch (err) {
       console.error("Send message error:", err);
       showToast("Failed to send message", "error");
@@ -72,6 +89,53 @@ export default function ChatsPage({ user }: Props) {
       console.error("Image send error:", err);
       showToast("Failed to send image", "error");
     }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+      audioChunks.current = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) audioChunks.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunks.current, { type: "audio/webm" });
+        const duration = (Date.now() - recordStartTime.current) / 1000;
+        if (duration > 0.5 && active) {
+          showToast("Sending voice message...", "info", "\u{1F3A4}");
+          await sendVoiceMessage(active.id, user.uid, blob, duration);
+          showToast("Voice message sent!", "success");
+        }
+      };
+      mr.start();
+      mediaRecorder.current = mr;
+      recordStartTime.current = Date.now();
+      setIsRecording(true);
+      setRecordDuration(0);
+      recordTimer.current = setInterval(() => {
+        setRecordDuration(Math.floor((Date.now() - recordStartTime.current) / 1000));
+      }, 1000);
+    } catch (err) {
+      console.error("Mic error:", err);
+      showToast("Microphone access denied", "error");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
+      mediaRecorder.current.stop();
+    }
+    setIsRecording(false);
+    if (recordTimer.current) {
+      clearInterval(recordTimer.current);
+      recordTimer.current = null;
+    }
+  };
+
+  const handleReaction = async (msgId: string, emoji: string) => {
+    if (!active) return;
+    await addReaction(active.id, msgId, user.uid, emoji);
+    setReactionMsgId(null);
   };
 
   const handleTyping = (val: string) => {
@@ -114,6 +178,10 @@ export default function ChatsPage({ user }: Props) {
         await followUser(user.uid, otherId);
         setIsFollowing(true);
         showToast("Following!", "success", "\u2764\uFE0F");
+        sendNotification(otherId, {
+          type: "follower", title: "New Follower!", body: `${user.name} started following you`,
+          icon: "\u{1F31F}", fromUid: user.uid, fromName: user.name,
+        }).catch(err => console.error("Notif error:", err));
       }
     } catch (err) {
       console.error("Follow/unfollow error:", err);
@@ -123,6 +191,27 @@ export default function ChatsPage({ user }: Props) {
     }
   };
 
+  const handleBlock = async () => {
+    if (!active) return;
+    const otherId = active.participants.find(p => p !== user.uid);
+    if (!otherId) return;
+    await blockUser(user.uid, otherId);
+    setActive(null);
+    showToast("User blocked", "info");
+  };
+
+  const getStatusIcon = (status?: string) => {
+    if (status === "seen") return "\u2714\u2714";
+    if (status === "delivered") return "\u2714\u2714";
+    if (status === "sent") return "\u2714";
+    return "";
+  };
+
+  const getStatusColor = (status?: string) => {
+    if (status === "seen") return "#6C5CE7";
+    return "rgba(162,155,254,0.35)";
+  };
+
   if (active) {
     const otherIdx = active.participants[0] === user.uid ? 1 : 0;
     const statusText = otherTyping ? "typing..." : otherOnline ? "\u25CF Online" : "\u25CB Offline";
@@ -130,57 +219,90 @@ export default function ChatsPage({ user }: Props) {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         <div style={{
-          display: "flex", alignItems: "center", gap: 12,
-          padding: "52px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "52px 12px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
         }}>
           <button onClick={() => { setActive(null); setShowEmojiPicker(false); }} style={{
-            width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontSize: 18, color: "#fff",
+            width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontSize: 16, color: "#fff",
           }}>{"\u2039"}</button>
           <div style={{
-            width: 40, height: 40, borderRadius: 20, fontSize: 20,
+            width: 38, height: 38, borderRadius: 19, fontSize: 18,
             background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.3)",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>{active.participantAvatars[otherIdx]}</div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontWeight: 800, fontSize: 15 }}>{active.participantNames[otherIdx]}</p>
-            <p style={{ fontSize: 11, color: statusColor }}>
-              {statusText}
-            </p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontWeight: 800, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active.participantNames[otherIdx]}</p>
+            <p style={{ fontSize: 10, color: statusColor }}>{statusText}</p>
           </div>
           <button
             className={`btn btn-sm ${isFollowing ? "btn-ghost" : "btn-primary"}`}
-            style={{ fontSize: 11, padding: "5px 12px", borderRadius: 14 }}
+            style={{ fontSize: 10, padding: "4px 10px", borderRadius: 12 }}
             onClick={handleFollow}
             disabled={followLoading}
           >
             {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
           </button>
-          <button className="btn btn-ghost btn-sm" style={{ fontSize: 18, width: 38, height: 38, padding: 0, borderRadius: 12 }}>{"\u{1F4DE}"}</button>
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: 16, width: 34, height: 34, padding: 0, borderRadius: 10 }} onClick={handleBlock}>{"\u{1F6AB}"}</button>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px 6px" }}>
           {msgs.map(msg => {
             const isSelf = msg.senderId === user.uid;
+            const reactions = msg.reactions ? Object.values(msg.reactions) : [];
             return (
-              <div key={msg.id} style={{ display: "flex", justifyContent: isSelf ? "flex-end" : "flex-start", marginBottom: 10, animation: "slide-up 0.2s ease" }}>
-                <div style={{
-                  maxWidth: "74%", padding: msg.type === "image" ? 4 : "10px 14px", lineHeight: 1.45,
-                  borderRadius: isSelf ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  background: isSelf ? "linear-gradient(135deg,#6C5CE7,#A29BFE)" : "rgba(255,255,255,0.07)",
-                  border: isSelf ? "none" : "1px solid rgba(255,255,255,0.08)",
-                  boxShadow: isSelf ? "0 4px 14px rgba(108,92,231,0.3)" : "none",
-                  fontSize: 14, color: "#fff", overflow: "hidden",
-                }}>
+              <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isSelf ? "flex-end" : "flex-start", marginBottom: 10, animation: "slide-up 0.2s ease" }}>
+                <div
+                  style={{
+                    maxWidth: "74%", padding: msg.type === "image" ? 4 : "10px 14px", lineHeight: 1.45,
+                    borderRadius: isSelf ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                    background: isSelf ? "linear-gradient(135deg,#6C5CE7,#A29BFE)" : "rgba(255,255,255,0.07)",
+                    border: isSelf ? "none" : "1px solid rgba(255,255,255,0.08)",
+                    boxShadow: isSelf ? "0 4px 14px rgba(108,92,231,0.3)" : "none",
+                    fontSize: 14, color: "#fff", overflow: "hidden", position: "relative", cursor: "pointer",
+                  }}
+                  onDoubleClick={() => setReactionMsgId(reactionMsgId === msg.id ? null : msg.id)}
+                >
                   {msg.type === "image" && msg.imageUrl ? (
                     <img src={msg.imageUrl} alt="shared" style={{ width: "100%", borderRadius: 14, display: "block" }} />
+                  ) : msg.type === "voice" && msg.voiceUrl ? (
+                    <VoicePlayer url={msg.voiceUrl} duration={msg.voiceDuration || 0} isSelf={isSelf} />
                   ) : (
                     msg.text
                   )}
-                  <div style={{ fontSize: 9, color: isSelf ? "rgba(255,255,255,0.45)" : "rgba(162,155,254,0.35)", marginTop: msg.type === "image" ? 6 : 3, textAlign: "right", padding: msg.type === "image" ? "0 8px 4px" : 0 }}>
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end", marginTop: msg.type === "image" ? 6 : 3, padding: msg.type === "image" ? "0 8px 4px" : 0 }}>
+                    <span style={{ fontSize: 9, color: isSelf ? "rgba(255,255,255,0.45)" : "rgba(162,155,254,0.35)" }}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    {isSelf && (
+                      <span style={{ fontSize: 9, color: getStatusColor(msg.status), fontWeight: msg.status === "seen" ? 700 : 400 }}>
+                        {getStatusIcon(msg.status)}
+                      </span>
+                    )}
                   </div>
                 </div>
+
+                {reactions.length > 0 && (
+                  <div style={{ display: "flex", gap: 2, marginTop: 2, padding: "0 4px" }}>
+                    {reactions.map((r, i) => (
+                      <span key={i} style={{ fontSize: 14, background: "rgba(108,92,231,0.15)", borderRadius: 10, padding: "1px 4px" }}>{r}</span>
+                    ))}
+                  </div>
+                )}
+
+                {reactionMsgId === msg.id && (
+                  <div style={{
+                    display: "flex", gap: 4, marginTop: 4, padding: "4px 8px",
+                    background: "rgba(15,5,30,0.95)", borderRadius: 16,
+                    border: "1px solid rgba(108,92,231,0.2)",
+                    animation: "popIn 0.15s ease",
+                  }}>
+                    {REACTION_EMOJIS.map(e => (
+                      <button key={e} onClick={() => handleReaction(msg.id, e)}
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 2 }}>{e}</button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -216,22 +338,42 @@ export default function ChatsPage({ user }: Props) {
         )}
 
         <div style={{
-          display: "flex", gap: 8, padding: "10px 14px 26px", alignItems: "center",
+          display: "flex", gap: 6, padding: "10px 12px 26px", alignItems: "center",
           borderTop: "1px solid rgba(255,255,255,0.06)",
           background: "rgba(8,4,24,0.85)", backdropFilter: "blur(14px)", flexShrink: 0,
         }}>
-          <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, padding: "0 2px" }}>{"\u{1F60A}"}</button>
-          <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: "0 2px" }}>{"\u{1F4F7}"}</button>
+          <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: "0 2px" }}>{"\u{1F60A}"}</button>
+          <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: "0 2px" }}>{"\u{1F4F7}"}</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSend} />
-          <input
-            className="input-field"
-            style={{ flex: 1, borderRadius: 22, padding: "10px 14px", fontSize: 13 }}
-            placeholder="Message..."
-            value={input}
-            onChange={e => handleTyping(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleSend()}
-          />
-          <button className="btn btn-primary btn-sm" style={{ width: 42, height: 42, padding: 0, borderRadius: 14, flexShrink: 0 }} onClick={handleSend}>{"\u27A4"}</button>
+
+          {isRecording ? (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "rgba(255,100,130,0.1)", borderRadius: 22, border: "1px solid rgba(255,100,130,0.3)" }}>
+              <div style={{ width: 8, height: 8, borderRadius: 4, background: "#ff6482", animation: "pulse-glow 1s infinite" }} />
+              <span style={{ fontSize: 13, color: "#ff6482", fontWeight: 700, flex: 1 }}>{formatDuration(recordDuration)}</span>
+              <button onClick={stopRecording} style={{ background: "rgba(255,100,130,0.2)", border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#ff6482" }}>
+                {"\u23F9"} Send
+              </button>
+            </div>
+          ) : (
+            <>
+              <input
+                className="input-field"
+                style={{ flex: 1, borderRadius: 22, padding: "10px 14px", fontSize: 13 }}
+                placeholder="Message..."
+                value={input}
+                onChange={e => handleTyping(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSend()}
+              />
+              {input.trim() ? (
+                <button className="btn btn-primary btn-sm" style={{ width: 40, height: 40, padding: 0, borderRadius: 14, flexShrink: 0 }} onClick={handleSend}>{"\u27A4"}</button>
+              ) : (
+                <button onClick={startRecording} style={{
+                  width: 40, height: 40, borderRadius: 14, border: "none", cursor: "pointer",
+                  background: "rgba(108,92,231,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#A29BFE", flexShrink: 0,
+                }}>{"\u{1F3A4}"}</button>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
@@ -241,10 +383,6 @@ export default function ChatsPage({ user }: Props) {
     <div className="page-scroll">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "54px 16px 12px" }}>
         <h1 style={{ fontSize: 20, fontWeight: 900 }}>Messages {"\u{1F4AC}"}</h1>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button className="btn btn-ghost btn-sm" style={{ width: 36, height: 36, padding: 0, borderRadius: 12 }}>{"\u{1F50D}"}</button>
-          <button className="btn btn-ghost btn-sm" style={{ width: 36, height: 36, padding: 0, borderRadius: 12 }}>{"\u270F\uFE0F"}</button>
-        </div>
       </div>
 
       <div style={{ padding: "0 14px" }}>
@@ -300,4 +438,51 @@ export default function ChatsPage({ user }: Props) {
       </div>
     </div>
   );
+}
+
+function VoicePlayer({ url, duration, isSelf }: { url: string; duration: number; isSelf: boolean }) {
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const toggle = () => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio(url);
+      audioRef.current.ontimeupdate = () => {
+        if (audioRef.current) setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+      };
+      audioRef.current.onended = () => { setPlaying(false); setProgress(0); };
+    }
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
+    } else {
+      audioRef.current.play();
+      setPlaying(true);
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0", minWidth: 150 }}>
+      <button onClick={toggle} style={{
+        width: 32, height: 32, borderRadius: 16, border: "none", cursor: "pointer",
+        background: isSelf ? "rgba(255,255,255,0.2)" : "rgba(108,92,231,0.3)",
+        color: "#fff", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
+      }}>{playing ? "\u23F8" : "\u25B6"}</button>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)" }}>
+          <div style={{ height: "100%", borderRadius: 2, width: `${progress}%`, background: isSelf ? "rgba(255,255,255,0.5)" : "#6C5CE7", transition: "width 0.1s" }} />
+        </div>
+        <span style={{ fontSize: 10, color: isSelf ? "rgba(255,255,255,0.5)" : "rgba(162,155,254,0.4)" }}>
+          {formatDuration(Math.round(duration))}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function formatDuration(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }

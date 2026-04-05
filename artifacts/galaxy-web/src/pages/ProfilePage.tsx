@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement } from "../lib/userService";
+import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 
 interface Props {
@@ -14,15 +14,15 @@ interface Props {
 const MENU_ITEMS = [
   { icon: "\u270F\uFE0F", label: "Edit Profile", action: "edit" },
   { icon: "\u{1F4B0}", label: "My Wallet", action: "wallet" },
-  { icon: "\u{1F4CA}", label: "My Activity", action: "" },
-  { icon: "\u2705", label: "Daily Tasks", action: "daily" },
-  { icon: "\u{1F4D6}", label: "Stories", action: "" },
+  { icon: "\u2705", label: "Daily Tasks", action: "dailyTasks" },
+  { icon: "\u{1F381}", label: "Daily Reward", action: "daily" },
+  { icon: "\u{1F91D}", label: "Friend Requests", action: "friendRequests" },
+  { icon: "\u{1F465}", label: "Friends List", action: "friendsList" },
   { icon: "\u{1F3C6}", label: "Achievements", action: "achievements" },
-  { icon: "\u{1F512}", label: "Privacy Settings", action: "" },
-  { icon: "\u{1F514}", label: "Notifications", action: "" },
-  { icon: "\u{1F6AB}", label: "Blocked Users", action: "" },
-  { icon: "\u2753", label: "Help & Support", action: "" },
-  { icon: "\u26A0\uFE0F", label: "Report Issue", action: "" },
+  { icon: "\u{1F512}", label: "Privacy Settings", action: "privacy" },
+  { icon: "\u{1F6AB}", label: "Blocked Users", action: "blocked" },
+  { icon: "\u{1F50D}", label: "Find Users", action: "search" },
+  { icon: "\u26A0\uFE0F", label: "Report Issue", action: "report" },
 ];
 
 const RECHARGE_PACKAGES = [
@@ -32,18 +32,63 @@ const RECHARGE_PACKAGES = [
   { coins: 5000, price: "$29.99", bonus: "+1000 Bonus" },
 ];
 
+const REPORT_REASONS = ["Harassment", "Spam", "Inappropriate Content", "Fake Profile", "Scam", "Other"];
+
 export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }: Props) {
   const [showWallet, setShowWallet] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showDailyTasks, setShowDailyTasks] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showBlocked, setShowBlocked] = useState(false);
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const [showFriendsList, setShowFriendsList] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [recharging, setRecharging] = useState<number | null>(null);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [friendProfiles, setFriendProfiles] = useState<UserProfile[]>([]);
+  const [blockedProfiles, setBlockedProfiles] = useState<UserProfile[]>([]);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportTarget, setReportTarget] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [privacy, setPrivacy] = useState(user.privacy || {
+    profileVisible: true, showOnline: true, allowMessages: "everyone" as const, allowGifts: true,
+  });
   const { showToast } = useToast();
 
   const xpPct = Math.min(100, (user.xp / (user.level * 1000)) * 100);
   const achievements = getAchievementsList(user);
   const unlockedCount = achievements.filter(a => a.unlocked).length;
-
+  const dailyTasks = getDailyTaskProgress(user);
   const transactions: Transaction[] = user.transactions ? Object.values(user.transactions).sort((a, b) => b.timestamp - a.timestamp) : [];
+
+  useEffect(() => {
+    const unsub = subscribeFriendRequests(user.uid, setFriendRequests);
+    return unsub;
+  }, [user.uid]);
+
+  const loadFriends = async () => {
+    const friends = user.friendsList || [];
+    const profiles: UserProfile[] = [];
+    for (const fid of friends.slice(0, 50)) {
+      const p = await getUser(fid);
+      if (p) profiles.push(p);
+    }
+    setFriendProfiles(profiles);
+  };
+
+  const loadBlocked = async () => {
+    const blocked = user.blockedList || [];
+    const profiles: UserProfile[] = [];
+    for (const bid of blocked.slice(0, 50)) {
+      const p = await getUser(bid);
+      if (p) profiles.push(p);
+    }
+    setBlockedProfiles(profiles);
+  };
 
   const handleLogout = async () => {
     try { await signOut(auth); } catch (err) { console.error("Logout error:", err); }
@@ -70,11 +115,62 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
     }
   };
 
+  const handleFriendResponse = async (reqId: string, accept: boolean) => {
+    await respondFriendRequest(user.uid, reqId, accept);
+    showToast(accept ? "Friend added!" : "Request declined", accept ? "success" : "info");
+  };
+
+  const handleUnblock = async (uid: string) => {
+    await unblockUser(user.uid, uid);
+    setBlockedProfiles(prev => prev.filter(p => p.uid !== uid));
+    showToast("User unblocked", "info");
+  };
+
+  const handleRemoveFriend = async (uid: string) => {
+    await removeFriend(user.uid, uid);
+    setFriendProfiles(prev => prev.filter(p => p.uid !== uid));
+    showToast("Friend removed", "info");
+  };
+
+  const handleSavePrivacy = async () => {
+    await updatePrivacy(user.uid, privacy);
+    showToast("Privacy settings saved", "success");
+    setShowPrivacy(false);
+  };
+
+  const handleReport = async () => {
+    if (!reportReason) { showToast("Please select a reason", "warning"); return; }
+    await reportUser(user.uid, reportTarget || "general", reportReason, reportDetails);
+    showToast("Report submitted. Thank you!", "success");
+    setShowReport(false);
+    setReportReason("");
+    setReportDetails("");
+    setReportTarget("");
+  };
+
+  const handleSearch = async () => {
+    if (searchQuery.trim().length < 2) return;
+    const results = await searchUsers(searchQuery.trim());
+    setSearchResults(results.filter(u => u.uid !== user.uid));
+  };
+
+  const handleAddFriend = async (target: UserProfile) => {
+    await sendFriendRequest(user.uid, user.name, user.avatar, target.uid);
+    showToast(`Friend request sent to ${target.name}!`, "success");
+  };
+
   const handleMenu = (action: string) => {
     if (action === "edit") onEditProfile();
     if (action === "wallet") setShowWallet(true);
     if (action === "achievements") setShowAchievements(true);
     if (action === "daily") handleDailyReward();
+    if (action === "dailyTasks") setShowDailyTasks(true);
+    if (action === "privacy") setShowPrivacy(true);
+    if (action === "blocked") { setShowBlocked(true); loadBlocked(); }
+    if (action === "friendRequests") setShowFriendRequests(true);
+    if (action === "friendsList") { setShowFriendsList(true); loadFriends(); }
+    if (action === "report") setShowReport(true);
+    if (action === "search") setShowSearch(true);
   };
 
   return (
@@ -161,17 +257,16 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
           </button>
         </div>
 
-        {/* Daily reward card */}
-        <div className="card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", cursor: "pointer" }} onClick={handleDailyReward}>
-          <div style={{ fontSize: 28 }}>{"\u{1F381}"}</div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Daily Reward</p>
-            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.45)" }}>
-              {user.dailyReward?.streak ? `${user.dailyReward.streak} day streak \u{1F525}` : "Claim your first reward!"}
-            </p>
+        {friendRequests.length > 0 && (
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", cursor: "pointer", border: "1px solid rgba(108,92,231,0.3)" }} onClick={() => setShowFriendRequests(true)}>
+            <div style={{ fontSize: 28 }}>{"\u{1F91D}"}</div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 700 }}>Friend Requests</p>
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.45)" }}>{friendRequests.length} pending</p>
+            </div>
+            <span className="badge badge-accent">{friendRequests.length}</span>
           </div>
-          <span className="badge badge-accent">Claim</span>
-        </div>
+        )}
 
         {user.bio && (
           <div className="card" style={{ padding: "14px 16px" }}>
@@ -194,6 +289,9 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
               >
                 <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
                 <span style={{ flex: 1, fontSize: 14, color: "rgba(255,255,255,0.8)", textAlign: "left", fontWeight: 600 }}>{item.label}</span>
+                {item.action === "friendRequests" && friendRequests.length > 0 && (
+                  <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: "#6C5CE7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, padding: "0 4px" }}>{friendRequests.length}</span>
+                )}
                 <span style={{ color: "rgba(162,155,254,0.3)", fontSize: 14 }}>{"\u203A"}</span>
               </button>
               {i < MENU_ITEMS.length - 1 && <div className="divider" />}
@@ -206,130 +304,347 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
         </button>
       </div>
 
-      {/* Wallet modal */}
       {showWallet && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(12px)",
-          display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400,
-        }} onClick={() => setShowWallet(false)}>
-          <div className="card" style={{
-            width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",
-            padding: 24, animation: "slide-up 0.3s ease",
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F48E}"} Recharge Coins</h2>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => { setShowHistory(true); setShowWallet(false); }} className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>{"\u{1F4CB}"} History</button>
-                <button onClick={() => setShowWallet(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
-              </div>
+        <BottomSheet onClose={() => setShowWallet(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F48E}"} Recharge Coins</h2>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setShowHistory(true); setShowWallet(false); }} className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>{"\u{1F4CB}"} History</button>
+              <button onClick={() => setShowWallet(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {RECHARGE_PACKAGES.map((pkg, i) => (
-                <button key={i} onClick={() => handleRecharge(pkg.coins, i)} disabled={recharging !== null}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 14, padding: "14px 18px",
-                    background: recharging === i ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(108,92,231,0.2)", borderRadius: 16,
-                    cursor: recharging !== null ? "not-allowed" : "pointer", fontFamily: "inherit", width: "100%",
-                    transition: "all 0.2s",
-                  }}>
-                  <span style={{ fontSize: 26 }}>{"\u{1F48E}"}</span>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <p style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>
-                      {pkg.coins.toLocaleString()} Coins
-                      {pkg.bonus && <span style={{ fontSize: 11, color: "#00e676", marginLeft: 6 }}>{pkg.bonus}</span>}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {RECHARGE_PACKAGES.map((pkg, i) => (
+              <button key={i} onClick={() => handleRecharge(pkg.coins, i)} disabled={recharging !== null}
+                style={{
+                  display: "flex", alignItems: "center", gap: 14, padding: "14px 18px",
+                  background: recharging === i ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(108,92,231,0.2)", borderRadius: 16,
+                  cursor: recharging !== null ? "not-allowed" : "pointer", fontFamily: "inherit", width: "100%",
+                  transition: "all 0.2s",
+                }}>
+                <span style={{ fontSize: 26 }}>{"\u{1F48E}"}</span>
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <p style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>
+                    {pkg.coins.toLocaleString()} Coins
+                    {pkg.bonus && <span style={{ fontSize: 11, color: "#00e676", marginLeft: 6 }}>{pkg.bonus}</span>}
+                  </p>
+                </div>
+                {recharging === i ? (
+                  <div style={{ width: 20, height: 20, borderRadius: 10, border: "2px solid rgba(108,92,231,0.3)", borderTopColor: "#A29BFE", animation: "spin 0.7s linear infinite" }} />
+                ) : (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#A29BFE" }}>{pkg.price}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", textAlign: "center", marginTop: 14 }}>
+            Demo mode {"\u2014"} no real payment processed.
+          </p>
+        </BottomSheet>
+      )}
+
+      {showHistory && (
+        <BottomSheet onClose={() => setShowHistory(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F4CB}"} Transaction History</h2>
+            <button onClick={() => setShowHistory(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {transactions.length === 0 ? (
+              <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No transactions yet</p>
+            ) : (
+              transactions.slice(0, 50).map(tx => (
+                <div key={tx.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <span style={{ fontSize: 20 }}>
+                    {tx.type === "recharge" ? "\u{1F48E}" : tx.type === "gift_sent" ? "\u{1F381}" : tx.type === "gift_received" ? "\u{1F4E5}" : tx.type === "daily_reward" ? "\u{1F31F}" : tx.type === "task_reward" ? "\u2705" : "\u2B50"}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600 }}>{tx.description}</p>
+                    <p style={{ fontSize: 10, color: "rgba(162,155,254,0.35)" }}>
+                      {new Date(tx.timestamp).toLocaleDateString()} {new Date(tx.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
-                  {recharging === i ? (
-                    <div style={{ width: 20, height: 20, borderRadius: 10, border: "2px solid rgba(108,92,231,0.3)", borderTopColor: "#A29BFE", animation: "spin 0.7s linear infinite" }} />
-                  ) : (
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#A29BFE" }}>{pkg.price}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", textAlign: "center", marginTop: 14 }}>
-              Demo mode {"\u2014"} no real payment processed.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Transaction history */}
-      {showHistory && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(12px)",
-          display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400,
-        }} onClick={() => setShowHistory(false)}>
-          <div className="card" style={{
-            width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",
-            padding: 24, animation: "slide-up 0.3s ease", maxHeight: "70vh", display: "flex", flexDirection: "column",
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F4CB}"} Transaction History</h2>
-              <button onClick={() => setShowHistory(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto" }}>
-              {transactions.length === 0 ? (
-                <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No transactions yet</p>
-              ) : (
-                transactions.slice(0, 50).map(tx => (
-                  <div key={tx.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <span style={{ fontSize: 20 }}>
-                      {tx.type === "recharge" ? "\u{1F48E}" : tx.type === "gift_sent" ? "\u{1F381}" : tx.type === "gift_received" ? "\u{1F4E5}" : tx.type === "daily_reward" ? "\u{1F31F}" : "\u2B50"}
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600 }}>{tx.description}</p>
-                      <p style={{ fontSize: 10, color: "rgba(162,155,254,0.35)" }}>
-                        {new Date(tx.timestamp).toLocaleDateString()} {new Date(tx.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                    <span style={{
-                      fontSize: 14, fontWeight: 800,
-                      color: tx.amount >= 0 ? "#00e676" : "#ff6482",
-                    }}>{tx.amount >= 0 ? "+" : ""}{tx.amount}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Achievements modal */}
-      {showAchievements && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(12px)",
-          display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400,
-        }} onClick={() => setShowAchievements(false)}>
-          <div className="card" style={{
-            width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",
-            padding: 24, animation: "slide-up 0.3s ease", maxHeight: "70vh", display: "flex", flexDirection: "column",
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F3C6}"} Achievements ({unlockedCount}/{achievements.length})</h2>
-              <button onClick={() => setShowAchievements(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-              {achievements.map(a => (
-                <div key={a.id} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                  background: a.unlocked ? "rgba(108,92,231,0.1)" : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${a.unlocked ? "rgba(108,92,231,0.3)" : "rgba(255,255,255,0.06)"}`,
-                  borderRadius: 14, opacity: a.unlocked ? 1 : 0.5,
-                }}>
-                  <span style={{ fontSize: 28, filter: a.unlocked ? "none" : "grayscale(1)" }}>{a.icon}</span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: a.unlocked ? "#fff" : "rgba(255,255,255,0.5)" }}>{a.title}</p>
-                    <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)" }}>{a.description}</p>
-                  </div>
-                  {a.unlocked && <span style={{ fontSize: 20 }}>{"\u2705"}</span>}
+                  <span style={{ fontSize: 14, fontWeight: 800, color: tx.amount >= 0 ? "#00e676" : "#ff6482" }}>{tx.amount >= 0 ? "+" : ""}{tx.amount}</span>
                 </div>
-              ))}
+              ))
+            )}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showAchievements && (
+        <BottomSheet onClose={() => setShowAchievements(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F3C6}"} Achievements ({unlockedCount}/{achievements.length})</h2>
+            <button onClick={() => setShowAchievements(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+            {achievements.map(a => (
+              <div key={a.id} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                background: a.unlocked ? "rgba(108,92,231,0.1)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${a.unlocked ? "rgba(108,92,231,0.3)" : "rgba(255,255,255,0.06)"}`,
+                borderRadius: 14, opacity: a.unlocked ? 1 : 0.5,
+              }}>
+                <span style={{ fontSize: 28, filter: a.unlocked ? "none" : "grayscale(1)" }}>{a.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: a.unlocked ? "#fff" : "rgba(255,255,255,0.5)" }}>{a.title}</p>
+                  <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)" }}>{a.description}</p>
+                </div>
+                {a.unlocked && <span style={{ fontSize: 20 }}>{"\u2705"}</span>}
+              </div>
+            ))}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showDailyTasks && (
+        <BottomSheet onClose={() => setShowDailyTasks(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u2705"} Daily Tasks</h2>
+            <button onClick={() => setShowDailyTasks(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {dailyTasks.map(task => (
+              <div key={task.id} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                background: task.completed ? "rgba(0,230,118,0.08)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${task.completed ? "rgba(0,230,118,0.2)" : "rgba(255,255,255,0.06)"}`,
+                borderRadius: 14,
+              }}>
+                <span style={{ fontSize: 24, filter: task.completed ? "none" : "grayscale(0.5)" }}>{task.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: task.completed ? "#00e676" : "#fff" }}>{task.title}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.07)" }}>
+                      <div style={{
+                        height: "100%", borderRadius: 2,
+                        width: `${Math.min(100, (task.progress / task.target) * 100)}%`,
+                        background: task.completed ? "#00e676" : "linear-gradient(90deg,#6C5CE7,#A29BFE)",
+                        transition: "width 0.3s",
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 10, color: "rgba(162,155,254,0.45)", whiteSpace: "nowrap" }}>{task.progress}/{task.target}</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: task.completed ? "#00e676" : "#FFD700" }}>
+                    {task.completed ? "\u2705" : `+${task.reward}`}
+                  </span>
+                  {!task.completed && <p style={{ fontSize: 8, color: "rgba(162,155,254,0.3)" }}>coins</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", textAlign: "center", marginTop: 14 }}>
+            Tasks reset daily at midnight
+          </p>
+        </BottomSheet>
+      )}
+
+      {showPrivacy && (
+        <BottomSheet onClose={() => setShowPrivacy(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F512}"} Privacy Settings</h2>
+            <button onClick={() => setShowPrivacy(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <PrivacyToggle label="Profile Visible" value={privacy.profileVisible} onChange={v => setPrivacy({ ...privacy, profileVisible: v })} />
+            <PrivacyToggle label="Show Online Status" value={privacy.showOnline} onChange={v => setPrivacy({ ...privacy, showOnline: v })} />
+            <PrivacyToggle label="Allow Gifts" value={privacy.allowGifts} onChange={v => setPrivacy({ ...privacy, allowGifts: v })} />
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginBottom: 8 }}>Who can message you</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                {(["everyone", "friends", "nobody"] as const).map(opt => (
+                  <button key={opt} onClick={() => setPrivacy({ ...privacy, allowMessages: opt })} style={{
+                    flex: 1, padding: "10px 0", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit",
+                    background: privacy.allowMessages === opt ? "rgba(108,92,231,0.3)" : "rgba(255,255,255,0.04)",
+                    color: privacy.allowMessages === opt ? "#A29BFE" : "rgba(162,155,254,0.4)",
+                    fontSize: 12, fontWeight: 700, textTransform: "capitalize",
+                  }}>{opt}</button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+          <button className="btn btn-primary btn-full" style={{ marginTop: 20 }} onClick={handleSavePrivacy}>Save Settings</button>
+        </BottomSheet>
       )}
+
+      {showFriendRequests && (
+        <BottomSheet onClose={() => setShowFriendRequests(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F91D}"} Friend Requests</h2>
+            <button onClick={() => setShowFriendRequests(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {friendRequests.length === 0 ? (
+              <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No pending requests</p>
+            ) : (
+              friendRequests.map(req => (
+                <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <span style={{ fontSize: 24 }}>{req.fromAvatar}</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700 }}>{req.fromName}</p>
+                    <p style={{ fontSize: 10, color: "rgba(162,155,254,0.35)" }}>{new Date(req.timestamp).toLocaleDateString()}</p>
+                  </div>
+                  <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "6px 12px" }} onClick={() => handleFriendResponse(req.id, true)}>{"\u2714"}</button>
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "6px 12px" }} onClick={() => handleFriendResponse(req.id, false)}>{"\u2715"}</button>
+                </div>
+              ))
+            )}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showFriendsList && (
+        <BottomSheet onClose={() => setShowFriendsList(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F465}"} Friends ({user.friends || 0})</h2>
+            <button onClick={() => setShowFriendsList(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {friendProfiles.length === 0 ? (
+              <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No friends yet</p>
+            ) : (
+              friendProfiles.map(fp => (
+                <div key={fp.uid} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <span style={{ fontSize: 24 }}>{fp.avatar}</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700 }}>{fp.name}</p>
+                    <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>{fp.online ? "Online" : "Offline"}</p>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: "4px 10px" }} onClick={() => handleRemoveFriend(fp.uid)}>Remove</button>
+                </div>
+              ))
+            )}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showBlocked && (
+        <BottomSheet onClose={() => setShowBlocked(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F6AB}"} Blocked Users</h2>
+            <button onClick={() => setShowBlocked(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {blockedProfiles.length === 0 ? (
+              <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No blocked users</p>
+            ) : (
+              blockedProfiles.map(bp => (
+                <div key={bp.uid} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <span style={{ fontSize: 24 }}>{bp.avatar}</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700 }}>{bp.name}</p>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: "4px 10px" }} onClick={() => handleUnblock(bp.uid)}>Unblock</button>
+                </div>
+              ))
+            )}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showReport && (
+        <BottomSheet onClose={() => setShowReport(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u26A0\uFE0F"} Report Issue</h2>
+            <button onClick={() => setShowReport(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input className="input-field" placeholder="User ID (optional)" value={reportTarget} onChange={e => setReportTarget(e.target.value)} style={{ borderRadius: 14, padding: "12px 14px" }} />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {REPORT_REASONS.map(r => (
+                <button key={r} onClick={() => setReportReason(r)} style={{
+                  padding: "8px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontFamily: "inherit",
+                  background: reportReason === r ? "rgba(255,100,130,0.2)" : "rgba(255,255,255,0.04)",
+                  color: reportReason === r ? "#ff6482" : "rgba(162,155,254,0.5)",
+                  fontSize: 12, fontWeight: 600,
+                }}>{r}</button>
+              ))}
+            </div>
+            <textarea
+              className="input-field"
+              placeholder="Describe the issue..."
+              value={reportDetails}
+              onChange={e => setReportDetails(e.target.value)}
+              rows={3}
+              style={{ borderRadius: 14, padding: "12px 14px", resize: "none", fontFamily: "inherit" }}
+            />
+            <button className="btn btn-danger btn-full" onClick={handleReport}>Submit Report</button>
+          </div>
+        </BottomSheet>
+      )}
+
+      {showSearch && (
+        <BottomSheet onClose={() => { setShowSearch(false); setSearchResults([]); setSearchQuery(""); }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F50D}"} Find Users</h2>
+            <button onClick={() => { setShowSearch(false); setSearchResults([]); setSearchQuery(""); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <input className="input-field" placeholder="Search by name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSearch()}
+              style={{ flex: 1, borderRadius: 14, padding: "12px 14px" }} />
+            <button className="btn btn-primary btn-sm" onClick={handleSearch}>{"\u{1F50D}"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {searchResults.map(sr => {
+              const isFriend = (user.friendsList || []).includes(sr.uid);
+              return (
+                <div key={sr.uid} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <span style={{ fontSize: 24 }}>{sr.avatar}</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700 }}>{sr.name}</p>
+                    <p style={{ fontSize: 10, color: "rgba(162,155,254,0.35)" }}>Lv.{sr.level}</p>
+                  </div>
+                  {isFriend ? (
+                    <span style={{ fontSize: 11, color: "#00e676", fontWeight: 600 }}>Friends</span>
+                  ) : (
+                    <button className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: "4px 10px" }} onClick={() => handleAddFriend(sr)}>Add Friend</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </BottomSheet>
+      )}
+    </div>
+  );
+}
+
+function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(12px)",
+      display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400,
+    }} onClick={onClose}>
+      <div className="card" style={{
+        width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",
+        padding: 24, animation: "slide-up 0.3s ease", maxHeight: "75vh", display: "flex", flexDirection: "column",
+      }} onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PrivacyToggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>{label}</span>
+      <button onClick={() => onChange(!value)} style={{
+        width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer",
+        background: value ? "rgba(108,92,231,0.6)" : "rgba(255,255,255,0.1)",
+        position: "relative", transition: "background 0.2s",
+      }}>
+        <div style={{
+          width: 20, height: 20, borderRadius: 10, background: "#fff",
+          position: "absolute", top: 3, left: value ? 25 : 3,
+          transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+        }} />
+      </button>
     </div>
   );
 }

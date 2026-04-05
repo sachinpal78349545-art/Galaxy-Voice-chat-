@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "agora-rtc-sdk-ng": "^4.24.3",
     "firebase": "^12.11.0"
   }
 }

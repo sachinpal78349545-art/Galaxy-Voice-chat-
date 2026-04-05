@@ -1,24 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Room, RoomMessage, subscribeRoom, subscribeRoomMessages, sendRoomMessage, raiseHand, kickFromSeat, muteUserSeat, toggleLockSeat, toggleMuteSeat, leaveSeat, joinSeat } from "../lib/roomService";
+import { Room, RoomMessage, subscribeRoom, subscribeRoomMessages, sendRoomMessage, raiseHand, kickFromSeat, muteUserSeat, toggleLockSeat, toggleMuteSeat, leaveSeat, joinSeat, setCoHost, isHostOrCoHost } from "../lib/roomService";
 import { UserProfile, gainXP, sendGift, incrementStat } from "../lib/userService";
+import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } from "../lib/giftService";
+import { sendNotification } from "../lib/notificationService";
+import { voiceService } from "../lib/voiceService";
 import { useToast } from "../lib/toastContext";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; }
 
 const EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u2728", "\u{1F602}", "\u{1F3B5}", "\u{1F44F}", "\u{1F31F}", "\u{1F4AF}", "\u{1F680}", "\u{1F60D}", "\u{1F389}", "\u{1F48E}"];
 const GIFTS = [
-  { emoji: "\u{1F381}", cost: 10 },
-  { emoji: "\u{1F48E}", cost: 50 },
-  { emoji: "\u{1F451}", cost: 100 },
-  { emoji: "\u{1F339}", cost: 20 },
-  { emoji: "\u{1F38A}", cost: 30 },
-  { emoji: "\u{1F340}", cost: 15 },
-  { emoji: "\u{1F98B}", cost: 25 },
-  { emoji: "\u2B50", cost: 40 },
-  { emoji: "\u{1F3B6}", cost: 35 },
-  { emoji: "\u{1F4B0}", cost: 200 },
-  { emoji: "\u{1F3C6}", cost: 500 },
-  { emoji: "\u{1F52E}", cost: 75 },
+  { emoji: "\u{1F381}", name: "Gift Box", cost: 10 },
+  { emoji: "\u{1F48E}", name: "Diamond", cost: 50 },
+  { emoji: "\u{1F451}", name: "Crown", cost: 100 },
+  { emoji: "\u{1F339}", name: "Rose", cost: 20 },
+  { emoji: "\u{1F38A}", name: "Confetti", cost: 30 },
+  { emoji: "\u{1F340}", name: "Clover", cost: 15 },
+  { emoji: "\u{1F98B}", name: "Butterfly", cost: 25 },
+  { emoji: "\u2B50", name: "Star", cost: 40 },
+  { emoji: "\u{1F3B6}", name: "Music", cost: 35 },
+  { emoji: "\u{1F4B0}", name: "Money Bag", cost: 200 },
+  { emoji: "\u{1F3C6}", name: "Trophy", cost: 500 },
+  { emoji: "\u{1F52E}", name: "Crystal Ball", cost: 75 },
 ];
 
 export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
@@ -30,12 +33,20 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
   const [showGift, setShowGift] = useState(false);
   const [showHostControls, setShowHostControls] = useState(false);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
-  const [floats, setFloats] = useState<{ id: number; item: string; x: number }[]>([]);
+  const [floats, setFloats] = useState<{ id: number; item: string; x: number; big?: boolean }[]>([]);
   const [elapsed, setElapsed] = useState("0:00");
+  const [showVolume, setShowVolume] = useState(false);
+  const [volumeSliders, setVolumeSliders] = useState<Record<number, number>>({});
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [lbPeriod, setLbPeriod] = useState<LeaderboardPeriod>("daily");
+  const [lbEntries, setLbEntries] = useState<LeaderboardEntry[]>([]);
+  const [speakingUids, setSpeakingUids] = useState<Set<number>>(new Set());
+  const [giftAnim, setGiftAnim] = useState<{ emoji: string; sender: string; receiver: string } | null>(null);
   const floatId = useRef(0);
   const msgEnd = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
   const joinedRef = useRef(false);
+  const voiceInitRef = useRef(false);
 
   useEffect(() => {
     const unsub1 = subscribeRoom(roomId, r => {
@@ -50,6 +61,27 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
   }, [roomId]);
 
   useEffect(() => {
+    if (!room || voiceInitRef.current) return;
+    voiceInitRef.current = true;
+    (async () => {
+      const ok = await voiceService.init();
+      if (ok) {
+        const numericUid = Math.abs(hashCode(user.uid)) % 1000000;
+        await voiceService.join(roomId, numericUid);
+        voiceService.onSpeaker((uid, vol) => {
+          setSpeakingUids(prev => {
+            const next = new Set(prev);
+            if (vol > 15) next.add(uid);
+            else next.delete(uid);
+            return next;
+          });
+        });
+      }
+    })();
+    return () => { voiceService.leave(); };
+  }, [room?.id]);
+
+  useEffect(() => {
     if (!room) return;
     const t = setInterval(() => {
       const diff = Date.now() - room.createdAt;
@@ -62,7 +94,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
   }, [room?.createdAt]);
 
   useEffect(() => {
-    if (!room) return;
+    if (!room || voiceService.joined) return;
     const t = setInterval(() => {
       setRoom(prev => {
         if (!prev) return prev;
@@ -79,11 +111,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
 
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const spawnFloat = (item: string) => {
+  const spawnFloat = (item: string, big = false) => {
     const id = floatId.current++;
     const x = 10 + Math.random() * 60;
-    setFloats(prev => [...prev, { id, item, x }]);
-    setTimeout(() => setFloats(prev => prev.filter(f => f.id !== id)), 2800);
+    setFloats(prev => [...prev, { id, item, x, big }]);
+    setTimeout(() => setFloats(prev => prev.filter(f => f.id !== id)), big ? 3200 : 2800);
   };
 
   const sendChat = async () => {
@@ -100,7 +132,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
     }
   };
 
-  const sendEmoji = async (e: string) => {
+  const sendEmojiMsg = async (e: string) => {
     spawnFloat(e);
     setShowEmoji(false);
     await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: e, type: "emoji" }).catch(err => {
@@ -113,15 +145,34 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
     if (!room) return;
     const hostSeat = room.seats.find(s => s.userId && s.userId !== user.uid);
     const recipientId = hostSeat?.userId || room.hostId;
+    const recipientName = hostSeat?.username || room.host;
     const success = await sendGift(user.uid, user, recipientId, gift.emoji, gift.cost);
     if (!success) {
       showToast(`Not enough coins! Need ${gift.cost} coins`, "warning", "\u{1F48E}");
       return;
     }
-    spawnFloat(gift.emoji);
+
+    setGiftAnim({ emoji: gift.emoji, sender: user.name, receiver: recipientName });
+    setTimeout(() => setGiftAnim(null), 3000);
+
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => spawnFloat(gift.emoji, true), i * 300);
+    }
     setShowGift(false);
-    showToast(`Sent ${gift.emoji} to ${hostSeat?.username || room.host} (-${gift.cost} coins)`, "success");
-    await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: `sent ${gift.emoji} gift to ${hostSeat?.username || room.host}`, type: "gift" }).catch(err => console.error("Gift message error:", err));
+    showToast(`Sent ${gift.emoji} ${gift.name} to ${recipientName} (-${gift.cost} coins)`, "success");
+
+    recordGift({
+      senderId: user.uid, senderName: user.name, senderAvatar: user.avatar,
+      receiverId: recipientId, receiverName: recipientName, receiverAvatar: hostSeat?.avatar || "\u{1F3A4}",
+      giftEmoji: gift.emoji, coins: gift.cost, timestamp: Date.now(),
+    }).catch(err => console.error("Gift record error:", err));
+
+    sendNotification(recipientId, {
+      type: "gift", title: "Gift Received!", body: `${user.name} sent you ${gift.emoji} ${gift.name}!`,
+      icon: gift.emoji, fromUid: user.uid, fromName: user.name,
+    }).catch(err => console.error("Notif error:", err));
+
+    await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: `sent ${gift.emoji} ${gift.name} to ${recipientName}`, type: "gift" }).catch(err => console.error("Gift message error:", err));
   };
 
   const handleRaiseHand = async () => {
@@ -142,10 +193,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
     }
   };
 
+  const hasControl = room ? isHostOrCoHost(room, user.uid) : false;
   const isHost = room?.hostId === user.uid;
 
   const handleHostAction = async (action: string, seatIdx: number) => {
-    if (!room || !isHost) return;
+    if (!room || !hasControl) return;
     try {
       if (action === "kick") {
         await kickFromSeat(roomId, seatIdx);
@@ -156,6 +208,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
       } else if (action === "lock") {
         await toggleLockSeat(roomId, seatIdx, !room.seats[seatIdx].isLocked);
         showToast(room.seats[seatIdx].isLocked ? "Seat unlocked" : "Seat locked", "info");
+      } else if (action === "cohost") {
+        const isCo = room.seats[seatIdx].isCoHost;
+        await setCoHost(roomId, seatIdx, !isCo);
+        showToast(isCo ? "Co-host removed" : "Co-host assigned!", "success");
       }
     } catch (err) {
       console.error("Host action error:", err);
@@ -165,12 +221,41 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
     setSelectedSeat(null);
   };
 
+  const handleMicToggle = async () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    await voiceService.setMuted(newMuted);
+    if (room) {
+      const mySeat = room.seats.findIndex(s => s.userId === user.uid);
+      if (mySeat >= 0) {
+        toggleMuteSeat(roomId, mySeat, newMuted).catch(err => console.error("Mute error:", err));
+      }
+    }
+  };
+
+  const handleVolumeChange = (uid: number, vol: number) => {
+    setVolumeSliders(prev => ({ ...prev, [uid]: vol }));
+    voiceService.setRemoteVolume(uid, vol);
+  };
+
   const handleLeave = async () => {
+    await voiceService.leave();
     if (room) {
       const mySeat = room.seats.findIndex(s => s.userId === user.uid);
       if (mySeat >= 0) await leaveSeat(roomId, mySeat).catch(err => console.error("Leave seat error:", err));
     }
     onLeave();
+  };
+
+  const loadLeaderboard = async (period: LeaderboardPeriod) => {
+    setLbPeriod(period);
+    const entries = await getGiftLeaderboard(period, "senders");
+    setLbEntries(entries);
+  };
+
+  const openLeaderboard = () => {
+    setShowLeaderboard(true);
+    loadLeaderboard("daily");
   };
 
   if (!room) {
@@ -189,10 +274,22 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
     }}>
       {floats.map(f => (
         <div key={f.id} style={{
-          position: "absolute", bottom: "42%", right: `${f.x}%`, fontSize: 38, zIndex: 500,
-          pointerEvents: "none", animation: "emojiFloat 2.8s ease-out forwards",
+          position: "absolute", bottom: "42%", right: `${f.x}%`, fontSize: f.big ? 52 : 38, zIndex: 500,
+          pointerEvents: "none", animation: f.big ? "giftFly 3.2s ease-out forwards" : "emojiFloat 2.8s ease-out forwards",
         }}>{f.item}</div>
       ))}
+
+      {giftAnim && (
+        <div style={{
+          position: "absolute", top: "25%", left: "50%", transform: "translateX(-50%)",
+          zIndex: 600, textAlign: "center", pointerEvents: "none", animation: "giftReveal 3s ease forwards",
+        }}>
+          <div style={{ fontSize: 80, animation: "giftBounce 0.6s ease infinite" }}>{giftAnim.emoji}</div>
+          <div style={{ fontSize: 14, color: "#FFD700", fontWeight: 800, textShadow: "0 2px 8px rgba(0,0,0,0.8)", marginTop: 8 }}>
+            {giftAnim.sender} {"\u27A4"} {giftAnim.receiver}
+          </div>
+        </div>
+      )}
 
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -208,6 +305,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
           <span style={{ fontSize: 9, color: "rgba(162,155,254,0.25)", fontFamily: "monospace" }}>ID: {room.id.slice(0, 16)}</span>
         </div>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: 14, padding: "6px 10px" }} onClick={openLeaderboard}>{"\u{1F3C6}"}</button>
           <button className="btn btn-ghost btn-sm" style={{ fontSize: 14, padding: "6px 10px" }} onClick={() => { navigator.clipboard?.writeText(room.id); showToast("Room ID copied!", "info"); }}>{"\u{1F517}"}</button>
           <button className="btn btn-danger btn-sm" onClick={handleLeave}>Leave</button>
         </div>
@@ -221,10 +319,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
               seat={seat}
               isHost={i === 0}
               isMe={seat.userId === user.uid}
-              isRoomHost={isHost}
-              onHostAction={(action) => { setSelectedSeat(i); handleHostAction(action, i); }}
+              hasControl={hasControl}
+              isSpeaking={seat.userId ? (voiceService.joined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking) : false}
               onTap={() => {
-                if (isHost && seat.userId && seat.userId !== user.uid) {
+                if (hasControl && seat.userId && seat.userId !== user.uid) {
                   setSelectedSeat(i);
                   setShowHostControls(true);
                 }
@@ -273,7 +371,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
           <div style={{ position: "relative" }}>
             <button className="btn btn-ghost btn-sm"
               style={{ width: 46, height: 46, borderRadius: 14, padding: 0, fontSize: 22 }}
-              onClick={() => { setShowEmoji(!showEmoji); setShowGift(false); }}>{"\u{1F60A}"}</button>
+              onClick={() => { setShowEmoji(!showEmoji); setShowGift(false); setShowVolume(false); }}>{"\u{1F60A}"}</button>
             {showEmoji && (
               <div style={{
                 position: "absolute", bottom: 54, left: 0, background: "rgba(15,5,30,0.97)",
@@ -282,7 +380,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
               }}>
                 {EMOJIS.map(e => (
                   <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
-                    onClick={() => sendEmoji(e)}>{e}</button>
+                    onClick={() => sendEmojiMsg(e)}>{e}</button>
                 ))}
               </div>
             )}
@@ -292,7 +390,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
             style={{ width: 46, height: 46, borderRadius: 14, padding: 0, fontSize: 22 }}
             onClick={handleRaiseHand}>{"\u270B"}</button>
 
-          <button onClick={() => setIsMuted(!isMuted)} style={{
+          <button onClick={handleMicToggle} style={{
             width: 66, height: 66, borderRadius: 33, border: "none", cursor: "pointer",
             background: isMuted ? "rgba(255,100,130,0.18)" : "linear-gradient(135deg,#6C5CE7,#A29BFE)",
             color: "#fff", fontSize: 26, display: "flex", alignItems: "center", justifyContent: "center",
@@ -304,7 +402,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
           <div style={{ position: "relative" }}>
             <button className="btn btn-ghost btn-sm"
               style={{ width: 46, height: 46, borderRadius: 14, padding: 0, fontSize: 22 }}
-              onClick={() => { setShowGift(!showGift); setShowEmoji(false); }}>{"\u{1F381}"}</button>
+              onClick={() => { setShowGift(!showGift); setShowEmoji(false); setShowVolume(false); }}>{"\u{1F381}"}</button>
             {showGift && (
               <div style={{
                 position: "absolute", bottom: 54, right: 0, background: "rgba(15,5,30,0.97)",
@@ -330,8 +428,36 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
             )}
           </div>
 
-          <button className="btn btn-ghost btn-sm"
-            style={{ width: 46, height: 46, borderRadius: 14, padding: 0, fontSize: 22 }}>{"\u{1F50A}"}</button>
+          <div style={{ position: "relative" }}>
+            <button className="btn btn-ghost btn-sm"
+              style={{ width: 46, height: 46, borderRadius: 14, padding: 0, fontSize: 22 }}
+              onClick={() => { setShowVolume(!showVolume); setShowEmoji(false); setShowGift(false); }}>{"\u{1F50A}"}</button>
+            {showVolume && (
+              <div style={{
+                position: "absolute", bottom: 54, right: 0, background: "rgba(15,5,30,0.97)",
+                border: "1px solid rgba(108,92,231,0.2)", borderRadius: 18, padding: 12,
+                width: 200, boxShadow: "0 8px 32px rgba(0,0,0,0.6)", zIndex: 20,
+              }}>
+                <div style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 8, fontWeight: 700 }}>Volume Control</div>
+                {room.seats.filter(s => s.userId && s.userId !== user.uid).map(s => {
+                  const uid = Math.abs(hashCode(s.userId!)) % 1000000;
+                  return (
+                    <div key={s.userId} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 14 }}>{s.avatar}</span>
+                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", width: 50, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.username}</span>
+                      <input type="range" min="0" max="100" value={volumeSliders[uid] ?? 100}
+                        onChange={e => handleVolumeChange(uid, parseInt(e.target.value))}
+                        style={{ flex: 1, accentColor: "#6C5CE7", height: 4 }}
+                      />
+                    </div>
+                  );
+                })}
+                {room.seats.filter(s => s.userId && s.userId !== user.uid).length === 0 && (
+                  <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", textAlign: "center" }}>No other users</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -341,12 +467,62 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
           display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600,
         }} onClick={() => { setShowHostControls(false); setSelectedSeat(null); }}>
           <div className="card" style={{ width: 260, padding: 20, animation: "popIn 0.2s ease" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{"\u{1F451}"} Host Controls</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{"\u{1F451}"} {isHost ? "Host" : "Co-Host"} Controls</h3>
             <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", marginBottom: 16 }}>{room.seats[selectedSeat].username}</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button className="btn btn-ghost btn-full" onClick={() => handleHostAction("mute", selectedSeat)}>{"\u{1F507}"} Mute User</button>
               <button className="btn btn-danger btn-full" onClick={() => handleHostAction("kick", selectedSeat)}>{"\u{1F6AB}"} Remove from Seat</button>
               <button className="btn btn-ghost btn-full" onClick={() => handleHostAction("lock", selectedSeat)}>{"\u{1F512}"} Lock Seat</button>
+              {isHost && (
+                <button className="btn btn-ghost btn-full" onClick={() => handleHostAction("cohost", selectedSeat)}>
+                  {room.seats[selectedSeat].isCoHost ? "\u274C Remove Co-Host" : "\u{1F451} Make Co-Host"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaderboard && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(12px)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 600,
+        }} onClick={() => setShowLeaderboard(false)}>
+          <div className="card" style={{
+            width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",
+            padding: 24, animation: "slide-up 0.3s ease", maxHeight: "65vh", display: "flex", flexDirection: "column",
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexShrink: 0 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F3C6}"} Gift Leaderboard</h2>
+              <button onClick={() => setShowLeaderboard(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12, flexShrink: 0 }}>
+              {(["daily", "weekly", "monthly"] as LeaderboardPeriod[]).map(p => (
+                <button key={p} onClick={() => loadLeaderboard(p)} style={{
+                  flex: 1, padding: "8px 0", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit",
+                  background: lbPeriod === p ? "rgba(108,92,231,0.3)" : "rgba(255,255,255,0.04)",
+                  color: lbPeriod === p ? "#A29BFE" : "rgba(162,155,254,0.4)",
+                  fontSize: 12, fontWeight: 700, textTransform: "capitalize",
+                }}>{p}</button>
+              ))}
+            </div>
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {lbEntries.length === 0 ? (
+                <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No gifts yet this period</p>
+              ) : (
+                lbEntries.map((entry, i) => (
+                  <div key={entry.uid} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <span style={{ fontSize: 16, fontWeight: 900, width: 24, textAlign: "center", color: i < 3 ? "#FFD700" : "rgba(162,155,254,0.4)" }}>
+                      {i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : i === 2 ? "\u{1F949}" : `${i + 1}`}
+                    </span>
+                    <span style={{ fontSize: 20 }}>{entry.avatar}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700 }}>{entry.name}</p>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#FFD700" }}>{"\u{1F48E}"}{entry.totalCoins}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -355,20 +531,30 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
   );
 }
 
+function hashCode(s: string): number {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    const char = s.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return hash;
+}
+
 interface SeatCellProps {
-  seat: { userId: string | null; username: string | null; avatar: string | null; isMuted: boolean; isLocked: boolean; isSpeaking: boolean; handRaised?: boolean };
+  seat: { userId: string | null; username: string | null; avatar: string | null; isMuted: boolean; isLocked: boolean; isSpeaking: boolean; handRaised?: boolean; isCoHost?: boolean };
   isHost: boolean;
   isMe: boolean;
-  isRoomHost: boolean;
-  onHostAction: (action: string) => void;
+  hasControl: boolean;
+  isSpeaking: boolean;
   onTap: () => void;
 }
 
-function SeatCell({ seat, isHost, isMe, isRoomHost, onTap }: SeatCellProps) {
+function SeatCell({ seat, isHost, isMe, hasControl, isSpeaking, onTap }: SeatCellProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: isRoomHost && seat.userId && !isMe ? "pointer" : "default" }} onClick={onTap}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: hasControl && seat.userId && !isMe ? "pointer" : "default" }} onClick={onTap}>
       <div style={{ position: "relative" }}>
-        {seat.isSpeaking && (
+        {isSpeaking && (
           <>
             <div style={{
               position: "absolute", inset: -7, borderRadius: "50%",
@@ -387,11 +573,11 @@ function SeatCell({ seat, isHost, isMe, isRoomHost, onTap }: SeatCellProps) {
           display: "flex", alignItems: "center", justifyContent: "center",
           background: seat.userId ? (isMe ? "rgba(108,92,231,0.25)" : "rgba(108,92,231,0.14)") : "rgba(255,255,255,0.03)",
           border: seat.isLocked ? "2px solid rgba(255,215,0,0.3)"
-            : seat.isSpeaking ? "2px solid rgba(0,230,118,0.7)"
+            : isSpeaking ? "2px solid rgba(0,230,118,0.7)"
             : seat.userId ? "2px solid rgba(108,92,231,0.4)"
             : "2px dashed rgba(255,255,255,0.1)",
           boxShadow: isHost && seat.userId ? "0 0 16px rgba(255,215,0,0.28)"
-            : seat.isSpeaking ? "0 0 24px rgba(0,230,118,0.4), 0 0 48px rgba(0,230,118,0.15)" : "none",
+            : isSpeaking ? "0 0 24px rgba(0,230,118,0.4), 0 0 48px rgba(0,230,118,0.15)" : "none",
           transition: "all 0.3s",
         }}>
           {seat.isLocked ? "\u{1F512}" : seat.userId ? seat.avatar : (
@@ -400,6 +586,9 @@ function SeatCell({ seat, isHost, isMe, isRoomHost, onTap }: SeatCellProps) {
         </div>
         {isHost && seat.userId && (
           <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", fontSize: 12 }}>{"\u{1F451}"}</div>
+        )}
+        {seat.isCoHost && !isHost && seat.userId && (
+          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", fontSize: 10 }}>{"\u{1F396}\uFE0F"}</div>
         )}
         {seat.userId && seat.isMuted && (
           <div style={{
