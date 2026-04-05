@@ -36,6 +36,7 @@ function AppContent() {
   const [authChecked, setAuthChecked] = useState(false);
   const [pageKey, setPageKey] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
   const notifSubCleanup = useRef<(() => void) | null>(null);
@@ -141,8 +142,6 @@ function AppContent() {
       </div>
     );
   }
-
-  const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
 
   const joinRoom = (room: Room) => {
     if (room.password && room.password !== "" && room.hostId !== profile.uid && !(room.adminIds || []).includes(profile.uid)) {
