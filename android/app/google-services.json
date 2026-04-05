@@ -1,0 +1,35 @@
+{
+  "project_info": {
+    "project_number": "767922030084",
+    "project_id": "chalotalk-67106",
+    "storage_bucket": "chalotalk-67106.firebasestorage.app",
+    "firebase_url": "https://chalotalk-67106-default-rtdb.firebaseio.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:767922030084:android:f8f1664a9685832faf5751",
+        "android_client_info": {
+          "package_name": "com.sachin.galaxyvoicechat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "767922030084-placeholder.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACJvjNecVmc-ooULC99pjlu6slWiQz_3o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
