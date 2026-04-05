@@ -8,23 +8,23 @@ import { Notification, subscribeNotifications } from "./lib/notificationService"
 import { ToastProvider, useToast } from "./lib/toastContext";
 import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
-import SearchPage from "./pages/SearchPage";
 import RoomsPage from "./pages/RoomsPage";
 import VoiceRoomPage from "./pages/VoiceRoomPage";
 import ChatsPage from "./pages/ChatsPage";
+import MomentPage from "./pages/MomentPage";
 import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import NotificationPage from "./pages/NotificationPage";
 import "./index.css";
 
-type NavPage = "home" | "search" | "rooms" | "chats" | "profile" | "notifications";
+type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications";
 
 const NAV = [
   { id: "home", icon: "\u{1F3E0}", label: "Home" },
-  { id: "search", icon: "\u{1F50D}", label: "Search" },
   { id: "rooms", icon: "\u{1F3A4}", label: "Rooms" },
   { id: "chats", icon: "\u{1F4AC}", label: "Chats" },
-  { id: "profile", icon: "\u{1F464}", label: "Profile" },
+  { id: "moment", icon: "\u{1F4F8}", label: "Moment" },
+  { id: "mine", icon: "\u{1F464}", label: "Mine" },
 ] as const;
 
 function AppContent() {
@@ -165,11 +165,11 @@ function AppContent() {
 
         <div key={pageKey} className="page-enter" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} />}
-          {page === "search" && <SearchPage user={profile} />}
           {page === "rooms" && <RoomsPage user={profile} onJoinRoom={joinRoom} />}
           {page === "chats" && <ChatsPage user={profile} />}
+          {page === "moment" && <MomentPage user={profile} />}
           {page === "notifications" && <NotificationPage user={profile} notifications={notifications} />}
-          {page === "profile" && (
+          {page === "mine" && (
             <ProfilePage
               user={profile}
               onUpdate={setProfile}

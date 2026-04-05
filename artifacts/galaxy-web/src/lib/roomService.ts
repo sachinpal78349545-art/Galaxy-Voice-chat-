@@ -184,7 +184,7 @@ export function subscribeRoom(roomId: string, cb: (room: Room | null) => void): 
 
 export async function createRoom(userId: string, username: string, avatar: string, name: string, topic: string): Promise<Room> {
   const id = `room_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const seats: RoomSeat[] = Array.from({ length: 8 }, (_, i) => ({
+  const seats: RoomSeat[] = Array.from({ length: 10 }, (_, i) => ({
     index: i,
     userId: i === 0 ? userId : null,
     username: i === 0 ? username : null,

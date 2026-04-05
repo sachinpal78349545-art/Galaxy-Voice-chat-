@@ -36,9 +36,9 @@ artifacts/galaxy-web/src/
                              achievements, transactions, XP/level, gift sending,
                              block/unblock, friend requests, privacy settings, report user,
                              daily tasks (4 tasks with progress tracking), searchUsers (name + userId)
-    roomService.ts         — Firebase rooms CRUD, 8-seat management, real-time listeners,
-                             room messages, seed data (5 rooms), raise hand, host controls,
-                             co-host role (setCoHost, removeCoHost)
+    roomService.ts         — Firebase rooms CRUD, 10-seat management (2x5 grid), real-time
+                             listeners, room messages, seed data (5 rooms), raise hand,
+                             host controls, co-host role (setCoHost, removeCoHost)
     chatService.ts         — Firebase conversations, real-time messaging, typing indicators,
                              image upload, voice messages (record/upload/playback),
                              seen/delivered message status, chat reactions (double-tap),
@@ -58,12 +58,18 @@ artifacts/galaxy-web/src/
     NotificationPage.tsx   — Full-page notification center with mark read/clear all
     supportService.ts      — Feedback form (bug/suggestion/feedback), help center articles (8)
     HomePage.tsx           — Gift leaderboard, quick-join category buttons, trending rooms,
-                             search, infinite scroll, online users strip, Hot/New/Following tabs
+                             search, infinite scroll, online users strip, Hot/New/Following tabs,
+                             room cards with host avatar and user count (6/9 format)
+    MomentPage.tsx         — Social feed page with sample moments, like/comment/share,
+                             post composer, community updates
     RoomsPage.tsx          — Firebase room list, create room modal, real-time updates
-    VoiceRoomPage.tsx      — 12-seat 4-column grid, real Agora voice (join/leave/mute),
+    VoiceRoomPage.tsx      — 10-seat 2x5-column grid, real Agora voice (join/leave/mute),
                              co-host controls, animated gift system (fly/reveal/bounce),
                              gift leaderboard modal (daily/weekly/monthly tabs),
-                             per-user volume sliders, room timer, room ID display
+                             per-user volume sliders, room timer, room ID display,
+                             bottom sheet on empty seat (Take Mic / Lock Mic),
+                             slide-up profile card on occupied seat (ID, Level, Follow),
+                             anti-screenshot CSS protection
     ChatsPage.tsx          — Firebase real-time conversations, emoji picker (32 emojis),
                              image send, typing indicator, seen/delivered ticks (✔/✔✔),
                              voice message recording + VoicePlayer component,
@@ -80,7 +86,10 @@ artifacts/galaxy-web/src/
 
 ### Key Features
 - **Real Agora Voice**: Join/leave/mute with AEC, ANS, AGC audio processing
-- **Voice Rooms**: 8 seats in 4-column grid, speaking ring animation, host crown, raise hand
+- **Voice Rooms**: 10 seats in 2x5 grid, speaking ring animation, host crown, raise hand, bottom sheet for empty seats, profile card popup
+- **Navigation**: Home / Rooms / Chats / Moment / Mine (5-tab bottom nav)
+- **Moments**: Social feed page with post composer and community updates
+- **Anti-Screenshot**: CSS protection on Profile and Voice Room pages
 - **9-Digit User ID**: Unique numeric ID per user, atomically reserved via Firebase transaction
 - **Mutual Follow Chat Gate**: Both users must follow each other to unlock chat (enforced at data layer + UI)
 - **Co-Host System**: Host can promote/demote co-hosts who share moderation powers

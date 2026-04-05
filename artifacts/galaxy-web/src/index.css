@@ -270,6 +270,20 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .anim-slide-up { animation: slide-up 0.3s ease forwards; }
 .anim-pop-in   { animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.no-screenshot {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media print {
+  .no-screenshot { display: none !important; }
+}
+
 @media (max-width: 400px) {
   .app-container { max-width: 100%; }
 }

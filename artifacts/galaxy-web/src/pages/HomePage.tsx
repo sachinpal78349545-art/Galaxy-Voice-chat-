@@ -308,52 +308,52 @@ export default function HomePage({ user, onJoinRoom }: Props) {
 
 function RoomCard({ room, onJoin }: { room: Room; onJoin: () => void }) {
   const occupied = room.seats.filter(s => s.userId);
+  const hostSeat = room.seats.find(s => s.userId);
+  const hostAvatar = hostSeat?.avatar || room.coverEmoji || "\u{1F3A4}";
+  const liveCount = Object.keys(room.roomUsers || {}).length || room.listeners;
+
   return (
-    <div className="card card-glow" style={{ cursor: "pointer" }} onClick={onJoin}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-        <div style={{
-          width: 52, height: 52, borderRadius: 16, fontSize: 28, flexShrink: 0,
-          background: "rgba(108,92,231,0.12)", border: "1px solid rgba(108,92,231,0.25)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>{room.coverEmoji || "\u{1F3A4}"}</div>
+    <div className="card card-glow" style={{ cursor: "pointer", padding: 14 }} onClick={onJoin}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 18, fontSize: 28,
+            background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.08))",
+            border: "2px solid rgba(108,92,231,0.35)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 16px rgba(108,92,231,0.15)",
+          }}>
+            {hostAvatar?.startsWith?.("http")
+              ? <img src={hostAvatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 16, objectFit: "cover" }} />
+              : hostAvatar}
+          </div>
+          {room.isLive && (
+            <div style={{
+              position: "absolute", bottom: -3, right: -3,
+              background: "#071a0e", border: "1.5px solid rgba(0,230,118,0.5)",
+              borderRadius: 8, padding: "1px 5px", fontSize: 7, fontWeight: 800,
+              color: "#00e676", display: "flex", alignItems: "center", gap: 2,
+            }}>
+              <span className="live-dot" style={{ width: 4, height: 4 }} /> LIVE
+            </div>
+          )}
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
-            {room.isLive && <span className="badge badge-live"><span className="live-dot"/>LIVE</span>}
-            <span className="badge badge-accent">{room.category}</span>
-            {room.tags?.map(t => <span key={t} className="badge" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(162,155,254,0.4)", fontSize: 9 }}>#{t}</span>)}
-          </div>
-          <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.name}</h3>
-          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.45)", marginBottom: 8 }}>by {room.host}</p>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
-            {room.seats.slice(0, 9).map((s, i) => (
-              <div key={i} style={{
-                width: 28, height: 28, borderRadius: 14, fontSize: 14,
-                background: s.userId ? "rgba(108,92,231,0.15)" : "rgba(255,255,255,0.03)",
-                border: s.isSpeaking ? "1.5px solid rgba(0,230,118,0.6)" : s.userId ? "1.5px solid rgba(108,92,231,0.3)" : "1.5px dashed rgba(255,255,255,0.09)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: s.isSpeaking ? "0 0 8px rgba(0,230,118,0.3)" : "none",
-              }}>
-                {s.isLocked ? "\u{1F512}" : s.userId ? s.avatar : <span style={{ fontSize: 10, color: "rgba(255,255,255,0.15)" }}>+</span>}
-              </div>
-            ))}
-            {room.seats.length > 9 && (
-              <div style={{
-                width: 28, height: 28, borderRadius: 14, fontSize: 9,
-                background: "rgba(108,92,231,0.1)", border: "1.5px solid rgba(108,92,231,0.2)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(162,155,254,0.5)",
-              }}>+{room.seats.length - 9}</div>
-            )}
-          </div>
-          <div style={{ display: "flex", gap: 14 }}>
-            <span style={{ fontSize: 12, color: "rgba(162,155,254,0.45)" }}>{"\u{1F399}"} {occupied.length}/{room.seats.length}</span>
-            <span style={{ fontSize: 12, color: "rgba(162,155,254,0.45)" }}>{"\u{1F3A7}"} {room.listeners}</span>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.name}</h3>
+          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.45)", marginBottom: 6 }}>by {room.host}</p>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span style={{
+              fontSize: 12, fontWeight: 700,
+              color: occupied.length >= room.seats.length - 1 ? "#ff6482" : "#A29BFE",
+            }}>{"\u{1F465}"} {liveCount}/{room.seats.length}</span>
+            <span className="badge badge-accent" style={{ fontSize: 8 }}>{room.topic || room.category}</span>
           </div>
         </div>
         <button
           className="btn btn-sm"
-          style={{ background: "rgba(108,92,231,0.2)", border: "1px solid rgba(108,92,231,0.4)", color: "#A29BFE", flexShrink: 0 }}
+          style={{ background: "rgba(108,92,231,0.2)", border: "1px solid rgba(108,92,231,0.4)", color: "#A29BFE", flexShrink: 0, padding: "8px 14px" }}
           onClick={e => { e.stopPropagation(); onJoin(); }}
-        >Join {"\u203A"}</button>
+        >Join</button>
       </div>
     </div>
   );

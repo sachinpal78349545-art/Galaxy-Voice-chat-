@@ -219,7 +219,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   };
 
   return (
-    <div className="page-scroll">
+    <div className="page-scroll no-screenshot">
       <div style={{
         padding: "52px 16px 24px",
         background: "linear-gradient(180deg, rgba(108,92,231,0.14) 0%, rgba(108,92,231,0.02) 60%, transparent 100%)",
