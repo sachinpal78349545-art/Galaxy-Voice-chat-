@@ -15,9 +15,10 @@ import MomentPage from "./pages/MomentPage";
 import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import NotificationPage from "./pages/NotificationPage";
+import SearchPage from "./pages/SearchPage";
 import "./index.css";
 
-type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications";
+type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications" | "search";
 
 const NAV = [
   { id: "home", icon: "\u{1F3E0}", label: "Home" },
@@ -31,6 +32,7 @@ function AppContent() {
   const [fbUser, setFbUser] = useState<FBUser | null | undefined>(undefined);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [page, setPage] = useState<NavPage>("home");
+  const [chatTargetUid, setChatTargetUid] = useState<string | null>(null);
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -95,6 +97,7 @@ function AppContent() {
   const unreadNotifCount = notifications.filter(n => !n.read).length;
 
   const changePage = (p: NavPage) => {
+    if (p !== "chats") setChatTargetUid(null);
     setPage(p);
     setPageKey(k => k + 1);
   };
@@ -159,9 +162,19 @@ function AppContent() {
     <div className="app-wrapper">
       <div className="stars" />
       <div className="app-container">
-        {page === "home" && (
-          <div style={{ position: "absolute", top: 54, right: 12, zIndex: 100 }}>
-            <button onClick={() => changePage("notifications")} className="btn btn-ghost btn-sm" style={{ width: 38, height: 38, padding: 0, borderRadius: 12, fontSize: 17, position: "relative" }}>
+        {(page === "home" || page === "rooms" || page === "chats") && (
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, zIndex: 100,
+            display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
+            background: "linear-gradient(180deg, rgba(8,4,24,0.98) 60%, transparent)",
+          }}>
+            <button onClick={() => changePage("search")} className="btn btn-ghost btn-sm" style={{
+              width: 38, height: 38, padding: 0, borderRadius: 12, fontSize: 17,
+            }}>{"\u{1F50D}"}</button>
+            <div style={{ flex: 1 }} />
+            <button onClick={() => changePage("notifications")} className="btn btn-ghost btn-sm" style={{
+              width: 38, height: 38, padding: 0, borderRadius: 12, fontSize: 17, position: "relative",
+            }}>
               {"\u{1F514}"}
               {unreadNotifCount > 0 && (
                 <span style={{
@@ -177,9 +190,10 @@ function AppContent() {
         <div key={pageKey} className="page-enter" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} />}
           {page === "rooms" && <RoomsPage user={profile} onJoinRoom={joinRoom} />}
-          {page === "chats" && <ChatsPage user={profile} />}
+          {page === "chats" && <ChatsPage user={profile} initialChatUid={chatTargetUid} />}
           {page === "moment" && <MomentPage user={profile} />}
-          {page === "notifications" && <NotificationPage user={profile} notifications={notifications} />}
+          {page === "notifications" && <NotificationPage user={profile} notifications={notifications} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onFollowBack={() => {}} />}
+          {page === "search" && <SearchPage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onBack={() => changePage("home")} />}
           {page === "mine" && (
             <ProfilePage
               user={profile}

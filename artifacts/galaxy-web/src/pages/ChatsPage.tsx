@@ -4,7 +4,7 @@ import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, s
 import { sendNotification } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
 
-interface Props { user: UserProfile; }
+interface Props { user: UserProfile; initialChatUid?: string | null; }
 
 const EMOJI_GRID = [
   "\u{1F600}","\u{1F602}","\u{1F60D}","\u{1F618}","\u{1F970}","\u{1F60E}","\u{1F913}","\u{1F60F}",
@@ -15,7 +15,7 @@ const EMOJI_GRID = [
 
 const REACTION_EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u{1F602}", "\u{1F44D}", "\u{1F62E}", "\u{1F622}"];
 
-export default function ChatsPage({ user }: Props) {
+export default function ChatsPage({ user, initialChatUid }: Props) {
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<Conversation | null>(null);
@@ -42,6 +42,13 @@ export default function ChatsPage({ user }: Props) {
     });
     return unsub;
   }, [user.uid]);
+
+  useEffect(() => {
+    if (initialChatUid && convs.length > 0 && !active) {
+      const match = convs.find(c => c.otherUid === initialChatUid);
+      if (match) setActive(match);
+    }
+  }, [initialChatUid, convs, active]);
 
   useEffect(() => {
     if (!active) return;

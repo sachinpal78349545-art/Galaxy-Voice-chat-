@@ -161,6 +161,19 @@ export async function seedRoomsIfEmpty(): Promise<void> {
   }
 }
 
+export async function fetchRooms(): Promise<Room[]> {
+  const snap = await get(ref(db, "rooms"));
+  if (!snap.exists()) return [];
+  const val = snap.val();
+  const rooms: Room[] = Object.keys(val).map(k => {
+    const room = { ...val[k], id: k };
+    if (room.password) room.password = "***";
+    return room;
+  });
+  rooms.sort((a, b) => b.createdAt - a.createdAt);
+  return rooms;
+}
+
 export function subscribeRooms(cb: (rooms: Room[]) => void): () => void {
   const r = ref(db, "rooms");
   const handler = onValue(r, snap => {

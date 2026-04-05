@@ -53,11 +53,15 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
     try {
       let roomAvatarUrl: string | undefined;
       if (dpFile) {
-        const fileExt = dpFile.name.split(".").pop() || "jpg";
-        const path = `room-avatars/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-        const sRef = storageRef(storage, path);
-        await uploadBytes(sRef, dpFile);
-        roomAvatarUrl = await getDownloadURL(sRef);
+        try {
+          const fileExt = dpFile.name.split(".").pop() || "jpg";
+          const path = `room-avatars/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+          const sRef = storageRef(storage, path);
+          await uploadBytes(sRef, dpFile);
+          roomAvatarUrl = await getDownloadURL(sRef);
+        } catch (uploadErr) {
+          console.warn("Image upload failed, creating room without DP:", uploadErr);
+        }
       }
       const room = await createRoom(user.uid, user.name, user.avatar, name.trim(), "Talk", {
         roomAvatar: roomAvatarUrl || undefined,
