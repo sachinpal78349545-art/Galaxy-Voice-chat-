@@ -54,6 +54,7 @@ export interface Room {
   theme?: string;
   bannedUsers?: string[];
   roomUsers?: Record<string, RoomUser>;
+  roomFollowers?: Record<string, { uid: string; name: string; avatar: string; followedAt: number }>;
 }
 
 const ROOM_COVERS: Record<string, string> = {
@@ -388,6 +389,16 @@ export async function sendRoomMessage(roomId: string, msg: Omit<RoomMessage, "id
 export async function deleteRoom(roomId: string): Promise<void> {
   await remove(ref(db, `rooms/${roomId}`));
   await remove(ref(db, `roomMessages/${roomId}`));
+}
+
+export async function followRoom(roomId: string, uid: string, name: string, avatar: string): Promise<void> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}`));
+  if (!roomSnap.exists()) throw new Error("Room not found");
+  await update(ref(db, `rooms/${roomId}/roomFollowers/${uid}`), { uid, name, avatar, followedAt: Date.now() });
+}
+
+export async function unfollowRoom(roomId: string, uid: string): Promise<void> {
+  await remove(ref(db, `rooms/${roomId}/roomFollowers/${uid}`));
 }
 
 export async function endRoom(roomId: string): Promise<void> {

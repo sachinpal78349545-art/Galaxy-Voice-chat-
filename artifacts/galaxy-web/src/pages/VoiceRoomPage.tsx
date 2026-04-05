@@ -6,8 +6,9 @@ import {
   leaveSeat, joinSeat, setCoHost, isOwnerOrAdmin, getUserRole,
   joinRoom, leaveRoom, setAdmin, removeAdmin, banUser, unbanUser,
   kickUserFromRoom, updateRoomSettings, endRoom, deleteRoom,
+  followRoom, unfollowRoom,
 } from "../lib/roomService";
-import { UserProfile, gainXP, sendGift, incrementStat } from "../lib/userService";
+import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser } from "../lib/userService";
 import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } from "../lib/giftService";
 import { sendNotification } from "../lib/notificationService";
 import { voiceService } from "../lib/voiceService";
@@ -58,6 +59,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
   const [showProfileCard, setShowProfileCard] = useState<{ uid: string; name: string; avatar: string; seatIdx: number } | null>(null);
   const [settingsTab, setSettingsTab] = useState<"general" | "mic" | "banned">("general");
   const [editName, setEditName] = useState("");
+  const [controlPanel, setControlPanel] = useState(false);
+  const [cpTab, setCpTab] = useState<"info" | "mic" | "banned" | "members">("info");
+  const [cpEditName, setCpEditName] = useState("");
+  const [showReportModal, setShowReportModal] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
   const floatId = useRef(0);
   const msgEnd = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
@@ -402,7 +408,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
         display: "flex", alignItems: "center", gap: 10,
         padding: "48px 12px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
       }}>
-        <div onClick={() => { setShowSettings(true); setEditName(room.name); setSettingsTab("general"); }}
+        <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpTab("info"); }}
           style={{
             width: 44, height: 44, borderRadius: 14, fontSize: 24,
             background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
@@ -412,7 +418,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
           {room.roomAvatar || room.coverEmoji || "\u{1F3A4}"}
         </div>
         <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
-          onClick={() => { setShowSettings(true); setEditName(room.name); setSettingsTab("general"); }}>
+          onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpTab("info"); }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.name}</h2>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span className="badge badge-live" style={{ fontSize: 9, padding: "1px 6px", gap: 3 }}>
@@ -702,146 +708,315 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
         </Overlay>
       )}
 
-      {showSettings && (
-        <Overlay onClose={() => setShowSettings(false)}>
-          <div className="card" style={{
-            width: "92%", maxWidth: 380, maxHeight: "75vh", padding: 0,
-            animation: "popIn 0.25s ease", display: "flex", flexDirection: "column", overflow: "hidden",
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <h3 style={{ fontSize: 16, fontWeight: 900 }}>{"\u2699\uFE0F"} Room Settings</h3>
-              <button onClick={() => setShowSettings(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
-            </div>
-            <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              {(["general", "mic", "banned"] as const).map(tab => (
-                <button key={tab} onClick={() => setSettingsTab(tab)} style={{
-                  flex: 1, padding: "10px 0", border: "none", cursor: "pointer", fontFamily: "inherit",
-                  background: settingsTab === tab ? "rgba(108,92,231,0.12)" : "transparent",
-                  color: settingsTab === tab ? "#A29BFE" : "rgba(162,155,254,0.4)",
-                  fontSize: 11, fontWeight: 700, textTransform: "capitalize",
-                  borderBottom: settingsTab === tab ? "2px solid #6C5CE7" : "2px solid transparent",
-                }}>{tab}</button>
-              ))}
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-              {settingsTab === "general" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{
-                      width: 64, height: 64, borderRadius: 20, fontSize: 32, margin: "0 auto 8px",
-                      background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.4)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>{room.roomAvatar || "\u{1F3A4}"}</div>
-                    {hasControl && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center", marginTop: 8 }}>
-                        {ROOM_AVATARS.map(a => (
-                          <button key={a} onClick={() => updateRoomSettings(roomId, { roomAvatar: a }).then(() => showToast("Avatar updated!", "success")).catch(console.error)}
-                            style={{
-                              width: 34, height: 34, borderRadius: 10, border: room.roomAvatar === a ? "2px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
-                              background: room.roomAvatar === a ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.03)",
-                              cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center",
-                            }}>{a}</button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 4, display: "block" }}>Room Name</label>
-                    {hasControl ? (
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <input className="input-field" value={editName} onChange={e => setEditName(e.target.value)}
-                          style={{ flex: 1, borderRadius: 14, padding: "10px 14px", fontSize: 13 }} />
-                        <button className="btn btn-primary btn-sm" onClick={handleSaveSettings} style={{ fontSize: 11, padding: "8px 14px" }}>Save</button>
-                      </div>
-                    ) : (
-                      <p style={{ fontSize: 14, fontWeight: 700 }}>{room.name}</p>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: "rgba(162,155,254,0.6)" }}>{"\u{1F3C6}"} Room Level</span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: "#FFD700" }}>Lv.{room.roomLevel || 1}</span>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 6, display: "block" }}>Theme</label>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {ROOM_THEMES.map(t => (
-                        <button key={t.id} onClick={() => hasControl && updateRoomSettings(roomId, { theme: t.id }).then(() => showToast("Theme updated!", "success")).catch(console.error)}
+      {controlPanel && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 700, maxWidth: 400, margin: "0 auto",
+          background: "linear-gradient(160deg, #1A0F2E, #0F0F1A)",
+          display: "flex", flexDirection: "column",
+          animation: "slide-up 0.3s ease",
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "52px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            <button onClick={() => setControlPanel(false)} style={{
+              background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#A29BFE",
+              width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{"\u2190"}</button>
+            <h2 style={{ fontSize: 17, fontWeight: 900, flex: 1 }}>Room Control Panel</h2>
+            {hasControl && <RoleBadge role={myRole} />}
+          </div>
+
+          <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            {([
+              { key: "info", icon: "\u2139\uFE0F", label: "Info" },
+              { key: "mic", icon: "\u{1F3A4}", label: "Mic" },
+              { key: "banned", icon: "\u26D4", label: "Banned" },
+              { key: "members", icon: "\u{1F465}", label: "Members" },
+            ] as const).map(t => (
+              <button key={t.key} onClick={() => setCpTab(t.key)} style={{
+                flex: 1, padding: "10px 0", border: "none", cursor: "pointer", fontFamily: "inherit",
+                background: cpTab === t.key ? "rgba(108,92,231,0.12)" : "transparent",
+                color: cpTab === t.key ? "#A29BFE" : "rgba(162,155,254,0.4)",
+                fontSize: 10, fontWeight: 700,
+                borderBottom: cpTab === t.key ? "2px solid #6C5CE7" : "2px solid transparent",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+              }}>
+                <span style={{ fontSize: 15 }}>{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+            {cpTab === "info" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{
+                    width: 80, height: 80, borderRadius: 24, fontSize: 40, margin: "0 auto 10px",
+                    background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.08))",
+                    border: "3px solid rgba(108,92,231,0.4)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 4px 24px rgba(108,92,231,0.25)",
+                  }}>{room.roomAvatar || "\u{1F3A4}"}</div>
+                  {hasControl && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", marginTop: 10 }}>
+                      {ROOM_AVATARS.map(a => (
+                        <button key={a} onClick={() => updateRoomSettings(roomId, { roomAvatar: a }).then(() => showToast("Avatar updated!", "success")).catch(console.error)}
                           style={{
-                            padding: "6px 12px", borderRadius: 10, border: (room.theme || "galaxy") === t.id ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
-                            background: (room.theme || "galaxy") === t.id ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.03)",
-                            cursor: hasControl ? "pointer" : "default", fontSize: 11, fontWeight: 600, color: (room.theme || "galaxy") === t.id ? "#A29BFE" : "rgba(162,155,254,0.4)",
-                            fontFamily: "inherit",
-                          }}>{t.name}</button>
+                            width: 38, height: 38, borderRadius: 12, border: room.roomAvatar === a ? "2px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
+                            background: room.roomAvatar === a ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.03)",
+                            cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>{a}</button>
                       ))}
                     </div>
-                  </div>
-                  {hasControl && (
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 12, color: "rgba(162,155,254,0.6)" }}>{"\u{1F512}"} Private Room</span>
-                      <button onClick={() => updateRoomSettings(roomId, { isPrivate: !room.isPrivate }).then(() => showToast(room.isPrivate ? "Room is now Public" : "Room is now Private", "info")).catch(console.error)}
-                        style={{
-                          width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
-                          background: room.isPrivate ? "#6C5CE7" : "rgba(255,255,255,0.15)", position: "relative",
-                          transition: "background 0.2s",
-                        }}>
-                        <div style={{
-                          width: 18, height: 18, borderRadius: 9, background: "#fff", position: "absolute", top: 3,
-                          left: room.isPrivate ? 23 : 3, transition: "left 0.2s",
-                        }} />
-                      </button>
-                    </div>
                   )}
                 </div>
-              )}
 
-              {settingsTab === "mic" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", marginBottom: 4 }}>Who can take a mic seat?</p>
-                  {(["all", "request", "admin_only"] as const).map(perm => (
-                    <button key={perm} onClick={() => hasControl && updateRoomSettings(roomId, { micPermission: perm }).then(() => showToast("Mic permission updated!", "success")).catch(console.error)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
-                        borderRadius: 14, border: (room.micPermission || "all") === perm ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
-                        background: (room.micPermission || "all") === perm ? "rgba(108,92,231,0.12)" : "rgba(255,255,255,0.03)",
-                        cursor: hasControl ? "pointer" : "default", fontFamily: "inherit", color: "#fff", textAlign: "left",
-                      }}>
-                      <span style={{ fontSize: 18 }}>{perm === "all" ? "\u{1F3A4}" : perm === "request" ? "\u270B" : "\u{1F6E1}\uFE0F"}</span>
-                      <div>
-                        <p style={{ fontSize: 13, fontWeight: 700 }}>{perm === "all" ? "Everyone" : perm === "request" ? "Request Only" : "Admin Only"}</p>
-                        <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>
-                          {perm === "all" ? "Anyone can take a seat" : perm === "request" ? "Users must request, owner/admin approves" : "Only owner and admins can speak"}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {settingsTab === "banned" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", marginBottom: 4 }}>Banned Users ({(room.bannedUsers || []).length})</p>
-                  {(room.bannedUsers || []).length === 0 ? (
-                    <p style={{ fontSize: 13, color: "rgba(162,155,254,0.3)", textAlign: "center", padding: 20 }}>No banned users</p>
+                <div style={{ background: "rgba(108,92,231,0.06)", borderRadius: 16, padding: 14, border: "1px solid rgba(108,92,231,0.1)" }}>
+                  <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 6, display: "block" }}>Room Name</label>
+                  {hasControl ? (
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input className="input-field" value={cpEditName} onChange={e => setCpEditName(e.target.value)}
+                        style={{ flex: 1, borderRadius: 14, padding: "10px 14px", fontSize: 13 }} />
+                      <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "8px 14px" }}
+                        onClick={async () => {
+                          if (cpEditName.trim() && cpEditName.trim() !== room.name) {
+                            await updateRoomSettings(roomId, { name: cpEditName.trim() } as any);
+                            showToast("Name updated!", "success");
+                          }
+                        }}>Save</button>
+                    </div>
                   ) : (
-                    (room.bannedUsers || []).map(uid => (
-                      <div key={uid} style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.06)",
+                    <p style={{ fontSize: 14, fontWeight: 700 }}>{room.name}</p>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <div style={{ flex: 1, background: "rgba(108,92,231,0.06)", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,92,231,0.1)", textAlign: "center" }}>
+                    <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700 }}>ROOM ID</p>
+                    <p style={{ fontSize: 11, fontWeight: 800, color: "#A29BFE", fontFamily: "monospace", marginTop: 4 }}>{room.id.slice(5, 21)}</p>
+                  </div>
+                  <div style={{ flex: 1, background: "rgba(108,92,231,0.06)", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,92,231,0.1)", textAlign: "center" }}>
+                    <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700 }}>LEVEL</p>
+                    <p style={{ fontSize: 18, fontWeight: 900, color: "#FFD700", marginTop: 2 }}>Lv.{room.roomLevel || 1}</p>
+                  </div>
+                  <div style={{ flex: 1, background: "rgba(108,92,231,0.06)", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,92,231,0.1)", textAlign: "center" }}>
+                    <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700 }}>ONLINE</p>
+                    <p style={{ fontSize: 18, fontWeight: 900, color: "#00e676", marginTop: 2 }}>{liveCount}</p>
+                  </div>
+                </div>
+
+                <div style={{ background: "rgba(108,92,231,0.06)", borderRadius: 16, padding: 14, border: "1px solid rgba(108,92,231,0.1)" }}>
+                  <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 8, display: "block" }}>Theme</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {ROOM_THEMES.map(t => (
+                      <button key={t.id} onClick={() => hasControl && updateRoomSettings(roomId, { theme: t.id }).then(() => showToast("Theme updated!", "success")).catch(console.error)}
+                        style={{
+                          padding: "7px 14px", borderRadius: 12, border: (room.theme || "galaxy") === t.id ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
+                          background: (room.theme || "galaxy") === t.id ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.03)",
+                          cursor: hasControl ? "pointer" : "default", fontSize: 12, fontWeight: 600,
+                          color: (room.theme || "galaxy") === t.id ? "#A29BFE" : "rgba(162,155,254,0.4)", fontFamily: "inherit",
+                        }}>{t.name}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {hasControl && (
+                  <div style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    background: "rgba(108,92,231,0.06)", borderRadius: 16, padding: "12px 14px", border: "1px solid rgba(108,92,231,0.1)",
+                  }}>
+                    <div>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{"\u{1F512}"} Private Room</span>
+                      <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)", marginTop: 2 }}>Only invited users can join</p>
+                    </div>
+                    <button onClick={() => updateRoomSettings(roomId, { isPrivate: !room.isPrivate }).then(() => showToast(room.isPrivate ? "Room is now Public" : "Room is now Private", "info")).catch(console.error)}
+                      style={{
+                        width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer",
+                        background: room.isPrivate ? "#6C5CE7" : "rgba(255,255,255,0.15)", position: "relative",
+                        transition: "background 0.2s",
                       }}>
-                        <span style={{ fontSize: 12, color: "rgba(162,155,254,0.6)", fontFamily: "monospace" }}>{uid.slice(0, 16)}...</span>
-                        {isOwner && (
-                          <button className="btn btn-ghost btn-sm" style={{ fontSize: 10 }}
-                            onClick={() => unbanUser(roomId, uid).then(() => showToast("User unbanned", "success")).catch(console.error)}>Unban</button>
+                      <div style={{
+                        width: 20, height: 20, borderRadius: 10, background: "#fff", position: "absolute", top: 3,
+                        left: room.isPrivate ? 25 : 3, transition: "left 0.2s",
+                      }} />
+                    </button>
+                  </div>
+                )}
+
+                {!isOwner && (
+                  <button className="btn btn-ghost btn-full" style={{ fontSize: 13, padding: "12px 0" }}
+                    onClick={async () => {
+                      try {
+                        const isFollowing = room.roomFollowers?.[user.uid];
+                        if (isFollowing) {
+                          await unfollowRoom(roomId, user.uid);
+                          showToast("Unfollowed room", "info");
+                        } else {
+                          await followRoom(roomId, user.uid, user.name, user.avatar);
+                          showToast("Following room!", "success");
+                        }
+                      } catch {
+                        showToast("Action failed", "error");
+                      }
+                    }}>
+                    {room.roomFollowers?.[user.uid] ? "\u2705 Following Room" : "\u2795 Follow Room"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {cpTab === "mic" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <p style={{ fontSize: 13, color: "rgba(162,155,254,0.6)", fontWeight: 700, marginBottom: 4 }}>Who can take a mic seat?</p>
+                {(["all", "request", "admin_only"] as const).map(perm => (
+                  <button key={perm} onClick={() => hasControl && updateRoomSettings(roomId, { micPermission: perm }).then(() => showToast("Mic permission updated!", "success")).catch(console.error)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                      borderRadius: 16, border: (room.micPermission || "all") === perm ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
+                      background: (room.micPermission || "all") === perm ? "rgba(108,92,231,0.12)" : "rgba(255,255,255,0.03)",
+                      cursor: hasControl ? "pointer" : "default", fontFamily: "inherit", color: "#fff", textAlign: "left", width: "100%",
+                    }}>
+                    <div style={{
+                      width: 42, height: 42, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: (room.micPermission || "all") === perm ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.04)",
+                      fontSize: 20, flexShrink: 0,
+                    }}>{perm === "all" ? "\u{1F3A4}" : perm === "request" ? "\u270B" : "\u{1F6E1}\uFE0F"}</div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700 }}>{perm === "all" ? "Everyone" : perm === "request" ? "Request Only" : "Admin Only"}</p>
+                      <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginTop: 2 }}>
+                        {perm === "all" ? "Anyone can take a seat freely" : perm === "request" ? "Users must request, owner/admin approves" : "Only owner and admins can speak"}
+                      </p>
+                    </div>
+                    {(room.micPermission || "all") === perm && (
+                      <span style={{ marginLeft: "auto", fontSize: 16, color: "#6C5CE7" }}>{"\u2713"}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {cpTab === "banned" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <p style={{ fontSize: 13, color: "rgba(162,155,254,0.6)", fontWeight: 700 }}>Banned Users</p>
+                  <span className="badge badge-accent" style={{ fontSize: 10 }}>{(room.bannedUsers || []).length}</span>
+                </div>
+                {(room.bannedUsers || []).length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>{"\u2705"}</div>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(162,155,254,0.5)" }}>No banned users</p>
+                    <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", marginTop: 4 }}>All users are welcome in this room</p>
+                  </div>
+                ) : (
+                  (room.bannedUsers || []).map(uid => (
+                    <div key={uid} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "12px 14px", borderRadius: 14, background: "rgba(255,100,130,0.04)",
+                      border: "1px solid rgba(255,100,130,0.1)",
+                    }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 18, fontSize: 16,
+                        background: "rgba(255,100,130,0.1)", border: "1.5px solid rgba(255,100,130,0.2)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>{"\u26D4"}</div>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 12, color: "rgba(162,155,254,0.6)", fontFamily: "monospace" }}>{uid.slice(0, 20)}...</span>
+                      </div>
+                      {isOwner && (
+                        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, color: "#00e676" }}
+                          onClick={() => unbanUser(roomId, uid).then(() => showToast("User unbanned", "success")).catch(console.error)}>
+                          {"\u{1F513}"} Unban
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {cpTab === "members" && (() => {
+              const followers = room.roomFollowers ? Object.values(room.roomFollowers) : [];
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#A29BFE" }}>{"\u{1F465}"} Online ({roomUsers.length})</p>
+                    </div>
+                    {roomUsers.map(ru => (
+                      <div key={ru.uid} style={{
+                        display: "flex", alignItems: "center", gap: 10, padding: "10px 8px",
+                        borderBottom: "1px solid rgba(255,255,255,0.04)", borderRadius: 12,
+                      }}>
+                        <div style={{
+                          width: 38, height: 38, borderRadius: 19, fontSize: 19,
+                          background: "rgba(108,92,231,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
+                          border: `2px solid ${ru.role === "owner" ? "rgba(255,215,0,0.5)" : ru.role === "admin" ? "rgba(108,92,231,0.5)" : "rgba(108,92,231,0.2)"}`,
+                        }}>{ru.avatar}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ru.name}</span>
+                            {ru.uid === user.uid && <span style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>(you)</span>}
+                          </div>
+                          <RoleBadge role={ru.role} />
+                        </div>
+                        {hasControl && ru.uid !== user.uid && ru.role !== "owner" && (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {isOwner && (
+                              <button className="btn btn-ghost btn-sm" style={{ fontSize: 9, padding: "4px 8px" }}
+                                onClick={() => {
+                                  const isAdm = (room.adminIds || []).includes(ru.uid);
+                                  if (isAdm) removeAdmin(roomId, ru.uid).then(() => showToast("Admin removed", "info"));
+                                  else setAdmin(roomId, ru.uid).then(() => showToast("Admin set!", "success"));
+                                }}>
+                                {(room.adminIds || []).includes(ru.uid) ? "\u274C Admin" : "\u{1F6E1}\uFE0F Admin"}
+                              </button>
+                            )}
+                            <button className="btn btn-danger btn-sm" style={{ fontSize: 9, padding: "4px 8px" }}
+                              onClick={() => handleUserAction("kick", ru.uid)}>{"\u{1F6AB}"}</button>
+                            {isOwner && (
+                              <button className="btn btn-danger btn-sm" style={{ fontSize: 9, padding: "4px 8px" }}
+                                onClick={() => handleUserAction("ban", ru.uid)}>{"\u26D4"}</button>
+                            )}
+                          </div>
                         )}
                       </div>
-                    ))
-                  )}
+                    ))}
+                  </div>
+
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700" }}>{"\u2B50"} Followers ({followers.length})</p>
+                    </div>
+                    {followers.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "20px 0" }}>
+                        <p style={{ fontSize: 12, color: "rgba(162,155,254,0.3)" }}>No room followers yet</p>
+                      </div>
+                    ) : (
+                      followers.sort((a, b) => b.followedAt - a.followedAt).map(f => (
+                        <div key={f.uid} style={{
+                          display: "flex", alignItems: "center", gap: 10, padding: "8px 8px",
+                          borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        }}>
+                          <div style={{
+                            width: 32, height: 32, borderRadius: 16, fontSize: 16,
+                            background: "rgba(255,215,0,0.08)", border: "1.5px solid rgba(255,215,0,0.2)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>{f.avatar}</div>
+                          <span style={{ flex: 1, fontSize: 12, fontWeight: 600 }}>{f.name}</span>
+                          <span style={{ fontSize: 9, color: "rgba(162,155,254,0.3)" }}>
+                            {new Date(f.followedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
-        </Overlay>
+        </div>
       )}
 
       {showLeaderboard && (
@@ -946,18 +1121,18 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
             <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 16px" }} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginBottom: 16 }}>
               <div style={{
-                width: 64, height: 64, borderRadius: 32, fontSize: 32,
+                width: 72, height: 72, borderRadius: 36, fontSize: 36,
                 background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
                 border: "3px solid rgba(108,92,231,0.5)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 boxShadow: "0 4px 20px rgba(108,92,231,0.3)",
               }}>
                 {showProfileCard.avatar?.startsWith("http")
-                  ? <img src={showProfileCard.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 32, objectFit: "cover" }} />
+                  ? <img src={showProfileCard.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 36, objectFit: "cover" }} />
                   : showProfileCard.avatar}
               </div>
-              <h3 style={{ fontSize: 17, fontWeight: 900 }}>{showProfileCard.name}</h3>
-              <div style={{ display: "flex", gap: 8 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 900 }}>{showProfileCard.name}</h3>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {(() => {
                   const ru = room?.roomUsers?.[showProfileCard.uid];
                   return (
@@ -970,33 +1145,97 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
               </div>
               <span className="badge badge-accent" style={{ fontSize: 10 }}>{"\u{1F3C6}"} Lv.{room?.roomLevel || 1}</span>
             </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <button className="btn btn-primary btn-full" style={{ fontSize: 13, padding: "12px 0" }}
-                onClick={() => { setShowProfileCard(null); showToast("Follow sent!", "success"); }}>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <button className="btn btn-primary" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }}
+                onClick={async () => {
+                  try {
+                    const res = await followUser(user.uid, showProfileCard!.uid);
+                    showToast(res.isMutual ? "You're now friends!" : "Followed!", "success");
+                  } catch { showToast("Follow failed", "error"); }
+                  setShowProfileCard(null);
+                }}>
                 {"\u2795"} Follow
               </button>
-              <button className="btn btn-ghost btn-full" style={{ fontSize: 13, padding: "12px 0" }}
+              <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }}
                 onClick={() => {
-                  const pc = showProfileCard;
+                  showToast("Chat feature — mutual follow required", "info");
                   setShowProfileCard(null);
-                  setSelectedSeat(pc.seatIdx);
-                  setShowHostControls(true);
                 }}>
-                {"\u2699\uFE0F"} Manage
+                {"\u{1F4AC}"} Message
               </button>
             </div>
+
+            <div style={{ display: "flex", gap: 6, marginBottom: hasControl ? 10 : 0 }}>
+              {hasControl && (
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
+                  onClick={() => {
+                    const pc = showProfileCard;
+                    setShowProfileCard(null);
+                    setSelectedSeat(pc!.seatIdx);
+                    setShowHostControls(true);
+                  }}>
+                  {"\u2699\uFE0F"} Manage
+                </button>
+              )}
+              <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12, color: "rgba(255,100,130,0.7)" }}
+                onClick={() => {
+                  setShowReportModal(showProfileCard!.uid);
+                  setShowProfileCard(null);
+                }}>
+                {"\u26A0\uFE0F"} Report
+              </button>
+            </div>
+
             {hasControl && (
               <div style={{ display: "flex", gap: 6 }}>
-                <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11 }}
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
                   onClick={() => { handleSeatAction("mute", showProfileCard!.seatIdx); setShowProfileCard(null); }}>
                   {"\u{1F507}"} Mute
                 </button>
-                <button className="btn btn-danger btn-sm" style={{ flex: 1, fontSize: 11 }}
+                <button className="btn btn-danger btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
                   onClick={() => { handleSeatAction("kick", showProfileCard!.seatIdx); setShowProfileCard(null); }}>
                   {"\u{1F6AB}"} Remove
                 </button>
               </div>
             )}
+          </div>
+        </Overlay>
+      )}
+
+      {showReportModal && (
+        <Overlay onClose={() => { setShowReportModal(null); setReportReason(""); }}>
+          <div className="card" style={{ width: 300, padding: 24, animation: "popIn 0.2s ease" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 4, textAlign: "center" }}>{"\u26A0\uFE0F"} Report User</h3>
+            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", textAlign: "center", marginBottom: 16 }}>Select a reason for reporting</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+              {["Harassment", "Spam", "Inappropriate Content", "Fake Profile", "Other"].map(r => (
+                <button key={r} onClick={() => setReportReason(r)} style={{
+                  padding: "10px 14px", borderRadius: 12, border: reportReason === r ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
+                  background: reportReason === r ? "rgba(108,92,231,0.12)" : "rgba(255,255,255,0.03)",
+                  color: reportReason === r ? "#A29BFE" : "rgba(162,155,254,0.5)", fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                }}>{r}</button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-ghost btn-full" style={{ fontSize: 13 }}
+                onClick={() => { setShowReportModal(null); setReportReason(""); }}>Cancel</button>
+              <button className="btn btn-danger btn-full" style={{ fontSize: 13 }}
+                disabled={!reportReason}
+                onClick={async () => {
+                  if (showReportModal && reportReason) {
+                    try {
+                      await reportUser(user.uid, showReportModal, reportReason, "");
+                      showToast("Report submitted. Thank you!", "success");
+                    } catch {
+                      showToast("Failed to submit report", "error");
+                    }
+                    setShowReportModal(null);
+                    setReportReason("");
+                  }
+                }}>Submit Report</button>
+            </div>
           </div>
         </Overlay>
       )}
