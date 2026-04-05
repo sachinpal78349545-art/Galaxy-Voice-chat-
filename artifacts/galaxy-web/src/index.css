@@ -250,6 +250,22 @@ textarea.input-field { resize: none; line-height: 1.5; }
   from { transform: translateY(-100%); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
+@keyframes welcomeEntry {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  15%  { opacity: 1; transform: translateX(-50%) scale(1.1); }
+  25%  { transform: translateX(-50%) scale(1); }
+  80%  { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(-20px); }
+}
+@keyframes welcomeMsg {
+  0%   { opacity: 0; transform: translateX(-20px); background: rgba(108,92,231,0.2); }
+  30%  { opacity: 1; transform: translateX(0); }
+  100% { background: rgba(108,92,231,0.1); }
+}
+@keyframes slideFromRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
 
 .anim-slide-up { animation: slide-up 0.3s ease forwards; }
 .anim-pop-in   { animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }

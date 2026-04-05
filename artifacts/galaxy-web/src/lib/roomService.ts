@@ -13,6 +13,15 @@ export interface RoomSeat {
   isCoHost?: boolean;
 }
 
+export interface RoomUser {
+  uid: string;
+  name: string;
+  avatar: string;
+  role: "owner" | "admin" | "user";
+  joinedAt: number;
+  seatIndex: number | null;
+}
+
 export interface RoomMessage {
   id: string;
   userId: string;
@@ -20,7 +29,7 @@ export interface RoomMessage {
   avatar: string;
   text: string;
   timestamp: number;
-  type?: "text" | "emoji" | "gift" | "system";
+  type?: "text" | "emoji" | "gift" | "system" | "join" | "leave" | "welcome";
 }
 
 export interface Room {
@@ -29,6 +38,7 @@ export interface Room {
   topic: string;
   host: string;
   hostId: string;
+  adminIds?: string[];
   coHostIds?: string[];
   seats: RoomSeat[];
   createdAt: number;
@@ -37,6 +47,13 @@ export interface Room {
   category: string;
   tags?: string[];
   coverEmoji?: string;
+  roomAvatar?: string;
+  isPrivate?: boolean;
+  micPermission?: "all" | "request" | "admin_only";
+  roomLevel?: number;
+  theme?: string;
+  bannedUsers?: string[];
+  roomUsers?: Record<string, RoomUser>;
 }
 
 const ROOM_COVERS: Record<string, string> = {
@@ -44,11 +61,25 @@ const ROOM_COVERS: Record<string, string> = {
   Comedy: "\u{1F602}", Study: "\u{1F4DA}", Debate: "\u26A1", News: "\u{1F4F0}", Sports: "\u26BD",
 };
 
+const ROOM_THEMES = [
+  { id: "galaxy", name: "Galaxy", bg: "linear-gradient(160deg, #1A0F2E 0%, #0F0F1A 100%)" },
+  { id: "ocean", name: "Ocean", bg: "linear-gradient(160deg, #0a192f 0%, #0d1b2a 100%)" },
+  { id: "sunset", name: "Sunset", bg: "linear-gradient(160deg, #2d1b3d 0%, #1a0f1e 100%)" },
+  { id: "forest", name: "Forest", bg: "linear-gradient(160deg, #0f2618 0%, #0a1a10 100%)" },
+  { id: "crimson", name: "Crimson", bg: "linear-gradient(160deg, #2d0f1e 0%, #1a0a12 100%)" },
+  { id: "midnight", name: "Midnight", bg: "linear-gradient(160deg, #0d0d2b 0%, #060614 100%)" },
+];
+
+export { ROOM_THEMES };
+
+const ROOM_AVATARS = ["\u{1F3A4}", "\u{1F3B5}", "\u{1F31F}", "\u{1F680}", "\u{1F30C}", "\u{1F525}", "\u{1F3AE}", "\u{1F4AC}", "\u{1F319}", "\u{1F48E}", "\u26A1", "\u{1F451}", "\u{1F389}", "\u{1F3B6}", "\u{1F984}", "\u{1F30A}"];
+export { ROOM_AVATARS };
+
 const SEED_ROOMS: Room[] = [
   {
     id: "room_seed1", name: "Chill Vibes Only", topic: "Chill",
     host: "SkyDancer", hostId: "seed_u1", category: "Chill", coverEmoji: "\u{1F319}",
-    tags: ["chill", "relax", "lofi"],
+    roomAvatar: "\u{1F319}", tags: ["chill", "relax", "lofi"], micPermission: "all", roomLevel: 3,
     seats: [
       { index: 0, userId: "seed_u1", username: "SkyDancer", avatar: "\u{1F31F}", isMuted: false, isLocked: false, isSpeaking: true },
       { index: 1, userId: "seed_u2", username: "CosmicDJ", avatar: "\u{1F3B5}", isMuted: false, isLocked: false, isSpeaking: false, isCoHost: true },
@@ -64,7 +95,7 @@ const SEED_ROOMS: Room[] = [
   {
     id: "room_seed2", name: "Late Night Thoughts", topic: "Talk",
     host: "MoonWalker", hostId: "seed_u6", category: "Talk", coverEmoji: "\u{1F4AC}",
-    tags: ["talk", "deep", "night"],
+    roomAvatar: "\u{1F4AC}", tags: ["talk", "deep", "night"], micPermission: "request", roomLevel: 5,
     seats: [
       { index: 0, userId: "seed_u6", username: "MoonWalker", avatar: "\u{1F680}", isMuted: false, isLocked: false, isSpeaking: true },
       { index: 1, userId: "seed_u7", username: "StarChild", avatar: "\u2B50", isMuted: true, isLocked: false, isSpeaking: false },
@@ -77,7 +108,7 @@ const SEED_ROOMS: Room[] = [
   {
     id: "room_seed3", name: "Galaxy Debates", topic: "Debate",
     host: "ArgonKnight", hostId: "seed_u9", category: "Talk", coverEmoji: "\u26A1",
-    tags: ["debate", "hot", "trending"],
+    roomAvatar: "\u26A1", tags: ["debate", "hot", "trending"], micPermission: "all", roomLevel: 7,
     seats: [
       { index: 0, userId: "seed_u9", username: "ArgonKnight", avatar: "\u26A1", isMuted: false, isLocked: false, isSpeaking: true },
       { index: 1, userId: "seed_u10", username: "SpaceFool", avatar: "\u{1F921}", isMuted: false, isLocked: false, isSpeaking: false },
@@ -88,7 +119,7 @@ const SEED_ROOMS: Room[] = [
   {
     id: "room_seed4", name: "Music & Beats", topic: "Music",
     host: "CosmicDJ", hostId: "seed_u2", category: "Music", coverEmoji: "\u{1F3B5}",
-    tags: ["music", "beats", "fun"],
+    roomAvatar: "\u{1F3B5}", tags: ["music", "beats", "fun"], micPermission: "all", roomLevel: 4,
     seats: Array.from({ length: 8 }, (_, i) => ({
       index: i, userId: i < 4 ? `seed_mu${i}` : null,
       username: ["CosmicDJ", "BeatMaker", "DropKing", "RhymeFlow"][i] || null,
@@ -100,7 +131,7 @@ const SEED_ROOMS: Room[] = [
   {
     id: "room_seed5", name: "Gaming Lounge", topic: "Gaming",
     host: "PixelHero", hostId: "seed_u11", category: "Gaming", coverEmoji: "\u{1F3AE}",
-    tags: ["gaming", "fun", "squad"],
+    roomAvatar: "\u{1F3AE}", tags: ["gaming", "fun", "squad"], micPermission: "all", roomLevel: 2,
     seats: Array.from({ length: 8 }, (_, i) => ({
       index: i, userId: i < 3 ? `seed_gm${i}` : null,
       username: ["PixelHero", "GameMaster", "ProSniper"][i] || null,
@@ -162,36 +193,62 @@ export async function createRoom(userId: string, username: string, avatar: strin
     isLocked: false,
     isSpeaking: false,
   }));
+  const ownerUser: RoomUser = { uid: userId, name: username, avatar, role: "owner", joinedAt: Date.now(), seatIndex: 0 };
   const room: Room = {
     id, name, topic, host: username, hostId: userId,
-    coHostIds: [],
+    adminIds: [], coHostIds: [], bannedUsers: [],
     seats, createdAt: Date.now(), isLive: true,
-    listeners: 0, category: topic,
+    listeners: 1, category: topic,
     coverEmoji: ROOM_COVERS[topic] || "\u{1F3A4}",
+    roomAvatar: ROOM_COVERS[topic] || "\u{1F3A4}",
     tags: [topic.toLowerCase()],
+    isPrivate: false,
+    micPermission: "all",
+    roomLevel: 1,
+    theme: "galaxy",
+    roomUsers: { [userId]: ownerUser },
   };
   await set(ref(db, `rooms/${id}`), room);
   return room;
+}
+
+export async function joinRoom(roomId: string, uid: string, name: string, avatar: string): Promise<{ joined: boolean; reason?: string }> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}`));
+  if (!roomSnap.exists()) return { joined: false, reason: "Room not found" };
+  const room = roomSnap.val();
+  if ((room.bannedUsers || []).includes(uid)) return { joined: false, reason: "You are banned from this room" };
+  if (room.isPrivate && room.hostId !== uid && !(room.adminIds || []).includes(uid)) return { joined: false, reason: "This room is private" };
+  const existing = await get(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
+  if (existing.exists()) return { joined: true };
+  const roomUser: RoomUser = { uid, name, avatar, role: "user", joinedAt: Date.now(), seatIndex: null };
+  if (room.hostId === uid) roomUser.role = "owner";
+  else if ((room.adminIds || []).includes(uid)) roomUser.role = "admin";
+  await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), roomUser);
+  await runTransaction(ref(db, `rooms/${roomId}/listeners`), (c: number | null) => (c ?? 0) + 1);
+  return { joined: true };
+}
+
+export async function leaveRoom(roomId: string, uid: string): Promise<void> {
+  await remove(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
+  await runTransaction(ref(db, `rooms/${roomId}/listeners`), (c: number | null) => Math.max(0, (c ?? 0) - 1));
 }
 
 export async function joinSeat(roomId: string, seatIndex: number, userId: string, username: string, avatar: string): Promise<void> {
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
     userId, username, avatar, isMuted: false, isLocked: false, isSpeaking: false, handRaised: false,
   });
-  const listenersRef = ref(db, `rooms/${roomId}/listeners`);
-  await runTransaction(listenersRef, (current: number | null) => {
-    return (current ?? 0) + 1;
-  });
+  await update(ref(db, `rooms/${roomId}/roomUsers/${userId}`), { seatIndex });
 }
 
 export async function leaveSeat(roomId: string, seatIndex: number): Promise<void> {
+  const seatSnap = await get(ref(db, `rooms/${roomId}/seats/${seatIndex}`));
+  const uid = seatSnap.exists() ? seatSnap.val().userId : null;
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
     userId: null, username: null, avatar: null, isMuted: false, isSpeaking: false, handRaised: false, isCoHost: false,
   });
-  const listenersRef = ref(db, `rooms/${roomId}/listeners`);
-  await runTransaction(listenersRef, (current: number | null) => {
-    return Math.max(0, (current ?? 0) - 1);
-  });
+  if (uid) {
+    await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), { seatIndex: null }).catch(() => {});
+  }
 }
 
 export async function toggleMuteSeat(roomId: string, seatIndex: number, muted: boolean): Promise<void> {
@@ -201,14 +258,12 @@ export async function toggleMuteSeat(roomId: string, seatIndex: number, muted: b
 export async function toggleLockSeat(roomId: string, seatIndex: number, locked: boolean): Promise<void> {
   const seatSnap = await get(ref(db, `rooms/${roomId}/seats/${seatIndex}`));
   const hadUser = seatSnap.exists() && seatSnap.val().userId;
+  const uid = hadUser ? seatSnap.val().userId : null;
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
     isLocked: locked, userId: null, username: null, avatar: null, isCoHost: false,
   });
-  if (hadUser) {
-    const listenersRef = ref(db, `rooms/${roomId}/listeners`);
-    await runTransaction(listenersRef, (current: number | null) => {
-      return Math.max(0, (current ?? 0) - 1);
-    });
+  if (uid) {
+    await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), { seatIndex: null }).catch(() => {});
   }
 }
 
@@ -229,22 +284,88 @@ export async function setCoHost(roomId: string, seatIndex: number, isCoHost: boo
   if (!seatSnap.exists()) return;
   const seat = seatSnap.val();
   if (!seat.userId) return;
-
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), { isCoHost });
-
   const roomSnap = await get(ref(db, `rooms/${roomId}/coHostIds`));
   let coHostIds: string[] = roomSnap.exists() ? roomSnap.val() : [];
-
-  if (isCoHost && !coHostIds.includes(seat.userId)) {
-    coHostIds.push(seat.userId);
-  } else if (!isCoHost) {
-    coHostIds = coHostIds.filter((id: string) => id !== seat.userId);
-  }
+  if (isCoHost && !coHostIds.includes(seat.userId)) coHostIds.push(seat.userId);
+  else if (!isCoHost) coHostIds = coHostIds.filter((id: string) => id !== seat.userId);
   await update(ref(db, `rooms/${roomId}`), { coHostIds });
+}
+
+export async function setAdmin(roomId: string, uid: string): Promise<void> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}/adminIds`));
+  const adminIds: string[] = roomSnap.exists() ? roomSnap.val() : [];
+  if (!adminIds.includes(uid)) {
+    adminIds.push(uid);
+    await update(ref(db, `rooms/${roomId}`), { adminIds });
+  }
+  await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), { role: "admin" }).catch(() => {});
+}
+
+export async function removeAdmin(roomId: string, uid: string): Promise<void> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}/adminIds`));
+  let adminIds: string[] = roomSnap.exists() ? roomSnap.val() : [];
+  adminIds = adminIds.filter((id: string) => id !== uid);
+  await update(ref(db, `rooms/${roomId}`), { adminIds });
+  await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), { role: "user" }).catch(() => {});
+}
+
+export async function banUser(roomId: string, uid: string): Promise<void> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}/bannedUsers`));
+  const banned: string[] = roomSnap.exists() ? roomSnap.val() : [];
+  if (!banned.includes(uid)) {
+    banned.push(uid);
+    await update(ref(db, `rooms/${roomId}`), { bannedUsers: banned });
+  }
+  const seats = (await get(ref(db, `rooms/${roomId}/seats`))).val() || [];
+  for (let i = 0; i < seats.length; i++) {
+    if (seats[i]?.userId === uid) {
+      await leaveSeat(roomId, i);
+      break;
+    }
+  }
+  const wasPresent = await get(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
+  await remove(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
+  if (wasPresent.exists()) {
+    await runTransaction(ref(db, `rooms/${roomId}/listeners`), (c: number | null) => Math.max(0, (c ?? 0) - 1));
+  }
+}
+
+export async function unbanUser(roomId: string, uid: string): Promise<void> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}/bannedUsers`));
+  let banned: string[] = roomSnap.exists() ? roomSnap.val() : [];
+  banned = banned.filter((id: string) => id !== uid);
+  await update(ref(db, `rooms/${roomId}`), { bannedUsers: banned });
+}
+
+export async function kickUserFromRoom(roomId: string, uid: string): Promise<void> {
+  const seats = (await get(ref(db, `rooms/${roomId}/seats`))).val() || [];
+  for (let i = 0; i < seats.length; i++) {
+    if (seats[i]?.userId === uid) {
+      await leaveSeat(roomId, i);
+      break;
+    }
+  }
+  await remove(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
+  await runTransaction(ref(db, `rooms/${roomId}/listeners`), (c: number | null) => Math.max(0, (c ?? 0) - 1));
+}
+
+export async function updateRoomSettings(roomId: string, settings: Partial<Pick<Room, "name" | "roomAvatar" | "isPrivate" | "micPermission" | "theme">>): Promise<void> {
+  await update(ref(db, `rooms/${roomId}`), settings);
 }
 
 export function isHostOrCoHost(room: Room, userId: string): boolean {
   return room.hostId === userId || (room.coHostIds || []).includes(userId);
+}
+
+export function isOwnerOrAdmin(room: Room, userId: string): boolean {
+  return room.hostId === userId || (room.adminIds || []).includes(userId);
+}
+
+export function getUserRole(room: Room, userId: string): "owner" | "admin" | "user" {
+  if (room.hostId === userId) return "owner";
+  if ((room.adminIds || []).includes(userId)) return "admin";
+  return "user";
 }
 
 export function subscribeRoomMessages(roomId: string, cb: (msgs: RoomMessage[]) => void): () => void {
@@ -254,7 +375,7 @@ export function subscribeRoomMessages(roomId: string, cb: (msgs: RoomMessage[]) 
     const val = snap.val();
     const msgs: RoomMessage[] = Object.keys(val).map(k => ({ ...val[k], id: k }));
     msgs.sort((a, b) => a.timestamp - b.timestamp);
-    cb(msgs.slice(-80));
+    cb(msgs.slice(-100));
   });
   return () => off(r);
 }
@@ -265,6 +386,12 @@ export async function sendRoomMessage(roomId: string, msg: Omit<RoomMessage, "id
 }
 
 export async function deleteRoom(roomId: string): Promise<void> {
+  await remove(ref(db, `rooms/${roomId}`));
+  await remove(ref(db, `roomMessages/${roomId}`));
+}
+
+export async function endRoom(roomId: string): Promise<void> {
+  await sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6D1}", text: "Room has been ended by the owner", type: "system" });
   await remove(ref(db, `rooms/${roomId}`));
   await remove(ref(db, `roomMessages/${roomId}`));
 }
