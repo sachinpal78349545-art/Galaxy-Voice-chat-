@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked } from "../lib/userService";
+import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked, canChatSync } from "../lib/userService";
 import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, sendVoiceMessage, addReaction, setTyping, subscribeTyping, markRead } from "../lib/chatService";
 import { sendNotification } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
@@ -153,14 +153,22 @@ export default function ChatsPage({ user }: Props) {
   const [otherOnline, setOtherOnline] = useState<boolean | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [otherProfile, setOtherProfile] = useState<UserProfile | null>(null);
+  const [chatLocked, setChatLocked] = useState(false);
 
   useEffect(() => {
     if (!active) return;
     const otherId = active.participants[0] === user.uid ? active.participants[1] : active.participants[0];
     setIsFollowing((user.followingList || []).includes(otherId));
     const unsubPresence = subscribeUser(otherId, u => {
-      if (u) setOtherOnline(u.online ?? false);
-      else setOtherOnline(false);
+      if (u) {
+        setOtherOnline(u.online ?? false);
+        setOtherProfile(u);
+        setChatLocked(!canChatSync(user, u));
+      } else {
+        setOtherOnline(false);
+        setChatLocked(true);
+      }
     });
     return unsubPresence;
   }, [active?.id, user.followingList]);
@@ -324,7 +332,30 @@ export default function ChatsPage({ user }: Props) {
           <div ref={msgEnd} />
         </div>
 
-        {showEmojiPicker && (
+        {chatLocked && (
+          <div style={{
+            padding: "16px 20px", textAlign: "center",
+            background: "rgba(108,92,231,0.08)", borderTop: "1px solid rgba(108,92,231,0.15)",
+          }}>
+            <p style={{ fontSize: 28, marginBottom: 8 }}>{"\u{1F512}"}</p>
+            <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Chat Locked</p>
+            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.5, marginBottom: 10 }}>
+              Both users must follow each other to unlock chat
+            </p>
+            {!isFollowing && (
+              <button onClick={handleFollow} disabled={followLoading} className="btn btn-primary btn-sm" style={{ fontSize: 12 }}>
+                {followLoading ? "..." : "\u{1F31F} Follow to unlock"}
+              </button>
+            )}
+            {isFollowing && (
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)" }}>
+                Waiting for them to follow you back...
+              </p>
+            )}
+          </div>
+        )}
+
+        {!chatLocked && showEmojiPicker && (
           <div style={{
             padding: "8px 14px", borderTop: "1px solid rgba(255,255,255,0.06)",
             background: "rgba(8,4,24,0.95)", display: "flex", flexWrap: "wrap", gap: 4,
@@ -337,7 +368,7 @@ export default function ChatsPage({ user }: Props) {
           </div>
         )}
 
-        <div style={{
+        {!chatLocked && <div style={{
           display: "flex", gap: 6, padding: "10px 12px 26px", alignItems: "center",
           borderTop: "1px solid rgba(255,255,255,0.06)",
           background: "rgba(8,4,24,0.85)", backdropFilter: "blur(14px)", flexShrink: 0,
@@ -374,7 +405,7 @@ export default function ChatsPage({ user }: Props) {
               )}
             </>
           )}
-        </div>
+        </div>}
       </div>
     );
   }

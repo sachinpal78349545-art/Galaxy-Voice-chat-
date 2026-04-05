@@ -313,7 +313,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
 
       <div style={{ padding: "12px 12px 8px", flexShrink: 0 }}>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10,
+          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12,
           background: "rgba(108,92,231,0.04)", borderRadius: 20, padding: "16px 8px",
           border: "1px solid rgba(108,92,231,0.08)",
         }}>

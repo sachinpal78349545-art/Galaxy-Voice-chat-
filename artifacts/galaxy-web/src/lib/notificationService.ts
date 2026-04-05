@@ -3,7 +3,7 @@ import { db } from "./firebase";
 
 export interface Notification {
   id: string;
-  type: "message" | "follower" | "gift" | "room_invite" | "friend_request" | "achievement" | "system";
+  type: "message" | "follower" | "follow_back" | "gift" | "room_invite" | "friend_request" | "achievement" | "system";
   title: string;
   body: string;
   icon: string;

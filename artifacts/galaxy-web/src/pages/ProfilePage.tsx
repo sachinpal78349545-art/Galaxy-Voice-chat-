@@ -254,7 +254,10 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
               <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.name}</h2>
               {user.vip && <span className="badge badge-vip">{"\u{1F451}"} VIP</span>}
             </div>
-            <p style={{ fontSize: 12, color: "rgba(162,155,254,0.35)", marginBottom: 8, fontFamily: "monospace", letterSpacing: 0.5 }}>
+            <p style={{ fontSize: 13, color: "rgba(162,155,254,0.5)", marginBottom: 4, fontFamily: "monospace", letterSpacing: 1 }}>
+              ID: {user.userId || "N/A"}
+            </p>
+            <p style={{ fontSize: 10, color: "rgba(162,155,254,0.25)", marginBottom: 8, fontFamily: "monospace" }}>
               UID: {user.uid.slice(0, 14).toUpperCase()}
             </p>
             <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>

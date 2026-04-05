@@ -13,7 +13,7 @@ Two parallel apps sharing Firebase project (`chalotalk-67106`):
 - **Framework**: React + Vite + TypeScript
 - **Location**: `artifacts/galaxy-web/`
 - **Backend**: Firebase Realtime Database (all data), Firebase Storage (images/avatars/voice)
-- **Auth**: Firebase Google Auth (popup + redirect), Phone OTP (demo), Guest (anonymous)
+- **Auth**: Firebase Email/Password + Google Auth (popup + redirect) + Phone OTP (demo) + Guest (anonymous)
 - **Voice**: Agora Web SDK (`agora-rtc-sdk-ng`) with AEC/ANS/AGC
 - **Data**: Fully Firebase-powered (no localStorage for core data)
 
@@ -30,11 +30,13 @@ artifacts/galaxy-web/src/
     firebase.ts            — Firebase SDK init (auth, db, storage)
     voiceService.ts        — Agora RTC: join/leave/mute, AEC/ANS/AGC, volume monitoring,
                              active speaker detection, per-user volume control
-    userService.ts         — User CRUD, online presence, follow/unfollow, daily rewards,
+    userService.ts         — User CRUD, online presence, follow/unfollow (returns isMutual),
+                             9-digit userId (atomic reservation via Firebase transaction),
+                             canChat/canChatSync (mutual follow check), daily rewards,
                              achievements, transactions, XP/level, gift sending,
                              block/unblock, friend requests, privacy settings, report user,
-                             daily tasks (4 tasks with progress tracking)
-    roomService.ts         — Firebase rooms CRUD, 12-seat management, real-time listeners,
+                             daily tasks (4 tasks with progress tracking), searchUsers (name + userId)
+    roomService.ts         — Firebase rooms CRUD, 8-seat management, real-time listeners,
                              room messages, seed data (5 rooms), raise hand, host controls,
                              co-host role (setCoHost, removeCoHost)
     chatService.ts         — Firebase conversations, real-time messaging, typing indicators,
@@ -49,8 +51,11 @@ artifacts/galaxy-web/src/
     toastContext.tsx        — Global toast notification system (success/error/info/warning)
     storage.ts             — Legacy localStorage (unused for core data, types reference)
   pages/
-    AuthPage.tsx           — Google sign-in, Phone OTP login (demo), Guest login,
-                             galaxy theme with feature cards
+    AuthPage.tsx           — Email signup/login, Google sign-in, Phone OTP (demo), Guest login,
+                             galaxy theme with feature cards, state-machine auth modes
+    SearchPage.tsx         — Dedicated user search page (by name or 9-digit User ID),
+                             user profile cards, follow/friend request actions
+    NotificationPage.tsx   — Full-page notification center with mark read/clear all
     supportService.ts      — Feedback form (bug/suggestion/feedback), help center articles (8)
     HomePage.tsx           — Gift leaderboard, quick-join category buttons, trending rooms,
                              search, infinite scroll, online users strip, Hot/New/Following tabs
@@ -75,7 +80,9 @@ artifacts/galaxy-web/src/
 
 ### Key Features
 - **Real Agora Voice**: Join/leave/mute with AEC, ANS, AGC audio processing
-- **Voice Rooms**: 12 seats in 4-column grid, speaking ring animation, host crown, raise hand
+- **Voice Rooms**: 8 seats in 4-column grid, speaking ring animation, host crown, raise hand
+- **9-Digit User ID**: Unique numeric ID per user, atomically reserved via Firebase transaction
+- **Mutual Follow Chat Gate**: Both users must follow each other to unlock chat (enforced at data layer + UI)
 - **Co-Host System**: Host can promote/demote co-hosts who share moderation powers
 - **Host Controls**: Mute/kick/lock seats (host and co-host panel)
 - **Animated Gift System**: 12 gifts with fly/reveal/bounce animations, coin deduction
@@ -90,7 +97,8 @@ artifacts/galaxy-web/src/
 - **Daily Tasks**: 4 tasks (join room, send messages, send gift, daily login) with coin rewards
 - **Report System**: Report users with reason selection
 - **Notification System**: In-app notifications for follows, gifts, friend requests, messages
-- **Multi-Auth**: Google OAuth, Phone OTP (demo mode), Guest anonymous login
+- **Multi-Auth**: Email/Password signup+login, Google OAuth, Phone OTP (demo mode), Guest anonymous login
+- **5-Tab Navigation**: Home, Search, Rooms, Chats, Profile (+ notification bell on Home)
 - **Daily Rewards**: 50 base + streak bonus (up to +100), auto-claim on first login
 - **Achievements**: 12 total (levels, coins, messages, streak, rooms, followers)
 - **Real-time Chat**: Firebase-powered with typing indicators, image upload
@@ -118,9 +126,10 @@ artifacts/galaxy-web/src/
 - **Volume**: 200ms polling interval for active speaker detection
 
 ### Data Architecture (Firebase Realtime DB)
-- `users/{uid}` — profile, coins, level, achievements, transactions, online status,
-                   blockedUsers, friends, friendRequests, privacySettings, dailyTasks
-- `rooms/{roomId}` — room config, 12 seats array, host info, coHosts
+- `users/{uid}` — profile, userId (9-digit), coins, level, achievements, transactions,
+                   online status, blockedUsers, friends, friendRequests, privacySettings, dailyTasks
+- `userIds/{userId}` — maps 9-digit userId → uid (atomic reservation)
+- `rooms/{roomId}` — room config, 8 seats array, host info, coHosts
 - `roomMessages/{roomId}/{msgId}` — voice room chat messages
 - `conversations/{convId}` — participants, lastMessage, unread counts, typing
 - `messages/{convId}/{msgId}` — chat messages (text, emoji, image, voice),

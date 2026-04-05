@@ -48,6 +48,7 @@ export interface DailyTask {
 
 export interface UserProfile {
   uid: string;
+  userId: string;
   name: string;
   email: string;
   avatar: string;
@@ -144,22 +145,47 @@ export const DAILY_TASKS: DailyTask[] = [
   { id: "login_daily", title: "Daily Login", icon: "\u2705", reward: 20, target: 1, field: "loginToday" },
 ];
 
+export async function generateUserId(): Promise<string> {
+  const min = 100000000;
+  const max = 999999999;
+  let attempts = 0;
+  while (attempts < 20) {
+    const id = String(Math.floor(Math.random() * (max - min + 1)) + min);
+    const idRef = ref(db, `userIds/${id}`);
+    const result = await runTransaction(idRef, (current) => {
+      if (current === null) return "__reserving__";
+      return undefined;
+    });
+    if (result.committed) return id;
+    attempts++;
+  }
+  return String(Math.floor(Math.random() * (max - min + 1)) + min);
+}
+
 export async function initUser(uid: string, name: string, email: string, avatar: string): Promise<UserProfile> {
   const existing = await getUser(uid);
   if (existing) {
+    if (!existing.userId) {
+      const userId = await generateUserId();
+      await update(ref(db, `users/${uid}`), { userId, online: true, lastSeen: Date.now() });
+      await set(ref(db, `userIds/${userId}`), uid);
+      return { ...existing, userId, online: true };
+    }
     await update(ref(db, `users/${uid}`), { online: true, lastSeen: Date.now() });
     return { ...existing, online: true };
   }
+  const userId = await generateUserId();
   const achievements: Record<string, Achievement> = {};
   ALL_ACHIEVEMENTS.forEach(a => { achievements[a.id] = { ...a }; });
   const profile: UserProfile = {
-    uid, name, email,
+    uid, userId, name, email,
     avatar: avatar || AVATAR_LIST[Math.floor(Math.random() * AVATAR_LIST.length)],
     ...DEFAULT_PROFILE,
     createdAt: Date.now(),
     achievements,
   } as UserProfile;
   await set(ref(db, `users/${uid}`), profile);
+  await set(ref(db, `userIds/${userId}`), uid);
   return profile;
 }
 
@@ -203,16 +229,16 @@ export function setupOnlinePresence(uid: string): () => void {
   };
 }
 
-export async function followUser(myUid: string, targetUid: string): Promise<void> {
+export async function followUser(myUid: string, targetUid: string): Promise<{ isMutual: boolean }> {
   const mySnap = await get(ref(db, `users/${myUid}`));
   const targetSnap = await get(ref(db, `users/${targetUid}`));
-  if (!mySnap.exists() || !targetSnap.exists()) return;
+  if (!mySnap.exists() || !targetSnap.exists()) return { isMutual: false };
 
   const myData = mySnap.val();
   const targetData = targetSnap.val();
 
   const myFollowing = myData.followingList || [];
-  if (myFollowing.includes(targetUid)) return;
+  if (myFollowing.includes(targetUid)) return { isMutual: (targetData.followingList || []).includes(myUid) };
   myFollowing.push(targetUid);
 
   const targetFollowers = targetData.followersList || [];
@@ -226,6 +252,9 @@ export async function followUser(myUid: string, targetUid: string): Promise<void
     followersList: targetFollowers,
     followers: targetFollowers.length,
   });
+
+  const isMutual = (targetData.followingList || []).includes(myUid);
+  return { isMutual };
 }
 
 export async function unfollowUser(myUid: string, targetUid: string): Promise<void> {
@@ -531,8 +560,28 @@ export async function searchUsers(query: string): Promise<UserProfile[]> {
   const snap = await get(ref(db, "users"));
   if (!snap.exists()) return [];
   const val = snap.val();
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().trim();
+  const isNumeric = /^\d+$/.test(q);
   return Object.values(val)
-    .filter((u: any) => u.name?.toLowerCase().includes(q))
+    .filter((u: any) => {
+      if (isNumeric) {
+        return (u.userId || "").includes(q) || u.name?.toLowerCase().includes(q);
+      }
+      return u.name?.toLowerCase().includes(q);
+    })
     .slice(0, 20) as UserProfile[];
+}
+
+export async function canChat(userAUid: string, userBUid: string): Promise<boolean> {
+  const aSnap = await get(ref(db, `users/${userAUid}/followingList`));
+  const bSnap = await get(ref(db, `users/${userBUid}/followingList`));
+  const aFollowing: string[] = aSnap.exists() ? aSnap.val() : [];
+  const bFollowing: string[] = bSnap.exists() ? bSnap.val() : [];
+  return aFollowing.includes(userBUid) && bFollowing.includes(userAUid);
+}
+
+export function canChatSync(profileA: UserProfile, profileB: UserProfile): boolean {
+  const aFollowing = profileA.followingList || [];
+  const bFollowing = profileB.followingList || [];
+  return aFollowing.includes(profileB.uid) && bFollowing.includes(profileA.uid);
 }

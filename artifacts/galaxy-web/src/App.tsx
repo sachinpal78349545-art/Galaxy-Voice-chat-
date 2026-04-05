@@ -4,21 +4,24 @@ import { auth } from "./lib/firebase";
 import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward } from "./lib/userService";
 import { seedRoomsIfEmpty, Room } from "./lib/roomService";
 import { seedConversations, subscribeConversations, Conversation } from "./lib/chatService";
-import { Notification, subscribeNotifications, markNotificationRead, markAllNotificationsRead } from "./lib/notificationService";
+import { Notification, subscribeNotifications } from "./lib/notificationService";
 import { ToastProvider, useToast } from "./lib/toastContext";
 import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
+import SearchPage from "./pages/SearchPage";
 import RoomsPage from "./pages/RoomsPage";
 import VoiceRoomPage from "./pages/VoiceRoomPage";
 import ChatsPage from "./pages/ChatsPage";
 import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
+import NotificationPage from "./pages/NotificationPage";
 import "./index.css";
 
-type NavPage = "home" | "rooms" | "chats" | "profile";
+type NavPage = "home" | "search" | "rooms" | "chats" | "profile" | "notifications";
 
 const NAV = [
   { id: "home", icon: "\u{1F3E0}", label: "Home" },
+  { id: "search", icon: "\u{1F50D}", label: "Search" },
   { id: "rooms", icon: "\u{1F3A4}", label: "Rooms" },
   { id: "chats", icon: "\u{1F4AC}", label: "Chats" },
   { id: "profile", icon: "\u{1F464}", label: "Profile" },
@@ -33,7 +36,6 @@ function AppContent() {
   const [authChecked, setAuthChecked] = useState(false);
   const [pageKey, setPageKey] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [showNotifs, setShowNotifs] = useState(false);
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
   const notifSubCleanup = useRef<(() => void) | null>(null);
@@ -96,12 +98,6 @@ function AppContent() {
     setPageKey(k => k + 1);
   };
 
-  const handleMarkAllRead = async () => {
-    if (profile) {
-      await markAllNotificationsRead(profile.uid);
-    }
-  };
-
   if (!authChecked) {
     return (
       <div className="app-wrapper">
@@ -153,71 +149,26 @@ function AppContent() {
       <div className="stars" />
       <div className="app-container">
         {page === "home" && (
-          <div style={{ position: "absolute", top: 54, right: 56, zIndex: 100 }}>
-            <button onClick={() => setShowNotifs(!showNotifs)} className="btn btn-ghost btn-sm" style={{ width: 35, height: 35, padding: 0, borderRadius: 11, fontSize: 16, position: "relative" }}>
+          <div style={{ position: "absolute", top: 54, right: 12, zIndex: 100 }}>
+            <button onClick={() => changePage("notifications")} className="btn btn-ghost btn-sm" style={{ width: 38, height: 38, padding: 0, borderRadius: 12, fontSize: 17, position: "relative" }}>
               {"\u{1F514}"}
               {unreadNotifCount > 0 && (
                 <span style={{
-                  position: "absolute", top: -2, right: -2, minWidth: 16, height: 16, borderRadius: 8,
+                  position: "absolute", top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9,
                   background: "#ff6482", display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 9, fontWeight: 800, padding: "0 3px", border: "1.5px solid #0F0F1A",
+                  fontSize: 9, fontWeight: 800, padding: "0 4px", border: "2px solid #0F0F1A",
                 }}>{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
               )}
             </button>
           </div>
         )}
 
-        {showNotifs && (
-          <div style={{
-            position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(12px)",
-            display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 500, paddingTop: 80,
-          }} onClick={() => setShowNotifs(false)}>
-            <div className="card" style={{
-              width: "92%", maxWidth: 380, maxHeight: "70vh", display: "flex", flexDirection: "column",
-              padding: 20, animation: "slide-up 0.2s ease",
-            }} onClick={e => e.stopPropagation()}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexShrink: 0 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 900 }}>{"\u{1F514}"} Notifications</h3>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {unreadNotifCount > 0 && (
-                    <button onClick={handleMarkAllRead} className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: "4px 10px" }}>Mark all read</button>
-                  )}
-                  <button onClick={() => setShowNotifs(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
-                </div>
-              </div>
-              <div style={{ flex: 1, overflowY: "auto" }}>
-                {notifications.length === 0 ? (
-                  <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32, fontSize: 13 }}>No notifications yet</p>
-                ) : (
-                  notifications.slice(0, 30).map(n => (
-                    <div key={n.id} onClick={() => { if (!n.read && profile) markNotificationRead(profile.uid, n.id); }}
-                      style={{
-                        display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 4px",
-                        borderBottom: "1px solid rgba(255,255,255,0.04)", cursor: "pointer",
-                        background: n.read ? "none" : "rgba(108,92,231,0.06)",
-                        borderRadius: 8,
-                      }}>
-                      <span style={{ fontSize: 22, flexShrink: 0 }}>{n.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: n.read ? 500 : 700, color: n.read ? "rgba(255,255,255,0.6)" : "#fff" }}>{n.title}</p>
-                        <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginTop: 2 }}>{n.body}</p>
-                        <p style={{ fontSize: 9, color: "rgba(162,155,254,0.25)", marginTop: 3 }}>{formatTimeAgo(n.timestamp)}</p>
-                      </div>
-                      {!n.read && (
-                        <div style={{ width: 8, height: 8, borderRadius: 4, background: "#6C5CE7", flexShrink: 0, marginTop: 6 }} />
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         <div key={pageKey} className="page-enter" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} />}
+          {page === "search" && <SearchPage user={profile} />}
           {page === "rooms" && <RoomsPage user={profile} onJoinRoom={joinRoom} />}
           {page === "chats" && <ChatsPage user={profile} />}
+          {page === "notifications" && <NotificationPage user={profile} notifications={notifications} />}
           {page === "profile" && (
             <ProfilePage
               user={profile}
@@ -236,9 +187,7 @@ function AppContent() {
             >
               <span className="nav-icon" style={{ position: "relative" }}>
                 {item.icon}
-                {item.id === "chats" && profile && (
-                  <ChatBadge uid={profile.uid} />
-                )}
+                {item.id === "chats" && profile && <ChatBadge uid={profile.uid} />}
               </span>
               <span className="nav-label">{item.label}</span>
             </button>
@@ -266,14 +215,6 @@ function ChatBadge({ uid }: { uid: string }) {
       fontSize: 8, fontWeight: 800, padding: "0 3px", border: "1.5px solid #0F0F1A",
     }}>{count > 9 ? "9+" : count}</span>
   );
-}
-
-function formatTimeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  if (diff < 60000) return "just now";
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return `${Math.floor(diff / 86400000)}d ago`;
 }
 
 export default function App() {

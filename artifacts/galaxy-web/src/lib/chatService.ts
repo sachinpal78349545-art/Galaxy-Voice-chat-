@@ -133,7 +133,26 @@ export function subscribeMessages(convId: string, cb: (msgs: ChatMessage[]) => v
   return () => off(r);
 }
 
+async function checkMutualFollow(senderUid: string, convId: string): Promise<boolean> {
+  const convSnap = await get(ref(db, `conversations/${convId}`));
+  if (!convSnap.exists()) return false;
+  const conv = convSnap.val();
+  const participants: string[] = conv.participants || [];
+  const otherUid = participants.find((p: string) => p !== senderUid);
+  if (!otherUid) return false;
+
+  const [senderSnap, otherSnap] = await Promise.all([
+    get(ref(db, `users/${senderUid}/followingList`)),
+    get(ref(db, `users/${otherUid}/followingList`)),
+  ]);
+  const senderFollowing: string[] = senderSnap.val() || [];
+  const otherFollowing: string[] = otherSnap.val() || [];
+  return senderFollowing.includes(otherUid) && otherFollowing.includes(senderUid);
+}
+
 export async function sendMessage(convId: string, senderId: string, text: string, type: "text" | "emoji" = "text"): Promise<void> {
+  const allowed = await checkMutualFollow(senderId, convId);
+  if (!allowed) throw new Error("Chat locked: mutual follow required");
   const msgRef = push(ref(db, `messages/${convId}`));
   await set(msgRef, { senderId, text, timestamp: Date.now(), type, status: "sent" });
 
@@ -177,6 +196,8 @@ export async function sendMessage(convId: string, senderId: string, text: string
 }
 
 export async function sendImageMessage(convId: string, senderId: string, file: File): Promise<void> {
+  const allowed = await checkMutualFollow(senderId, convId);
+  if (!allowed) throw new Error("Chat locked: mutual follow required");
   const path = `chatImages/${convId}/${Date.now()}_${file.name}`;
   const sRef = storageRef(fbStorage, path);
   await uploadBytes(sRef, file);
@@ -194,6 +215,8 @@ export async function sendImageMessage(convId: string, senderId: string, file: F
 }
 
 export async function sendVoiceMessage(convId: string, senderId: string, audioBlob: Blob, duration: number): Promise<void> {
+  const allowed = await checkMutualFollow(senderId, convId);
+  if (!allowed) throw new Error("Chat locked: mutual follow required");
   const path = `chatVoice/${convId}/${Date.now()}.webm`;
   const sRef = storageRef(fbStorage, path);
   await uploadBytes(sRef, audioBlob);

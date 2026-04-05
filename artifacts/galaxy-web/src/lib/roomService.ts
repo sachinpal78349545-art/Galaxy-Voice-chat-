@@ -56,7 +56,8 @@ const SEED_ROOMS: Room[] = [
       { index: 3, userId: null, username: null, avatar: null, isMuted: false, isLocked: false, isSpeaking: false },
       { index: 4, userId: null, username: null, avatar: null, isMuted: false, isLocked: true, isSpeaking: false },
       { index: 5, userId: "seed_u4", username: "NightOwl", avatar: "\u{1F989}", isMuted: false, isLocked: false, isSpeaking: true },
-      ...Array.from({ length: 6 }, (_, i) => ({ index: i + 6, userId: null, username: null, avatar: null, isMuted: false, isLocked: false, isSpeaking: false })),
+      { index: 6, userId: null, username: null, avatar: null, isMuted: false, isLocked: false, isSpeaking: false },
+      { index: 7, userId: null, username: null, avatar: null, isMuted: false, isLocked: false, isSpeaking: false },
     ],
     createdAt: Date.now() - 3600000, isLive: true, listeners: 24,
   },
@@ -69,7 +70,7 @@ const SEED_ROOMS: Room[] = [
       { index: 1, userId: "seed_u7", username: "StarChild", avatar: "\u2B50", isMuted: true, isLocked: false, isSpeaking: false },
       { index: 2, userId: null, username: null, avatar: null, isMuted: false, isLocked: false, isSpeaking: false },
       { index: 3, userId: "seed_u8", username: "NebulaDev", avatar: "\u{1F4BB}", isMuted: false, isLocked: false, isSpeaking: false },
-      ...Array.from({ length: 8 }, (_, i) => ({ index: i + 4, userId: null, username: null, avatar: null, isMuted: false, isLocked: i === 7, isSpeaking: false })),
+      ...Array.from({ length: 4 }, (_, i) => ({ index: i + 4, userId: null, username: null, avatar: null, isMuted: false, isLocked: i === 3, isSpeaking: false })),
     ],
     createdAt: Date.now() - 1800000, isLive: true, listeners: 12,
   },
@@ -80,7 +81,7 @@ const SEED_ROOMS: Room[] = [
     seats: [
       { index: 0, userId: "seed_u9", username: "ArgonKnight", avatar: "\u26A1", isMuted: false, isLocked: false, isSpeaking: true },
       { index: 1, userId: "seed_u10", username: "SpaceFool", avatar: "\u{1F921}", isMuted: false, isLocked: false, isSpeaking: false },
-      ...Array.from({ length: 10 }, (_, i) => ({ index: i + 2, userId: null, username: null, avatar: null, isMuted: false, isLocked: false, isSpeaking: false })),
+      ...Array.from({ length: 6 }, (_, i) => ({ index: i + 2, userId: null, username: null, avatar: null, isMuted: false, isLocked: false, isSpeaking: false })),
     ],
     createdAt: Date.now() - 900000, isLive: true, listeners: 18,
   },
@@ -88,11 +89,11 @@ const SEED_ROOMS: Room[] = [
     id: "room_seed4", name: "Music & Beats", topic: "Music",
     host: "CosmicDJ", hostId: "seed_u2", category: "Music", coverEmoji: "\u{1F3B5}",
     tags: ["music", "beats", "fun"],
-    seats: Array.from({ length: 12 }, (_, i) => ({
+    seats: Array.from({ length: 8 }, (_, i) => ({
       index: i, userId: i < 4 ? `seed_mu${i}` : null,
       username: ["CosmicDJ", "BeatMaker", "DropKing", "RhymeFlow"][i] || null,
       avatar: ["\u{1F3B5}", "\u{1F941}", "\u{1F3B8}", "\u{1F3A4}"][i] || null,
-      isMuted: i === 2, isLocked: i === 11, isSpeaking: i === 0,
+      isMuted: i === 2, isLocked: i === 7, isSpeaking: i === 0,
     })),
     createdAt: Date.now() - 7200000, isLive: true, listeners: 42,
   },
@@ -100,7 +101,7 @@ const SEED_ROOMS: Room[] = [
     id: "room_seed5", name: "Gaming Lounge", topic: "Gaming",
     host: "PixelHero", hostId: "seed_u11", category: "Gaming", coverEmoji: "\u{1F3AE}",
     tags: ["gaming", "fun", "squad"],
-    seats: Array.from({ length: 12 }, (_, i) => ({
+    seats: Array.from({ length: 8 }, (_, i) => ({
       index: i, userId: i < 3 ? `seed_gm${i}` : null,
       username: ["PixelHero", "GameMaster", "ProSniper"][i] || null,
       avatar: ["\u{1F3AE}", "\u{1F579}\uFE0F", "\u{1F3C6}"][i] || null,
@@ -152,7 +153,7 @@ export function subscribeRoom(roomId: string, cb: (room: Room | null) => void): 
 
 export async function createRoom(userId: string, username: string, avatar: string, name: string, topic: string): Promise<Room> {
   const id = `room_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const seats: RoomSeat[] = Array.from({ length: 12 }, (_, i) => ({
+  const seats: RoomSeat[] = Array.from({ length: 8 }, (_, i) => ({
     index: i,
     userId: i === 0 ? userId : null,
     username: i === 0 ? username : null,
