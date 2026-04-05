@@ -14,7 +14,7 @@ import { sendNotification } from "../lib/notificationService";
 import { voiceService } from "../lib/voiceService";
 import { useToast } from "../lib/toastContext";
 
-interface Props { roomId: string; user: UserProfile; onLeave: () => void; }
+interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; }
 
 const EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u2728", "\u{1F602}", "\u{1F3B5}", "\u{1F44F}", "\u{1F31F}", "\u{1F4AF}", "\u{1F680}", "\u{1F60D}", "\u{1F389}", "\u{1F48E}"];
 const GIFTS = [
@@ -31,8 +31,17 @@ const GIFTS = [
   { emoji: "\u{1F3C6}", name: "Trophy", cost: 500 },
   { emoji: "\u{1F52E}", name: "Crystal Ball", cost: 75 },
 ];
+const GIFT_COMBOS = [1, 10, 50, 100];
+const REACTIONS = [
+  { emoji: "\u{1F44F}", label: "Clap" },
+  { emoji: "\u{1F525}", label: "Fire" },
+  { emoji: "\u2764\uFE0F", label: "Love" },
+  { emoji: "\u{1F602}", label: "LOL" },
+  { emoji: "\u{1F4AF}", label: "100" },
+  { emoji: "\u{1F389}", label: "Party" },
+];
 
-export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
+export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }: Props) {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [isMuted, setIsMuted] = useState(false);
@@ -64,6 +73,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
   const [cpEditName, setCpEditName] = useState("");
   const [showReportModal, setShowReportModal] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
+  const [isSpeakerOff, setIsSpeakerOff] = useState(false);
+  const [giftCombo, setGiftCombo] = useState(1);
+  const [showReactions, setShowReactions] = useState(false);
+  const [inviteSeatIdx, setInviteSeatIdx] = useState<number | null>(null);
   const floatId = useRef(0);
   const msgEnd = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
@@ -80,7 +93,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
       setRoom(r);
       if (r && !joinedRef.current) {
         joinedRef.current = true;
-        joinRoom(roomId, user.uid, user.name, user.avatar).then(res => {
+        joinRoom(roomId, user.uid, user.name, user.avatar, enteredPassword).then(res => {
           if (!res.joined) {
             showToast(res.reason || "Cannot join room", "error");
             onLeave();
@@ -184,21 +197,51 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
     await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: e, type: "emoji" }).catch(console.error);
   };
 
-  const handleGift = async (gift: typeof GIFTS[0]) => {
+  const handleGift = async (gift: typeof GIFTS[0], combo: number = 1) => {
     if (!room) return;
+    const totalCost = gift.cost * combo;
     const hostSeat = room.seats.find(s => s.userId && s.userId !== user.uid);
     const recipientId = hostSeat?.userId || room.hostId;
     const recipientName = hostSeat?.username || room.host;
-    const success = await sendGift(user.uid, user, recipientId, gift.emoji, gift.cost);
-    if (!success) { showToast(`Not enough coins! Need ${gift.cost}`, "warning", "\u{1F48E}"); return; }
+    const success = await sendGift(user.uid, user, recipientId, gift.emoji, totalCost);
+    if (!success) { showToast(`Not enough coins! Need ${totalCost}`, "warning", "\u{1F48E}"); return; }
     setGiftAnim({ emoji: gift.emoji, sender: user.name, receiver: recipientName });
     setTimeout(() => setGiftAnim(null), 3000);
-    for (let i = 0; i < 3; i++) setTimeout(() => spawnFloat(gift.emoji, true), i * 300);
+    const floatCount = Math.min(combo * 3, 15);
+    for (let i = 0; i < floatCount; i++) setTimeout(() => spawnFloat(gift.emoji, true), i * 200);
     setShowGift(false);
-    showToast(`Sent ${gift.emoji} ${gift.name} to ${recipientName}`, "success");
-    recordGift({ senderId: user.uid, senderName: user.name, senderAvatar: user.avatar, receiverId: recipientId, receiverName: recipientName, receiverAvatar: hostSeat?.avatar || "\u{1F3A4}", giftEmoji: gift.emoji, coins: gift.cost, timestamp: Date.now() }).catch(console.error);
-    sendNotification(recipientId, { type: "gift", title: "Gift Received!", body: `${user.name} sent you ${gift.emoji} ${gift.name}!`, icon: gift.emoji, fromUid: user.uid, fromName: user.name }).catch(console.error);
-    sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: `sent ${gift.emoji} ${gift.name} to ${recipientName}`, type: "gift" }).catch(console.error);
+    const comboText = combo > 1 ? ` x${combo}` : "";
+    showToast(`Sent ${gift.emoji} ${gift.name}${comboText} to ${recipientName}`, "success");
+    recordGift({ senderId: user.uid, senderName: user.name, senderAvatar: user.avatar, receiverId: recipientId, receiverName: recipientName, receiverAvatar: hostSeat?.avatar || "\u{1F3A4}", giftEmoji: gift.emoji, coins: totalCost, timestamp: Date.now() }).catch(console.error);
+    sendNotification(recipientId, { type: "gift", title: "Gift Received!", body: `${user.name} sent you ${gift.emoji} ${gift.name}${comboText}!`, icon: gift.emoji, fromUid: user.uid, fromName: user.name }).catch(console.error);
+    sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: `sent ${gift.emoji} ${gift.name}${comboText} to ${recipientName}`, type: "gift" }).catch(console.error);
+  };
+
+  const handleReaction = (emoji: string) => {
+    spawnFloat(emoji);
+    setShowReactions(false);
+    sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: emoji, type: "emoji" }).catch(console.error);
+  };
+
+  const handleSpeakerToggle = () => {
+    const newOff = !isSpeakerOff;
+    setIsSpeakerOff(newOff);
+    voiceService.setSpeakerOff(newOff);
+    showToast(newOff ? "Speaker OFF" : "Speaker ON", "info");
+  };
+
+  const handleInviteToSeat = async (uid: string, seatIdx: number) => {
+    if (!room) return;
+    const ru = room.roomUsers?.[uid];
+    const uname = ru?.name || "User";
+    try {
+      await joinSeat(roomId, seatIdx, uid, uname, ru?.avatar || "\u{1F464}");
+      showToast(`${uname} invited to seat ${seatIdx + 1}`, "success");
+      sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F3A4}", text: `${uname} was invited to seat ${seatIdx + 1}`, type: "system" }).catch(console.error);
+    } catch {
+      showToast("Failed to invite", "error");
+    }
+    setInviteSeatIdx(null);
   };
 
   const handleRaiseHand = async () => {
@@ -513,7 +556,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around" }}>
-          <PopupBtn icon={"\u{1F60A}"} active={showEmoji} onToggle={() => { setShowEmoji(!showEmoji); setShowGift(false); setShowVolume(false); }}>
+          <PopupBtn icon={"\u{1F60A}"} active={showEmoji} onToggle={() => { setShowEmoji(!showEmoji); setShowGift(false); setShowVolume(false); setShowReactions(false); }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, width: 200 }}>
               {EMOJIS.map(e => (
                 <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
@@ -522,56 +565,67 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
             </div>
           </PopupBtn>
 
-          <button className="btn btn-ghost btn-sm" style={{ width: 44, height: 44, borderRadius: 13, padding: 0, fontSize: 20 }}
-            onClick={handleRaiseHand}>{"\u270B"}</button>
+          <PopupBtn icon={"\u{1F44F}"} active={showReactions} onToggle={() => { setShowReactions(!showReactions); setShowEmoji(false); setShowGift(false); setShowVolume(false); }}>
+            <div style={{ display: "flex", gap: 6, padding: "4px 2px" }}>
+              {REACTIONS.map(r => (
+                <button key={r.emoji} onClick={() => handleReaction(r.emoji)} style={{
+                  background: "none", border: "none", cursor: "pointer", fontSize: 28, padding: 4,
+                  transition: "transform 0.15s",
+                }} onMouseOver={e => (e.currentTarget.style.transform = "scale(1.3)")}
+                  onMouseOut={e => (e.currentTarget.style.transform = "scale(1)")}>{r.emoji}</button>
+              ))}
+            </div>
+          </PopupBtn>
 
           <button onClick={handleMicToggle} style={{
-            width: 62, height: 62, borderRadius: 31, border: "none", cursor: "pointer",
+            width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer",
             background: isMuted ? "rgba(255,100,130,0.18)" : "linear-gradient(135deg,#6C5CE7,#A29BFE)",
-            color: "#fff", fontSize: 24, display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
             boxShadow: isMuted ? "0 0 18px rgba(255,100,130,0.4)" : "0 0 28px rgba(108,92,231,0.6), 0 0 56px rgba(108,92,231,0.25)",
             animation: !isMuted ? "pulse-glow 2s infinite" : "none",
             transition: "all 0.25s",
           }}>{isMuted ? "\u{1F507}" : "\u{1F3A4}"}</button>
 
-          <PopupBtn icon={"\u{1F381}"} active={showGift} onToggle={() => { setShowGift(!showGift); setShowEmoji(false); setShowVolume(false); }}>
-            <div style={{ width: 210 }}>
-              <div style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 6, fontWeight: 700 }}>{"\u{1F48E}"} {user.coins} coins</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {GIFTS.map(g => (
-                  <button key={g.emoji} onClick={() => handleGift(g)} style={{
-                    background: user.coins >= g.cost ? "rgba(108,92,231,0.12)" : "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(108,92,231,0.2)", borderRadius: 12,
-                    cursor: user.coins >= g.cost ? "pointer" : "not-allowed",
-                    padding: "5px 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
-                    opacity: user.coins >= g.cost ? 1 : 0.4,
-                  }}>
-                    <span style={{ fontSize: 18 }}>{g.emoji}</span>
-                    <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 700 }}>{g.cost}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </PopupBtn>
+          <button onClick={handleSpeakerToggle} style={{
+            width: 40, height: 40, borderRadius: 12, border: "none", cursor: "pointer",
+            background: isSpeakerOff ? "rgba(255,100,130,0.15)" : "rgba(108,92,231,0.12)",
+            color: isSpeakerOff ? "#ff6482" : "#A29BFE", fontSize: 18,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.2s",
+          }}>{isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}</button>
 
-          <PopupBtn icon={"\u{1F50A}"} active={showVolume} onToggle={() => { setShowVolume(!showVolume); setShowEmoji(false); setShowGift(false); }}>
-            <div style={{ width: 190 }}>
-              <div style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 8, fontWeight: 700 }}>Volume Control</div>
-              {room.seats.filter(s => s.userId && s.userId !== user.uid).map(s => {
-                const uid = Math.abs(hashCode(s.userId!)) % 1000000;
-                return (
-                  <div key={s.userId} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                    <span style={{ fontSize: 13 }}>{s.avatar}</span>
-                    <span style={{ fontSize: 9, color: "rgba(255,255,255,0.6)", width: 45, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.username}</span>
-                    <input type="range" min="0" max="100" value={volumeSliders[uid] ?? 100}
-                      onChange={e => handleVolumeChange(uid, parseInt(e.target.value))}
-                      style={{ flex: 1, accentColor: "#6C5CE7", height: 3 }} />
-                  </div>
-                );
-              })}
-              {room.seats.filter(s => s.userId && s.userId !== user.uid).length === 0 && (
-                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", textAlign: "center" }}>No other speakers</p>
-              )}
+          <PopupBtn icon={"\u{1F381}"} active={showGift} onToggle={() => { setShowGift(!showGift); setShowEmoji(false); setShowVolume(false); setShowReactions(false); }}>
+            <div style={{ width: 230 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700 }}>{"\u{1F48E}"} {user.coins} coins</span>
+                <div style={{ display: "flex", gap: 3 }}>
+                  {GIFT_COMBOS.map(c => (
+                    <button key={c} onClick={() => setGiftCombo(c)} style={{
+                      padding: "2px 7px", borderRadius: 8, fontSize: 9, fontWeight: 800, fontFamily: "inherit",
+                      border: giftCombo === c ? "1px solid #6C5CE7" : "1px solid rgba(255,255,255,0.1)",
+                      background: giftCombo === c ? "rgba(108,92,231,0.25)" : "rgba(255,255,255,0.03)",
+                      color: giftCombo === c ? "#A29BFE" : "rgba(162,155,254,0.4)", cursor: "pointer",
+                    }}>x{c}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {GIFTS.map(g => {
+                  const totalCost = g.cost * giftCombo;
+                  return (
+                    <button key={g.emoji} onClick={() => handleGift(g, giftCombo)} style={{
+                      background: user.coins >= totalCost ? "rgba(108,92,231,0.12)" : "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(108,92,231,0.2)", borderRadius: 12,
+                      cursor: user.coins >= totalCost ? "pointer" : "not-allowed",
+                      padding: "5px 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+                      opacity: user.coins >= totalCost ? 1 : 0.4,
+                    }}>
+                      <span style={{ fontSize: 18 }}>{g.emoji}</span>
+                      <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 700 }}>{totalCost}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </PopupBtn>
         </div>
@@ -963,12 +1017,20 @@ export default function VoiceRoomPage({ roomId, user, onLeave }: Props) {
                         </div>
                         {hasControl && ru.uid !== user.uid && ru.role !== "owner" && (
                           <div style={{ display: "flex", gap: 4 }}>
+                            {ru.seatIndex === null && (
+                              <button className="btn btn-ghost btn-sm" style={{ fontSize: 9, padding: "4px 8px", color: "#00b894" }}
+                                onClick={() => {
+                                  const emptySeat = room.seats.findIndex(s => !s.userId && !s.isLocked);
+                                  if (emptySeat >= 0) handleInviteToSeat(ru.uid, emptySeat);
+                                  else showToast("No empty seats available", "warning");
+                                }}>{"\u{1F4BA}"} Seat</button>
+                            )}
                             {isOwner && (
                               <button className="btn btn-ghost btn-sm" style={{ fontSize: 9, padding: "4px 8px" }}
                                 onClick={() => {
                                   const isAdm = (room.adminIds || []).includes(ru.uid);
-                                  if (isAdm) removeAdmin(roomId, ru.uid).then(() => showToast("Admin removed", "info"));
-                                  else setAdmin(roomId, ru.uid).then(() => showToast("Admin set!", "success"));
+                                  if (isAdm) removeAdmin(roomId, ru.uid).then(() => showToast("Admin removed", "info")).catch(() => showToast("Failed", "error"));
+                                  else setAdmin(roomId, ru.uid).then(() => showToast("Admin set!", "success")).catch(() => showToast("Failed", "error"));
                                 }}>
                                 {(room.adminIds || []).includes(ru.uid) ? "\u274C Admin" : "\u{1F6E1}\uFE0F Admin"}
                               </button>

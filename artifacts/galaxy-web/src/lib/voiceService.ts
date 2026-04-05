@@ -15,6 +15,7 @@ class VoiceService {
   private client: IAgoraRTCClient | null = null;
   private localTrack: IMicrophoneAudioTrack | null = null;
   private _muted = false;
+  private _speakerOff = false;
   private _ready = false;
   private _joined = false;
   private speakerCb: SpeakerCb | null = null;
@@ -42,7 +43,7 @@ class VoiceService {
         const remoteTrack = user.audioTrack;
         if (remoteTrack) {
           remoteTrack.play();
-          const vol = this.remoteVolumes.get(Number(user.uid)) ?? 100;
+          const vol = this._speakerOff ? 0 : (this.remoteVolumes.get(Number(user.uid)) ?? 100);
           remoteTrack.setVolume(vol);
         }
         this.remoteCb?.(Number(user.uid), true);
@@ -107,8 +108,22 @@ class VoiceService {
     }
   }
 
+  setSpeakerOff(off: boolean): void {
+    this._speakerOff = off;
+    if (this.client && this._joined) {
+      for (const user of this.client.remoteUsers) {
+        if (user.audioTrack) {
+          user.audioTrack.setVolume(off ? 0 : (this.remoteVolumes.get(Number(user.uid)) ?? 100));
+        }
+      }
+    }
+  }
+
+  get speakerOff() { return this._speakerOff; }
+
   setRemoteVolume(uid: number, volume: number): void {
     this.remoteVolumes.set(uid, Math.max(0, Math.min(100, volume)));
+    if (this._speakerOff) return;
     if (this.client && this._joined) {
       const users = this.client.remoteUsers;
       const user = users.find(u => Number(u.uid) === uid);

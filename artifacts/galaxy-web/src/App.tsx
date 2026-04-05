@@ -137,12 +137,24 @@ function AppContent() {
     return (
       <div className="app-wrapper">
         <div className="stars" />
-        <VoiceRoomPage roomId={activeRoom.id} user={profile} onLeave={() => { setActiveRoom(null); changePage("rooms"); }} />
+        <VoiceRoomPage roomId={activeRoom.id} user={profile} onLeave={() => { setActiveRoom(null); changePage("rooms"); }} enteredPassword={(activeRoom as any)._enteredPassword} />
       </div>
     );
   }
 
-  const joinRoom = (room: Room) => setActiveRoom(room);
+  const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
+
+  const joinRoom = (room: Room) => {
+    if (room.password && room.password !== "" && room.hostId !== profile.uid && !(room.adminIds || []).includes(profile.uid)) {
+      if ((room as any)._enteredPassword) {
+        setActiveRoom(room);
+      } else {
+        setPasswordPrompt({ room, pwd: "" });
+      }
+    } else {
+      setActiveRoom(room);
+    }
+  };
 
   return (
     <div className="app-wrapper">
@@ -193,6 +205,47 @@ function AppContent() {
             </button>
           ))}
         </nav>
+
+        {passwordPrompt && (
+          <div style={{
+            position: "fixed", inset: 0, background: "rgba(5,1,18,0.85)", backdropFilter: "blur(10px)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200,
+          }} onClick={() => setPasswordPrompt(null)}>
+            <div style={{
+              width: 300, padding: 24, background: "rgba(15,15,26,0.95)", borderRadius: 20,
+              border: "1px solid rgba(108,92,231,0.2)", animation: "popIn 0.2s ease",
+            }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 4, textAlign: "center", color: "#fff" }}>{"\u{1F512}"} Password Required</h3>
+              <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", textAlign: "center", marginBottom: 16 }}>
+                Enter the password to join "{passwordPrompt.room.name}"
+              </p>
+              <input
+                className="input-field"
+                type="password"
+                placeholder="Room password"
+                value={passwordPrompt.pwd}
+                onChange={e => setPasswordPrompt({ ...passwordPrompt, pwd: e.target.value })}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && passwordPrompt.pwd.trim()) {
+                    setActiveRoom({ ...passwordPrompt.room, _enteredPassword: passwordPrompt.pwd.trim() } as any);
+                    setPasswordPrompt(null);
+                  }
+                }}
+                style={{ marginBottom: 12 }}
+                autoFocus
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-ghost" style={{ flex: 1, padding: "10px 0" }} onClick={() => setPasswordPrompt(null)}>Cancel</button>
+                <button className="btn btn-primary" style={{ flex: 1, padding: "10px 0" }}
+                  disabled={!passwordPrompt.pwd.trim()}
+                  onClick={() => {
+                    setActiveRoom({ ...passwordPrompt.room, _enteredPassword: passwordPrompt.pwd.trim() } as any);
+                    setPasswordPrompt(null);
+                  }}>Join</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

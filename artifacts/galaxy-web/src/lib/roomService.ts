@@ -49,6 +49,7 @@ export interface Room {
   coverEmoji?: string;
   roomAvatar?: string;
   isPrivate?: boolean;
+  password?: string;
   micPermission?: "all" | "request" | "admin_only";
   roomLevel?: number;
   theme?: string;
@@ -165,7 +166,13 @@ export function subscribeRooms(cb: (rooms: Room[]) => void): () => void {
   const handler = onValue(r, snap => {
     if (!snap.exists()) { cb([]); return; }
     const val = snap.val();
-    const rooms: Room[] = Object.keys(val).map(k => ({ ...val[k], id: k }));
+    const rooms: Room[] = Object.keys(val).map(k => {
+      const room = { ...val[k], id: k };
+      if (room.password) {
+        room.password = "***";
+      }
+      return room;
+    });
     rooms.sort((a, b) => b.createdAt - a.createdAt);
     cb(rooms);
   }, err => {
@@ -183,7 +190,10 @@ export function subscribeRoom(roomId: string, cb: (room: Room | null) => void): 
   return () => off(r);
 }
 
-export async function createRoom(userId: string, username: string, avatar: string, name: string, topic: string): Promise<Room> {
+export async function createRoom(
+  userId: string, username: string, avatar: string, name: string, topic: string,
+  options?: { isPrivate?: boolean; password?: string; roomAvatar?: string; micPermission?: "all" | "request" | "admin_only" }
+): Promise<Room> {
   const id = `room_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const seats: RoomSeat[] = Array.from({ length: 10 }, (_, i) => ({
     index: i,
@@ -201,10 +211,11 @@ export async function createRoom(userId: string, username: string, avatar: strin
     seats, createdAt: Date.now(), isLive: true,
     listeners: 1, category: topic,
     coverEmoji: ROOM_COVERS[topic] || "\u{1F3A4}",
-    roomAvatar: ROOM_COVERS[topic] || "\u{1F3A4}",
+    roomAvatar: options?.roomAvatar || ROOM_COVERS[topic] || "\u{1F3A4}",
     tags: [topic.toLowerCase()],
-    isPrivate: false,
-    micPermission: "all",
+    isPrivate: options?.isPrivate || false,
+    password: options?.password || undefined,
+    micPermission: options?.micPermission || "all",
     roomLevel: 1,
     theme: "galaxy",
     roomUsers: { [userId]: ownerUser },
@@ -213,12 +224,16 @@ export async function createRoom(userId: string, username: string, avatar: strin
   return room;
 }
 
-export async function joinRoom(roomId: string, uid: string, name: string, avatar: string): Promise<{ joined: boolean; reason?: string }> {
+export async function joinRoom(roomId: string, uid: string, name: string, avatar: string, password?: string): Promise<{ joined: boolean; reason?: string; needsPassword?: boolean }> {
   const roomSnap = await get(ref(db, `rooms/${roomId}`));
   if (!roomSnap.exists()) return { joined: false, reason: "Room not found" };
   const room = roomSnap.val();
   if ((room.bannedUsers || []).includes(uid)) return { joined: false, reason: "You are banned from this room" };
-  if (room.isPrivate && room.hostId !== uid && !(room.adminIds || []).includes(uid)) return { joined: false, reason: "This room is private" };
+  if (room.password && room.hostId !== uid && !(room.adminIds || []).includes(uid)) {
+    if (!password) return { joined: false, reason: "This room requires a password", needsPassword: true };
+    if (password !== room.password) return { joined: false, reason: "Incorrect password" };
+  }
+  if (room.isPrivate && !room.password && room.hostId !== uid && !(room.adminIds || []).includes(uid)) return { joined: false, reason: "This room is private" };
   const existing = await get(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
   if (existing.exists()) return { joined: true };
   const roomUser: RoomUser = { uid, name, avatar, role: "user", joinedAt: Date.now(), seatIndex: null };
