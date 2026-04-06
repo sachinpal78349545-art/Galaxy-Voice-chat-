@@ -32,13 +32,7 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-  const createTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const createOpId = useRef(0);
   const { showToast } = useToast();
-
-  useEffect(() => {
-    return () => { if (createTimeout.current) clearTimeout(createTimeout.current); };
-  }, []);
 
   useEffect(() => {
     const unsub = subscribeRooms(r => { setRooms(r); setLoading(false); });
@@ -76,49 +70,35 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
     setIsPrivate(false);
     setPassword("");
     setCreating(false);
-    if (createTimeout.current) { clearTimeout(createTimeout.current); createTimeout.current = null; }
   };
 
   const handleCreate = async () => {
     if (!name.trim()) { showToast("Please enter a room name", "warning"); return; }
     if (creating) return;
     setCreating(true);
-    const opId = ++createOpId.current;
-
-    createTimeout.current = setTimeout(() => {
-      if (createOpId.current === opId) {
-        setCreating(false);
-        showToast("Room creation timed out. Please try again.", "error");
-      }
-    }, 15000);
 
     try {
       let roomAvatarUrl: string | undefined;
       if (dpFile) {
-        try {
-          const fileExt = dpFile.name.split(".").pop() || "jpg";
-          const path = `room-avatars/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-          const sRef = storageRef(storage, path);
-          await uploadBytes(sRef, dpFile);
-          roomAvatarUrl = await getDownloadURL(sRef);
-        } catch (uploadErr) {
-          console.warn("Image upload failed, creating room without DP:", uploadErr);
-        }
+        const fileExt = dpFile.name.split(".").pop() || "jpg";
+        const path = `room-avatars/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+        const sRef = storageRef(storage, path);
+        await uploadBytes(sRef, dpFile);
+        roomAvatarUrl = await getDownloadURL(sRef);
       }
       const room = await createRoom(user.uid, user.name, user.avatar, name.trim(), category, {
         ...(roomAvatarUrl ? { roomAvatar: roomAvatarUrl } : {}),
         isPrivate: isPrivate,
         ...(isPrivate && password.trim() ? { password: password.trim() } : {}),
       });
-      if (createTimeout.current) { clearTimeout(createTimeout.current); createTimeout.current = null; }
       setShowCreate(false);
       resetForm();
       showToast("Room created!", "success");
       onJoinRoom(room);
     } catch (err: any) {
       console.error("Create room error:", err);
-      if (createTimeout.current) { clearTimeout(createTimeout.current); createTimeout.current = null; }
       showToast(err?.message || "Failed to create room. Try again.", "error");
+    } finally {
       setCreating(false);
     }
   };
