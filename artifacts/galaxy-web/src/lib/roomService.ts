@@ -130,7 +130,7 @@ export async function createRoom(
   options?: { isPrivate?: boolean; password?: string; roomAvatar?: string; micPermission?: "all" | "request" | "admin_only" }
 ): Promise<Room> {
   const id = `room_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const seats: RoomSeat[] = Array.from({ length: 10 }, (_, i) => ({
+  const seats: RoomSeat[] = Array.from({ length: 12 }, (_, i) => ({
     index: i,
     userId: i === 0 ? userId : null,
     username: i === 0 ? username : null,
@@ -192,7 +192,7 @@ export async function joinSeat(roomId: string, seatIndex: number, userId: string
   const roomSnap = await get(ref(db, `rooms/${roomId}`));
   if (roomSnap.exists()) {
     const room = roomSnap.val();
-    const maxMics = room.maxMics || 8;
+    const maxMics = room.maxMics || 12;
     if (seatIndex >= maxMics) return false;
     const seats: RoomSeat[] = room.seats || [];
     const occupied = seats.filter((s: RoomSeat, i: number) => i < maxMics && s.userId).length;

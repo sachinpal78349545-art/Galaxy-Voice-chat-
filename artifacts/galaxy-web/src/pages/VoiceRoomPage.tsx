@@ -263,7 +263,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         showToast("Only owner/admins can take seats", "warning");
         return;
       }
-      const maxMics = room.maxMics || 8;
+      const maxMics = room.maxMics || 12;
       const emptySeat = room.seats.findIndex((s, i) => i < maxMics && !s.userId && !s.isLocked);
       if (emptySeat >= 0) {
         if (room.micPermission === "request" && !hasControl) {
@@ -566,31 +566,34 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       <div style={{ padding: "10px 10px 6px", flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10,
-          background: "rgba(255,255,255,0.08)", borderRadius: 22, padding: "16px 10px",
+          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12,
+          background: "rgba(255,255,255,0.08)", borderRadius: 22, padding: "18px 10px",
           border: "1px solid rgba(255,255,255,0.15)",
           backdropFilter: "blur(15px)",
           boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
         }}>
-          {room.seats.slice(0, room.maxMics || 8).map((seat, i) => (
-            <SeatCell
-              key={i}
-              seat={seat}
-              seatIndex={i}
-              role={seat.userId ? getUserRole(room, seat.userId) : "user"}
-              isMe={seat.userId === user.uid}
-              hasControl={hasControl}
-              isSpeaking={seat.userId ? (voiceService.joined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking) : false}
-              onTap={() => {
-                if (seat.userId === user.uid) return;
-                if (seat.userId) {
-                  setShowProfileCard({ uid: seat.userId, name: seat.username || "User", avatar: seat.avatar || "\u{1F464}", seatIdx: i });
-                } else if (!seat.isLocked) {
-                  setShowSeatSheet(i);
-                }
-              }}
-            />
-          ))}
+          {Array.from({ length: 12 }, (_, i) => {
+            const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: true, isSpeaking: false };
+            return (
+              <SeatCell
+                key={i}
+                seat={seat}
+                seatIndex={i}
+                role={seat.userId ? getUserRole(room, seat.userId) : "user"}
+                isMe={seat.userId === user.uid}
+                hasControl={hasControl}
+                isSpeaking={seat.userId ? (voiceService.joined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking) : false}
+                onTap={() => {
+                  if (seat.userId === user.uid) return;
+                  if (seat.userId) {
+                    setShowProfileCard({ uid: seat.userId, name: seat.username || "User", avatar: seat.avatar || "\u{1F464}", seatIdx: i });
+                  } else if (!seat.isLocked) {
+                    setShowSeatSheet(i);
+                  }
+                }}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -1298,7 +1301,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                             {ru.seatIndex === null && (
                               <button className="btn btn-ghost btn-sm" style={{ fontSize: 9, padding: "4px 8px", color: "#00b894" }}
                                 onClick={() => {
-                                  const mxM = room.maxMics || 8;
+                                  const mxM = room.maxMics || 12;
                                   const emptySeat = room.seats.findIndex((s, si) => si < mxM && !s.userId && !s.isLocked);
                                   if (emptySeat >= 0) handleInviteToSeat(ru.uid, emptySeat);
                                   else showToast("No empty seats available", "warning");
@@ -1562,7 +1565,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                     onClick={() => {
                       const pc = showProfileCard;
                       setShowProfileCard(null);
-                      const mxM2 = room?.maxMics || 8;
+                      const mxM2 = room?.maxMics || 12;
                       const emptySeat = room?.seats.findIndex((s, si) => si < mxM2 && !s.userId && !s.isLocked);
                       if (emptySeat !== undefined && emptySeat >= 0) handleInviteToSeat(pc!.uid, emptySeat);
                       else showToast("No empty seats", "warning");
@@ -1773,9 +1776,32 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
   const seatNum = seatIndex + 1;
+
+  const bubbleBase: React.CSSProperties = {
+    width: 56, height: 56, borderRadius: 28, fontSize: 23,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    background: "rgba(255,255,255,0.08)",
+    backdropFilter: "blur(10px)",
+    border: "1px solid rgba(255,255,255,0.20)",
+    boxShadow: "inset 0 2px 6px rgba(255,255,255,0.08), inset 0 -2px 4px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.2)",
+    transition: "all 0.3s ease",
+    overflow: "hidden",
+    opacity: isLocked ? 0.5 : 1,
+  };
+
+  const speakingExtra: React.CSSProperties = isSpeaking ? {
+    border: "2px solid #2DD4BF",
+    boxShadow: "0 0 10px #2dd4bf, inset 0 0 5px #2dd4bf, inset 0 2px 6px rgba(255,255,255,0.08)",
+  } : {};
+
+  const activeExtra: React.CSSProperties = isActive && !isSpeaking ? {
+    border: "1.5px solid rgba(138,43,226,0.6)",
+    boxShadow: "0 0 10px rgba(138,43,226,0.4), inset 0 0 5px rgba(138,43,226,0.2), inset 0 2px 6px rgba(255,255,255,0.08)",
+  } : {};
+
   return (
     <div style={{
-      display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
       cursor: (!isMe && seat.userId) || (!seat.userId && !isLocked) ? "pointer" : "default",
       transition: "transform 0.15s ease",
     }} onClick={onTap}>
@@ -1784,7 +1810,7 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
           <>
             <div style={{
               position: "absolute", inset: -6, borderRadius: "50%",
-              border: "2px solid rgba(45,212,191,0.8)",
+              border: "2px solid rgba(45,212,191,0.7)",
               animation: "speaking-ring 1s ease-in-out infinite", pointerEvents: "none",
             }} />
             <div style={{
@@ -1794,34 +1820,15 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
             }} />
           </>
         )}
-        <div style={{
-          width: 52, height: 52, borderRadius: 26, fontSize: 23,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          background: isActive
-            ? "rgba(255,255,255,0.08)"
-            : isLocked ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.05)",
-          border: isLocked ? "1.5px dashed rgba(255,255,255,0.12)"
-            : isSpeaking ? "2px solid #2DD4BF"
-            : isActive ? "2px solid rgba(138,43,226,0.8)"
-            : "1.5px dashed rgba(255,255,255,0.15)",
-          boxShadow: isSpeaking
-            ? "0 0 10px #2dd4bf, inset 0 0 5px #2dd4bf"
-            : isActive
-            ? "0 0 10px rgba(138,43,226,0.6), inset 0 0 5px rgba(138,43,226,0.3)"
-            : "none",
-          transition: "all 0.3s ease",
-          backdropFilter: "blur(10px)",
-          overflow: "hidden",
-          opacity: isLocked ? 0.5 : 1,
-        }}>
+        <div style={{ ...bubbleBase, ...speakingExtra, ...activeExtra }}>
           {isLocked ? (
-            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.25)" }}>{"\u{1F512}"}</span>
+            <span style={{ fontSize: 16, color: "rgba(255,255,255,0.3)" }}>{"\u{1F512}"}</span>
           ) : isActive ? (
             seat.avatar?.startsWith("http")
-              ? <img src={seat.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 26, objectFit: "cover" }} />
-              : seat.avatar
+              ? <img src={seat.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 28, objectFit: "cover" }} />
+              : <span>{seat.avatar}</span>
           ) : (
-            <span style={{ fontSize: 16, color: "rgba(255,255,255,0.15)" }}>+</span>
+            <span style={{ fontSize: 18, color: "rgba(255,255,255,0.2)", fontWeight: 300 }}>+</span>
           )}
         </div>
         {role === "owner" && isActive && (
@@ -1849,12 +1856,13 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
         )}
       </div>
       <span style={{
-        fontSize: 9, fontWeight: 600, textAlign: "center", letterSpacing: 0.2,
+        fontSize: 8, fontWeight: 600, textAlign: "center",
         fontFamily: "'Inter', sans-serif",
-        color: isActive ? "#fff" : "rgba(255,255,255,0.25)",
+        color: isActive ? "#fff" : "rgba(255,255,255,0.35)",
         maxWidth: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        lineHeight: 1.2,
       }}>
-        {isLocked ? "Locked" : seat.username || ""}
+        {isActive && seat.username ? seat.username : seatNum}
       </span>
     </div>
   );
