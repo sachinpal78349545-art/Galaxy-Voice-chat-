@@ -1780,10 +1780,9 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
   const bubbleBase: React.CSSProperties = {
     width: 56, height: 56, borderRadius: 28, fontSize: 23,
     display: "flex", alignItems: "center", justifyContent: "center",
-    background: "rgba(255,255,255,0.08)",
-    backdropFilter: "blur(10px)",
-    border: "1px solid rgba(255,255,255,0.20)",
-    boxShadow: "inset 0 2px 6px rgba(255,255,255,0.08), inset 0 -2px 4px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.2)",
+    background: "transparent",
+    border: "1px solid rgba(255,255,255,0.3)",
+    boxShadow: "inset 0 1px 4px rgba(255,255,255,0.12), inset 0 -1px 3px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15)",
     transition: "all 0.3s ease",
     overflow: "hidden",
     opacity: isLocked ? 0.5 : 1,
@@ -1791,12 +1790,12 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
 
   const speakingExtra: React.CSSProperties = isSpeaking ? {
     border: "2px solid #2DD4BF",
-    boxShadow: "0 0 10px #2dd4bf, inset 0 0 5px #2dd4bf, inset 0 2px 6px rgba(255,255,255,0.08)",
+    boxShadow: "0 0 10px #2dd4bf, inset 0 0 5px #2dd4bf",
   } : {};
 
   const activeExtra: React.CSSProperties = isActive && !isSpeaking ? {
     border: "1.5px solid rgba(138,43,226,0.6)",
-    boxShadow: "0 0 10px rgba(138,43,226,0.4), inset 0 0 5px rgba(138,43,226,0.2), inset 0 2px 6px rgba(255,255,255,0.08)",
+    boxShadow: "0 0 8px rgba(138,43,226,0.35), inset 0 1px 4px rgba(255,255,255,0.12)",
   } : {};
 
   return (
