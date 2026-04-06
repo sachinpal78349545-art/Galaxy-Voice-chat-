@@ -25,7 +25,8 @@ artifacts/galaxy-web/src/
   index.css                — Global styles, Inter font, button animations (scale+ripple),
                              card hover/press states, skeleton shimmer, page transitions,
                              animations (giftFly, giftReveal, giftBounce, logoGlow,
-                             speaking-ring, handWave, float, confetti, etc.)
+                             speaking-ring, handWave, float, confetti, mysticGlow,
+                             crystalPulse, mysticFloat, sofaFloat, runeGlow, borderRotate)
   lib/
     firebase.ts            — Firebase SDK init (auth, db, storage)
     voiceService.ts        — Agora RTC: join/leave/mute, AEC/ANS/AGC, volume monitoring,
@@ -66,14 +67,17 @@ artifacts/galaxy-web/src/
     RoomsPage.tsx          — Firebase room list, create room modal with 9-category
                              selector, DP upload, Public/Private toggle with password,
                              15s timeout safeguard, proper error handling, real-time updates
-    VoiceRoomPage.tsx      — 10-seat 2x5-column grid, real Agora voice (join/leave/mute),
-                             co-host controls, animated gift system (fly/reveal/bounce),
+    VoiceRoomPage.tsx      — "Mystical Library" dark fantasy theme, 4-column seats grid
+                             with teal/purple glowing borders, glassmorphism chat area,
+                             real Agora voice (join/leave/mute), co-host controls,
+                             animated gift system (fly/reveal/bounce),
                              gift leaderboard modal (daily/weekly/monthly tabs),
                              per-user volume sliders, room timer, room ID display,
-                             bottom sheet on empty seat (Take Mic / Lock Mic),
+                             premium bottom bar (Gift Vault + Special Gems buttons),
+                             floating sofa icon, bottom sheet on empty seat,
                              slide-up profile card on occupied seat (ID, Level, Follow),
                              anti-screenshot CSS protection,
-                             sticky room header (Share + ⋮ + ❌),
+                             sticky header with trophy counter + share/menu/close,
                              control panel (5 tabs: Profile/Followers/Mic/Banned/Events),
                              room DP gallery upload (Firebase Storage),
                              level progress bar, announcement editor,

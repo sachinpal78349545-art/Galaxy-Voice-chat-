@@ -285,6 +285,31 @@ textarea.input-field { resize: none; line-height: 1.5; }
   .no-screenshot { display: none !important; }
 }
 
+@keyframes mysticGlow {
+  0%,100% { box-shadow: 0 0 15px rgba(138,43,226,0.5), 0 0 30px rgba(0,206,209,0.2); }
+  50%     { box-shadow: 0 0 30px rgba(138,43,226,0.8), 0 0 60px rgba(0,206,209,0.4); }
+}
+@keyframes crystalPulse {
+  0%,100% { opacity: 0.6; filter: brightness(1); }
+  50%     { opacity: 1; filter: brightness(1.3); }
+}
+@keyframes mysticFloat {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  33%     { transform: translateY(-6px) rotate(1deg); }
+  66%     { transform: translateY(-3px) rotate(-1deg); }
+}
+@keyframes sofaFloat {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-8px); }
+}
+@keyframes runeGlow {
+  0%,100% { text-shadow: 0 0 6px rgba(138,43,226,0.6), 0 0 12px rgba(0,206,209,0.3); }
+  50%     { text-shadow: 0 0 16px rgba(138,43,226,0.9), 0 0 32px rgba(0,206,209,0.5); }
+}
+@keyframes borderRotate {
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 400px) {
   .app-container { max-width: 100%; }
 }

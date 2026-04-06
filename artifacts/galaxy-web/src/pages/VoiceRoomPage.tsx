@@ -407,9 +407,14 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
   if (!room) {
     return (
-      <div style={{ position: "fixed", inset: 0, zIndex: 300, maxWidth: 400, margin: "0 auto", background: "linear-gradient(160deg, #1A0F2E, #0F0F1A)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 18, border: "3px solid rgba(108,92,231,0.2)", borderTopColor: "#6C5CE7", animation: "spin 0.8s linear infinite" }} />
-        <p style={{ fontSize: 13, color: "rgba(162,155,254,0.5)" }}>Joining room...</p>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 300, maxWidth: 400, margin: "0 auto",
+        background: "linear-gradient(160deg, #0D0A1A 0%, #1A0F2E 30%, #0F0820 70%, #070510 100%)",
+        display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16,
+      }}>
+        <div style={{ fontSize: 48, animation: "mysticFloat 2s ease-in-out infinite" }}>{"\u{1F52E}"}</div>
+        <div style={{ width: 36, height: 36, borderRadius: 18, border: "3px solid rgba(138,43,226,0.2)", borderTopColor: "#8A2BE2", animation: "spin 0.8s linear infinite" }} />
+        <p style={{ fontSize: 13, color: "rgba(180,160,255,0.6)", animation: "runeGlow 2s ease-in-out infinite" }}>Entering the sanctuary...</p>
       </div>
     );
   }
@@ -417,8 +422,34 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
   return (
     <div className="no-screenshot" style={{
       position: "fixed", inset: 0, zIndex: 300, maxWidth: 400, margin: "0 auto",
-      background: roomTheme.bg, display: "flex", flexDirection: "column",
+      background: "linear-gradient(160deg, #0D0A1A 0%, #1A0F2E 30%, #0F0820 70%, #070510 100%)",
+      display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+        backgroundImage: `
+          radial-gradient(ellipse 120% 60% at 50% 15%, rgba(138,43,226,0.12) 0%, transparent 55%),
+          radial-gradient(circle at 10% 85%, rgba(0,206,209,0.08) 0%, transparent 40%),
+          radial-gradient(circle at 90% 70%, rgba(138,43,226,0.06) 0%, transparent 35%),
+          radial-gradient(circle at 50% 50%, rgba(75,0,130,0.04) 0%, transparent 50%)
+        `,
+      }} />
+
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.5,
+        backgroundImage: `
+          radial-gradient(1px 1px at 12% 8%, rgba(180,160,255,0.9) 0%, transparent 100%),
+          radial-gradient(1.5px 1.5px at 28% 22%, rgba(0,206,209,0.8) 0%, transparent 100%),
+          radial-gradient(1px 1px at 45% 12%, rgba(255,255,255,0.7) 0%, transparent 100%),
+          radial-gradient(2px 2px at 65% 5%, rgba(138,43,226,0.9) 0%, transparent 100%),
+          radial-gradient(1px 1px at 82% 18%, rgba(0,206,209,0.7) 0%, transparent 100%),
+          radial-gradient(1px 1px at 18% 52%, rgba(180,160,255,0.5) 0%, transparent 100%),
+          radial-gradient(1.5px 1.5px at 72% 48%, rgba(138,43,226,0.6) 0%, transparent 100%),
+          radial-gradient(1px 1px at 35% 72%, rgba(0,206,209,0.5) 0%, transparent 100%),
+          radial-gradient(1px 1px at 88% 62%, rgba(180,160,255,0.4) 0%, transparent 100%)
+        `,
+      }} />
+
       {floats.map(f => (
         <div key={f.id} style={{
           position: "absolute", bottom: "42%", right: `${f.x}%`, fontSize: f.big ? 52 : 38, zIndex: 500,
@@ -432,7 +463,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           zIndex: 600, textAlign: "center", pointerEvents: "none", animation: "giftReveal 3s ease forwards",
         }}>
           <div style={{ fontSize: 80, animation: "giftBounce 0.6s ease infinite" }}>{giftAnim.emoji}</div>
-          <div style={{ fontSize: 14, color: "#FFD700", fontWeight: 800, textShadow: "0 2px 8px rgba(0,0,0,0.8)", marginTop: 8 }}>
+          <div style={{ fontSize: 14, color: "#FFD700", fontWeight: 800, textShadow: "0 2px 8px rgba(0,0,0,0.8), 0 0 20px rgba(138,43,226,0.5)", marginTop: 8 }}>
             {giftAnim.sender} {"\u27A4"} {giftAnim.receiver}
           </div>
         </div>
@@ -444,30 +475,34 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           zIndex: 700, textAlign: "center", pointerEvents: "none",
           animation: "welcomeEntry 3.5s ease forwards",
         }}>
-          <div style={{ fontSize: 48, marginBottom: 8, animation: "float 1s ease-in-out infinite" }}>{"\u2728"}</div>
+          <div style={{ fontSize: 48, marginBottom: 8, animation: "float 1s ease-in-out infinite" }}>{"\u{1F52E}"}</div>
           <div style={{
-            background: "linear-gradient(135deg, rgba(108,92,231,0.3), rgba(108,92,231,0.1))",
-            border: "1.5px solid rgba(108,92,231,0.4)", borderRadius: 20, padding: "12px 24px",
+            background: "linear-gradient(135deg, rgba(138,43,226,0.3), rgba(0,206,209,0.15))",
+            border: "1.5px solid rgba(138,43,226,0.5)", borderRadius: 20, padding: "12px 24px",
             backdropFilter: "blur(16px)",
+            boxShadow: "0 4px 30px rgba(138,43,226,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
           }}>
-            <p style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Welcome {welcomeAnim}!</p>
-            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.6)", marginTop: 2 }}>Enjoy the room {"\u{1F389}"}</p>
+            <p style={{ fontSize: 15, fontWeight: 800, color: "#E8D5FF" }}>Welcome {welcomeAnim}!</p>
+            <p style={{ fontSize: 11, color: "rgba(180,160,255,0.6)", marginTop: 2 }}>The sanctuary awaits {"\u2728"}</p>
           </div>
         </div>
       )}
 
       <div style={{
-        position: "sticky", top: 0, zIndex: 1000,
+        position: "relative", zIndex: 10,
         display: "flex", alignItems: "center", gap: 10,
-        padding: "48px 12px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
-        background: roomTheme.bg,
+        padding: "48px 12px 10px",
+        borderBottom: "1px solid rgba(138,43,226,0.15)", flexShrink: 0,
+        background: "linear-gradient(180deg, rgba(13,10,26,0.95) 0%, rgba(13,10,26,0.7) 100%)",
+        backdropFilter: "blur(12px)",
       }}>
         <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}
           style={{
             width: 44, height: 44, borderRadius: 14, fontSize: 24,
-            background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-            border: "2px solid rgba(108,92,231,0.4)", display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 12px rgba(108,92,231,0.2)",
+            background: "linear-gradient(135deg, rgba(138,43,226,0.3), rgba(0,206,209,0.15))",
+            border: "2px solid rgba(138,43,226,0.5)", display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", flexShrink: 0,
+            boxShadow: "0 2px 16px rgba(138,43,226,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
             overflow: "hidden",
           }}>
           {(room.roomAvatar || room.coverEmoji || "\u{1F3A4}").startsWith?.("http")
@@ -476,30 +511,35 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
         <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
           onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>
-          <h2 style={{ fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.name}</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#E8D5FF", animation: "runeGlow 4s ease-in-out infinite" }}>{room.name}</h2>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span className="badge badge-live" style={{ fontSize: 9, padding: "1px 6px", gap: 3 }}>
-              <span className="live-dot" style={{ width: 5, height: 5 }} /> LIVE
+            <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 8, background: "rgba(0,206,209,0.15)", border: "1px solid rgba(0,206,209,0.35)", color: "#00CED1", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#00CED1", animation: "crystalPulse 2s ease-in-out infinite" }} /> LIVE
             </span>
-            <span style={{ fontSize: 10, color: "rgba(162,155,254,0.5)" }}>{liveCount} online</span>
-            <span style={{ fontSize: 10, color: "rgba(162,155,254,0.3)" }}>{"\u23F1"} {elapsed}</span>
+            <span style={{ fontSize: 10, color: "rgba(180,160,255,0.5)" }}>{liveCount} online</span>
+            <span style={{ fontSize: 10, color: "rgba(180,160,255,0.3)" }}>{"\u23F1"} {elapsed}</span>
           </div>
-          <span style={{ fontSize: 9, color: "rgba(162,155,254,0.25)", fontFamily: "monospace" }}>ID: {room.id.slice(5, 21)}</span>
+          <span style={{ fontSize: 9, color: "rgba(138,43,226,0.5)", fontFamily: "monospace" }}>ID: {room.id.slice(5, 21)}</span>
         </div>
-        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-          <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15 }}
+        <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+          <button onClick={() => { loadLeaderboard("daily"); setShowLeaderboard(true); }} style={{
+            display: "flex", alignItems: "center", gap: 3, padding: "4px 8px", borderRadius: 10,
+            background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.25)",
+            cursor: "pointer", fontSize: 11, color: "#FFD700", fontWeight: 700, fontFamily: "inherit",
+          }}>{"\u{1F3C6}"} {(liveCount * 0.95 + 0.28).toFixed(2)}K</button>
+          <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, borderColor: "rgba(138,43,226,0.2)" }}
             onClick={() => {
               const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
               if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
               else { navigator.clipboard?.writeText(shareText + ` Room ID: ${room.id}`); showToast("Room link copied!", "success"); }
             }}>{"\u{1F517}"}</button>
-          <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15 }}
+          <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, borderColor: "rgba(138,43,226,0.2)" }}
             onClick={() => setShowUsersPanel(true)}>{"\u{1F465}"}</button>
-          <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15 }}
-            onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>{"\u22EE"}</button>
+          <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, borderColor: "rgba(138,43,226,0.2)" }}
+            onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>{"\u2630"}</button>
           <button onClick={() => setShowCloseMenu(true)} style={{
             width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(255,100,130,0.3)",
-            background: "rgba(255,100,130,0.1)", cursor: "pointer", fontSize: 16, color: "#ff6482",
+            background: "rgba(255,100,130,0.08)", cursor: "pointer", fontSize: 16, color: "#ff6482",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>{"\u2715"}</button>
         </div>
@@ -507,26 +547,33 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       {myRole !== "user" && (
         <div style={{
-          display: "flex", gap: 4, padding: "6px 12px",
-          borderBottom: "1px solid rgba(255,255,255,0.04)", flexShrink: 0,
+          display: "flex", gap: 4, padding: "6px 12px", position: "relative", zIndex: 10,
+          borderBottom: "1px solid rgba(138,43,226,0.1)", flexShrink: 0,
         }}>
-          <span className={`badge ${myRole === "owner" ? "badge-gold" : "badge-accent"}`} style={{ fontSize: 9 }}>
+          <span style={{
+            fontSize: 9, padding: "2px 8px", borderRadius: 10, fontWeight: 700,
+            background: myRole === "owner" ? "rgba(255,215,0,0.12)" : "rgba(138,43,226,0.15)",
+            border: myRole === "owner" ? "1px solid rgba(255,215,0,0.3)" : "1px solid rgba(138,43,226,0.3)",
+            color: myRole === "owner" ? "#FFD700" : "#B4A0FF",
+          }}>
             {myRole === "owner" ? "\u{1F451} Owner" : "\u{1F6E1}\uFE0F Admin"}
           </span>
           {room.micPermission && room.micPermission !== "all" && (
-            <span className="badge badge-accent" style={{ fontSize: 9 }}>
+            <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 10, fontWeight: 700, background: "rgba(0,206,209,0.1)", border: "1px solid rgba(0,206,209,0.25)", color: "#00CED1" }}>
               {"\u{1F3A4}"} Mic: {room.micPermission === "request" ? "Request" : "Admin Only"}
             </span>
           )}
-          {room.isPrivate && <span className="badge badge-accent" style={{ fontSize: 9 }}>{"\u{1F512}"} Private</span>}
+          {room.isPrivate && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 10, fontWeight: 700, background: "rgba(138,43,226,0.1)", border: "1px solid rgba(138,43,226,0.25)", color: "#B4A0FF" }}>{"\u{1F512}"} Private</span>}
         </div>
       )}
 
-      <div style={{ padding: "10px 10px 6px", flexShrink: 0 }}>
+      <div style={{ padding: "10px 10px 6px", flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8,
-          background: "rgba(108,92,231,0.03)", borderRadius: 20, padding: "14px 6px",
-          border: "1px solid rgba(108,92,231,0.06)",
+          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8,
+          background: "rgba(138,43,226,0.04)", borderRadius: 22, padding: "14px 8px",
+          border: "1px solid rgba(138,43,226,0.1)",
+          backdropFilter: "blur(10px)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 20px rgba(0,0,0,0.3)",
         }}>
           {room.seats.slice(0, room.maxMics || 8).map((seat, i) => (
             <SeatCell
@@ -550,8 +597,14 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 12px" }}>
-        <div style={{ flex: 1, overflowY: "auto", paddingTop: 6, paddingBottom: 4 }}>
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 12px", position: "relative", zIndex: 10 }}>
+        <div style={{
+          flex: 1, overflowY: "auto", paddingTop: 6, paddingBottom: 4,
+          background: "rgba(13,10,26,0.5)", borderRadius: 16, padding: "8px 10px",
+          backdropFilter: "blur(10px)",
+          border: "1px solid rgba(138,43,226,0.08)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+        }}>
           {messages.map(msg => (
             <ChatBubble key={msg.id} msg={msg} isMe={msg.userId === user.uid} />
           ))}
@@ -559,96 +612,147 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       </div>
 
+      <div style={{ position: "absolute", right: 8, bottom: 170, zIndex: 20, animation: "sofaFloat 3s ease-in-out infinite" }}>
+        <button onClick={handleRaiseHand} style={{
+          width: 48, height: 48, borderRadius: 24, border: "none", cursor: "pointer",
+          background: "linear-gradient(135deg, rgba(138,43,226,0.6), rgba(75,0,130,0.8))",
+          boxShadow: "0 4px 20px rgba(138,43,226,0.5), 0 0 30px rgba(138,43,226,0.2)",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
+        }}>{"\u{1F6CB}\uFE0F"}</button>
+      </div>
+
       <div style={{
-        padding: "8px 12px 22px", borderTop: "1px solid rgba(255,255,255,0.06)",
-        background: "rgba(8,4,24,0.85)", backdropFilter: "blur(14px)", flexShrink: 0,
+        padding: "8px 12px 22px", borderTop: "1px solid rgba(138,43,226,0.15)",
+        background: "rgba(7,5,16,0.92)", backdropFilter: "blur(16px)", flexShrink: 0,
+        position: "relative", zIndex: 10,
       }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           <input className="input-field"
-            style={{ flex: 1, borderRadius: 22, padding: "10px 14px", fontSize: 13 }}
-            placeholder="Say something..."
+            style={{ flex: 1, borderRadius: 22, padding: "10px 14px", fontSize: 13, background: "rgba(138,43,226,0.08)", borderColor: "rgba(138,43,226,0.2)" }}
+            placeholder="Cast your words..."
             value={inputText}
             onChange={e => setInputText(e.target.value)}
             onKeyDown={e => e.key === "Enter" && sendChat()}
           />
-          <button className="btn btn-primary btn-sm" style={{ borderRadius: 22, padding: "10px 16px", flexShrink: 0 }}
-            onClick={sendChat}>{"\u27A4"}</button>
+          <button style={{
+            borderRadius: 22, padding: "10px 16px", flexShrink: 0, border: "none", cursor: "pointer",
+            background: "linear-gradient(135deg, #8A2BE2, #00CED1)", color: "#fff", fontSize: 14, fontWeight: 700,
+            boxShadow: "0 4px 16px rgba(138,43,226,0.4)",
+          }} onClick={sendChat}>{"\u27A4"}</button>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around" }}>
-          <PopupBtn icon={"\u{1F60A}"} active={showEmoji} onToggle={() => { setShowEmoji(!showEmoji); setShowGift(false); setShowVolume(false); setShowReactions(false); }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, width: 200 }}>
-              {EMOJIS.map(e => (
-                <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
-                  onClick={() => sendEmojiMsg(e)}>{e}</button>
-              ))}
-            </div>
-          </PopupBtn>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button onClick={handleSpeakerToggle} style={{
+              width: 40, height: 40, borderRadius: 12, border: "1px solid rgba(138,43,226,0.2)", cursor: "pointer",
+              background: isSpeakerOff ? "rgba(255,100,130,0.1)" : "rgba(138,43,226,0.1)",
+              color: isSpeakerOff ? "#ff6482" : "#B4A0FF", fontSize: 18,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}</button>
 
-          <PopupBtn icon={"\u{1F44F}"} active={showReactions} onToggle={() => { setShowReactions(!showReactions); setShowEmoji(false); setShowGift(false); setShowVolume(false); }}>
-            <div style={{ display: "flex", gap: 6, padding: "4px 2px" }}>
-              {REACTIONS.map(r => (
-                <button key={r.emoji} onClick={() => handleReaction(r.emoji)} style={{
-                  background: "none", border: "none", cursor: "pointer", fontSize: 28, padding: 4,
-                  transition: "transform 0.15s",
-                }} onMouseOver={e => (e.currentTarget.style.transform = "scale(1.3)")}
-                  onMouseOut={e => (e.currentTarget.style.transform = "scale(1)")}>{r.emoji}</button>
-              ))}
-            </div>
-          </PopupBtn>
+            <button onClick={handleMicToggle} style={{
+              width: 48, height: 48, borderRadius: 24, border: "none", cursor: "pointer",
+              background: isMuted ? "rgba(255,100,130,0.15)" : "linear-gradient(135deg, #8A2BE2, #00CED1)",
+              color: "#fff", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: isMuted ? "0 0 18px rgba(255,100,130,0.3)" : "0 0 24px rgba(138,43,226,0.5), 0 0 48px rgba(0,206,209,0.2)",
+              animation: !isMuted ? "mysticGlow 2s infinite" : "none",
+              transition: "all 0.25s",
+            }}>{isMuted ? "\u{1F507}" : "\u{1F3A4}"}</button>
+          </div>
 
-          <button onClick={handleMicToggle} style={{
-            width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer",
-            background: isMuted ? "rgba(255,100,130,0.18)" : "linear-gradient(135deg,#6C5CE7,#A29BFE)",
-            color: "#fff", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: isMuted ? "0 0 18px rgba(255,100,130,0.4)" : "0 0 28px rgba(108,92,231,0.6), 0 0 56px rgba(108,92,231,0.25)",
-            animation: !isMuted ? "pulse-glow 2s infinite" : "none",
-            transition: "all 0.25s",
-          }}>{isMuted ? "\u{1F507}" : "\u{1F3A4}"}</button>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <PopupBtn icon={"\u{1F517}"} active={false} onToggle={() => {
+              const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
+              if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
+              else { navigator.clipboard?.writeText(shareText + ` Room ID: ${room.id}`); showToast("Room link copied!", "success"); }
+            }}><span /></PopupBtn>
 
-          <button onClick={handleSpeakerToggle} style={{
-            width: 40, height: 40, borderRadius: 12, border: "none", cursor: "pointer",
-            background: isSpeakerOff ? "rgba(255,100,130,0.15)" : "rgba(108,92,231,0.12)",
-            color: isSpeakerOff ? "#ff6482" : "#A29BFE", fontSize: 18,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "all 0.2s",
-          }}>{isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}</button>
-
-          <PopupBtn icon={"\u{1F381}"} active={showGift} onToggle={() => { setShowGift(!showGift); setShowEmoji(false); setShowVolume(false); setShowReactions(false); }}>
-            <div style={{ width: 230 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700 }}>{"\u{1F48E}"} {user.coins} coins</span>
-                <div style={{ display: "flex", gap: 3 }}>
-                  {GIFT_COMBOS.map(c => (
-                    <button key={c} onClick={() => setGiftCombo(c)} style={{
-                      padding: "2px 7px", borderRadius: 8, fontSize: 9, fontWeight: 800, fontFamily: "inherit",
-                      border: giftCombo === c ? "1px solid #6C5CE7" : "1px solid rgba(255,255,255,0.1)",
-                      background: giftCombo === c ? "rgba(108,92,231,0.25)" : "rgba(255,255,255,0.03)",
-                      color: giftCombo === c ? "#A29BFE" : "rgba(162,155,254,0.4)", cursor: "pointer",
-                    }}>x{c}</button>
-                  ))}
-                </div>
+            <PopupBtn icon={"\u{1F4AC}"} active={showEmoji} onToggle={() => { setShowEmoji(!showEmoji); setShowGift(false); setShowVolume(false); setShowReactions(false); }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, width: 200 }}>
+                {EMOJIS.map(e => (
+                  <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
+                    onClick={() => sendEmojiMsg(e)}>{e}</button>
+                ))}
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {GIFTS.map(g => {
-                  const totalCost = g.cost * giftCombo;
-                  return (
-                    <button key={g.emoji} onClick={() => handleGift(g, giftCombo)} style={{
-                      background: user.coins >= totalCost ? "rgba(108,92,231,0.12)" : "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(108,92,231,0.2)", borderRadius: 12,
-                      cursor: user.coins >= totalCost ? "pointer" : "not-allowed",
-                      padding: "5px 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
-                      opacity: user.coins >= totalCost ? 1 : 0.4,
-                    }}>
-                      <span style={{ fontSize: 18 }}>{g.emoji}</span>
-                      <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 700 }}>{totalCost}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </PopupBtn>
+            </PopupBtn>
+          </div>
+
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button onClick={() => { setShowGift(!showGift); setShowEmoji(false); setShowVolume(false); setShowReactions(false); }} style={{
+              padding: "8px 12px", borderRadius: 16, border: "none", cursor: "pointer",
+              background: "linear-gradient(135deg, rgba(138,43,226,0.4), rgba(75,0,130,0.6))",
+              boxShadow: "0 2px 12px rgba(138,43,226,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
+              color: "#E8D5FF", fontSize: 11, fontWeight: 800, fontFamily: "inherit",
+              display: "flex", alignItems: "center", gap: 4, animation: "mysticGlow 3s infinite",
+            }}>{"\u{1F3F0}"} Gift Vault</button>
+
+            <button onClick={() => { setShowReactions(!showReactions); setShowEmoji(false); setShowGift(false); setShowVolume(false); }} style={{
+              padding: "8px 12px", borderRadius: 16, border: "none", cursor: "pointer",
+              background: "linear-gradient(135deg, rgba(0,206,209,0.3), rgba(138,43,226,0.4))",
+              boxShadow: "0 2px 12px rgba(0,206,209,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+              color: "#B4FFFF", fontSize: 11, fontWeight: 800, fontFamily: "inherit",
+              display: "flex", alignItems: "center", gap: 4,
+            }}>{"\u{1F48E}"} Gems</button>
+          </div>
         </div>
+
+        {showGift && (
+          <div style={{
+            position: "absolute", bottom: "100%", left: 12, right: 12, marginBottom: 6,
+            background: "rgba(13,10,26,0.97)", border: "1px solid rgba(138,43,226,0.25)",
+            borderRadius: 18, padding: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 40px rgba(138,43,226,0.15)",
+            animation: "popIn 0.15s ease", zIndex: 20,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, color: "rgba(180,160,255,0.6)", fontWeight: 700 }}>{"\u{1F48E}"} {user.coins} coins</span>
+              <div style={{ display: "flex", gap: 3 }}>
+                {GIFT_COMBOS.map(c => (
+                  <button key={c} onClick={() => setGiftCombo(c)} style={{
+                    padding: "2px 7px", borderRadius: 8, fontSize: 9, fontWeight: 800, fontFamily: "inherit",
+                    border: giftCombo === c ? "1px solid #8A2BE2" : "1px solid rgba(255,255,255,0.1)",
+                    background: giftCombo === c ? "rgba(138,43,226,0.25)" : "rgba(255,255,255,0.03)",
+                    color: giftCombo === c ? "#B4A0FF" : "rgba(180,160,255,0.4)", cursor: "pointer",
+                  }}>x{c}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {GIFTS.map(g => {
+                const totalCost = g.cost * giftCombo;
+                return (
+                  <button key={g.emoji} onClick={() => handleGift(g, giftCombo)} style={{
+                    background: user.coins >= totalCost ? "rgba(138,43,226,0.12)" : "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(138,43,226,0.2)", borderRadius: 12,
+                    cursor: user.coins >= totalCost ? "pointer" : "not-allowed",
+                    padding: "5px 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+                    opacity: user.coins >= totalCost ? 1 : 0.4,
+                  }}>
+                    <span style={{ fontSize: 18 }}>{g.emoji}</span>
+                    <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 700 }}>{totalCost}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {showReactions && (
+          <div style={{
+            position: "absolute", bottom: "100%", right: 12, marginBottom: 6,
+            background: "rgba(13,10,26,0.97)", border: "1px solid rgba(0,206,209,0.2)",
+            borderRadius: 18, padding: "8px 12px", boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+            animation: "popIn 0.15s ease", zIndex: 20,
+            display: "flex", gap: 6,
+          }}>
+            {REACTIONS.map(r => (
+              <button key={r.emoji} onClick={() => handleReaction(r.emoji)} style={{
+                background: "none", border: "none", cursor: "pointer", fontSize: 28, padding: 4,
+                transition: "transform 0.15s",
+              }} onMouseOver={e => (e.currentTarget.style.transform = "scale(1.3)")}
+                onMouseOut={e => (e.currentTarget.style.transform = "scale(1)")}>{r.emoji}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {showCloseMenu && (
@@ -1592,34 +1696,35 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
       display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 6,
       animation: isWelcome ? "welcomeMsg 0.5s ease" : "slide-up 0.15s ease",
       padding: "3px 6px", borderRadius: 10,
-      background: isWelcome ? "rgba(108,92,231,0.1)"
+      background: isWelcome ? "rgba(138,43,226,0.12)"
         : isGift ? "rgba(255,215,0,0.06)"
-        : isSystem ? "rgba(0,230,118,0.04)"
+        : isSystem ? "rgba(0,206,209,0.05)"
         : "transparent",
-      border: isWelcome ? "1px solid rgba(108,92,231,0.2)" : "none",
+      border: isWelcome ? "1px solid rgba(138,43,226,0.25)" : "none",
     }}>
       {!isSystem && (
         <div style={{
           width: 22, height: 22, borderRadius: 11, fontSize: 12, flexShrink: 0,
-          background: "rgba(108,92,231,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(138,43,226,0.15)", display: "flex", alignItems: "center", justifyContent: "center",
+          border: "1px solid rgba(138,43,226,0.2)",
         }}>{msg.avatar}</div>
       )}
       <div style={{ flex: 1 }}>
         {isSystem ? (
           <span style={{
             fontSize: 12, lineHeight: 1.4,
-            color: isWelcome ? "#A29BFE" : msg.type === "leave" ? "rgba(255,100,130,0.6)" : "#00e676",
+            color: isWelcome ? "#B4A0FF" : msg.type === "leave" ? "rgba(255,100,130,0.6)" : "#00CED1",
             fontWeight: isWelcome ? 700 : 500, fontStyle: "italic",
           }}>{msg.text}</span>
         ) : (
           <>
             <span style={{
-              fontSize: 10, color: isMe ? "#A29BFE" : "rgba(162,155,254,0.5)",
+              fontSize: 10, color: isMe ? "#B4A0FF" : "rgba(180,160,255,0.5)",
               marginRight: 5, fontWeight: 700,
             }}>{msg.username}</span>
             <span style={{
               fontSize: msg.type === "emoji" ? 22 : 13, lineHeight: 1.4,
-              color: isGift ? "#FFD700" : isMe ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.75)",
+              color: isGift ? "#FFD700" : isMe ? "rgba(228,213,255,0.9)" : "rgba(228,213,255,0.7)",
               fontWeight: isGift ? 700 : 400,
             }}>{msg.text}</span>
           </>
@@ -1650,61 +1755,75 @@ interface SeatCellProps {
 }
 
 function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }: SeatCellProps) {
+  const isActive = !!seat.userId;
+  const seatNum = seatIndex + 1;
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
       cursor: (!isMe && seat.userId) || (!seat.userId && !seat.isLocked) ? "pointer" : "default",
       transition: "transform 0.15s ease",
+      animation: isActive ? "mysticFloat 3s ease-in-out infinite" : "none",
+      animationDelay: `${seatIndex * 0.2}s`,
     }} onClick={onTap}>
       <div style={{ position: "relative" }}>
         {isSpeaking && (
           <>
             <div style={{
               position: "absolute", inset: -5, borderRadius: "50%",
-              border: "2px solid rgba(0,230,118,0.6)",
+              border: "2px solid rgba(0,206,209,0.7)",
               animation: "speaking-ring 1s ease-in-out infinite", pointerEvents: "none",
             }} />
             <div style={{
               position: "absolute", inset: -10, borderRadius: "50%",
-              border: "1.5px solid rgba(0,230,118,0.25)",
+              border: "1.5px solid rgba(138,43,226,0.4)",
               animation: "speaking-ring 1.3s ease-in-out infinite 0.2s", pointerEvents: "none",
             }} />
           </>
         )}
         <div style={{
-          width: 46, height: 46, borderRadius: 23, fontSize: 22,
+          width: 50, height: 50, borderRadius: 25, fontSize: 22,
           display: "flex", alignItems: "center", justifyContent: "center",
-          background: seat.userId
-            ? (isMe ? "linear-gradient(135deg, rgba(108,92,231,0.3), rgba(108,92,231,0.15))" : "linear-gradient(135deg, rgba(108,92,231,0.18), rgba(108,92,231,0.08))")
-            : "rgba(255,255,255,0.02)",
+          background: isActive
+            ? (isMe
+              ? "linear-gradient(135deg, rgba(138,43,226,0.35), rgba(0,206,209,0.2))"
+              : "linear-gradient(135deg, rgba(138,43,226,0.2), rgba(75,0,130,0.15))")
+            : "rgba(138,43,226,0.04)",
           border: seat.isLocked ? "2px solid rgba(255,215,0,0.3)"
-            : isSpeaking ? "2px solid rgba(0,230,118,0.7)"
-            : seat.userId ? "2px solid rgba(108,92,231,0.4)"
-            : "2px dashed rgba(255,255,255,0.08)",
-          boxShadow: role === "owner" && seat.userId ? "0 0 16px rgba(255,215,0,0.3), 0 3px 12px rgba(108,92,231,0.2)"
-            : isSpeaking ? "0 0 22px rgba(0,230,118,0.45), 0 0 44px rgba(0,230,118,0.15)"
-            : seat.userId ? "0 3px 12px rgba(108,92,231,0.15)" : "none",
+            : isSpeaking ? "2px solid rgba(0,206,209,0.8)"
+            : isActive ? "2px solid rgba(138,43,226,0.5)"
+            : "2px dashed rgba(138,43,226,0.15)",
+          boxShadow: role === "owner" && isActive ? "0 0 20px rgba(255,215,0,0.35), 0 0 40px rgba(138,43,226,0.2)"
+            : isSpeaking ? "0 0 25px rgba(0,206,209,0.5), 0 0 50px rgba(138,43,226,0.2)"
+            : isActive ? "0 0 16px rgba(138,43,226,0.25), inset 0 1px 0 rgba(255,255,255,0.08)"
+            : "inset 0 1px 0 rgba(255,255,255,0.03)",
           transition: "all 0.3s ease",
+          animation: isActive && isSpeaking ? "mysticGlow 2s infinite" : "none",
+          backdropFilter: !isActive ? "blur(6px)" : "none",
+          overflow: "hidden",
         }}>
-          {seat.isLocked ? "\u{1F512}" : seat.userId ? (
-            seat.avatar?.startsWith("http") ? <img src={seat.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 23, objectFit: "cover" }} /> : seat.avatar
+          {seat.isLocked ? (
+            <span style={{ fontSize: 16, opacity: 0.4 }}>{"\u{1F512}"}</span>
+          ) : isActive ? (
+            seat.avatar?.startsWith("http")
+              ? <img src={seat.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 25, objectFit: "cover" }} />
+              : seat.avatar
           ) : (
-            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.12)" }}>+</span>
+            <span style={{ fontSize: 11, color: "rgba(138,43,226,0.3)", fontWeight: 700 }}>{seatNum}</span>
           )}
         </div>
-        {role === "owner" && seat.userId && (
-          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", fontSize: 12, filter: "drop-shadow(0 1px 4px rgba(255,215,0,0.5))" }}>{"\u{1F451}"}</div>
+        {role === "owner" && isActive && (
+          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", fontSize: 12, filter: "drop-shadow(0 1px 6px rgba(255,215,0,0.7))" }}>{"\u{1F451}"}</div>
         )}
-        {role === "admin" && seat.userId && (
+        {role === "admin" && isActive && (
           <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", fontSize: 10 }}>{"\u{1F6E1}\uFE0F"}</div>
         )}
-        {seat.isCoHost && role !== "owner" && role !== "admin" && seat.userId && (
+        {seat.isCoHost && role !== "owner" && role !== "admin" && isActive && (
           <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", fontSize: 10 }}>{"\u{1F396}\uFE0F"}</div>
         )}
-        {seat.userId && seat.isMuted && (
+        {isActive && seat.isMuted && (
           <div style={{
             position: "absolute", bottom: -2, right: -2, width: 14, height: 14, borderRadius: 7,
-            background: "rgba(255,100,130,0.95)", border: "2px solid #0F0F1A",
+            background: "rgba(255,100,130,0.95)", border: "2px solid #0D0A1A",
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7,
           }}>{"\u{1F507}"}</div>
         )}
@@ -1718,10 +1837,10 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
       </div>
       <span style={{
         fontSize: 8, fontWeight: 600, textAlign: "center",
-        color: seat.userId ? (isMe ? "#A29BFE" : "rgba(255,255,255,0.75)") : "rgba(255,255,255,0.15)",
-        maxWidth: 54, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        color: isActive ? (isMe ? "#B4A0FF" : "rgba(228,213,255,0.75)") : "rgba(138,43,226,0.25)",
+        maxWidth: 58, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
       }}>
-        {seat.isLocked ? "Locked" : seat.username || "Empty"}
+        {seat.isLocked ? "Locked" : seat.username || `Seat ${seatNum}`}
       </span>
     </div>
   );
