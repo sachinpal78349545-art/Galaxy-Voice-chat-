@@ -416,9 +416,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           position: "absolute", inset: 0,
           backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)`,
           backgroundSize: "cover", backgroundPosition: "center",
-          filter: "brightness(0.4) saturate(1.2)", opacity: 0.7,
         }} />
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.60)" }} />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <div style={{ fontSize: 48, animation: "mysticFloat 2s ease-in-out infinite", filter: "drop-shadow(0 0 16px rgba(45,212,191,0.6))" }}>{"\u{1F52E}"}</div>
           <div style={{ width: 36, height: 36, borderRadius: 18, border: "3px solid rgba(45,212,191,0.15)", borderTopColor: "#2DD4BF", animation: "spin 0.8s linear infinite" }} />
@@ -432,18 +431,17 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
     <div className="no-screenshot" style={{
       position: "fixed", inset: 0, zIndex: 300, maxWidth: 400, margin: "0 auto",
       display: "flex", flexDirection: "column", overflow: "hidden",
-      background: "#050310",
+      background: "#050310", fontFamily: "'Inter', sans-serif",
     }}>
       <div style={{
         position: "absolute", inset: 0, zIndex: 0,
         backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)`,
         backgroundSize: "cover", backgroundPosition: "center",
-        filter: "brightness(0.6) saturate(1.2)",
       }} />
 
       <div style={{
         position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-        background: "rgba(0,0,0,0.4)",
+        background: "rgba(0,0,0,0.60)",
       }} />
 
       {floats.map(f => (
@@ -488,9 +486,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         position: "relative", zIndex: 10,
         display: "flex", alignItems: "center", gap: 10,
         padding: "48px 12px 10px",
-        borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0,
-        background: "rgba(0,0,0,0.25)",
-        backdropFilter: "blur(16px)",
+        borderBottom: "1px solid rgba(255,255,255,0.15)", flexShrink: 0,
+        background: "rgba(255,255,255,0.08)",
+        backdropFilter: "blur(15px)",
       }}>
         <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}
           style={{
@@ -512,10 +510,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
             <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 8, background: "rgba(45,212,191,0.15)", border: "1px solid rgba(45,212,191,0.3)", color: "#2DD4BF", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
               <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#2DD4BF", animation: "crystalPulse 2s ease-in-out infinite" }} /> LIVE
             </span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)" }}>{liveCount} online</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>{"\u23F1"} {elapsed}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.8)" }}>{liveCount} online</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>{"\u23F1"} {elapsed}</span>
           </div>
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontFamily: "'Inter', monospace" }}>ID: {room.id.slice(5, 21)}</span>
+          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', monospace" }}>ID: {room.id.slice(5, 21)}</span>
         </div>
         <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
           <button onClick={() => { loadLeaderboard("daily"); setShowLeaderboard(true); }} style={{
@@ -569,9 +567,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       <div style={{ padding: "10px 10px 6px", flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10,
-          background: "rgba(255,255,255,0.04)", borderRadius: 22, padding: "16px 10px",
-          border: "1px solid rgba(255,255,255,0.08)",
-          backdropFilter: "blur(12px)",
+          background: "rgba(255,255,255,0.08)", borderRadius: 22, padding: "16px 10px",
+          border: "1px solid rgba(255,255,255,0.15)",
+          backdropFilter: "blur(15px)",
           boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
         }}>
           {room.seats.slice(0, room.maxMics || 8).map((seat, i) => (
@@ -599,9 +597,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 12px", position: "relative", zIndex: 10 }}>
         <div style={{
           flex: 1, overflowY: "auto",
-          background: "rgba(0,0,0,0.2)", borderRadius: 18, padding: "10px 12px",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(255,255,255,0.08)", borderRadius: 18, padding: "10px 12px",
+          backdropFilter: "blur(15px)",
+          border: "1px solid rgba(255,255,255,0.15)",
           boxShadow: "0 4px 24px rgba(0,0,0,0.2)",
         }}>
           {messages.map(msg => (
@@ -622,13 +620,13 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       </div>
 
       <div style={{
-        padding: "10px 12px 24px", borderTop: "1px solid rgba(255,255,255,0.08)",
-        background: "rgba(0,0,0,0.3)", backdropFilter: "blur(20px)", flexShrink: 0,
+        padding: "10px 12px 24px", borderTop: "1px solid rgba(255,255,255,0.15)",
+        background: "rgba(255,255,255,0.08)", backdropFilter: "blur(15px)", flexShrink: 0,
         position: "relative", zIndex: 10,
       }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
           <input className="input-field"
-            style={{ flex: 1, borderRadius: 24, padding: "11px 16px", fontSize: 13, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}
+            style={{ flex: 1, borderRadius: 24, padding: "11px 16px", fontSize: 13, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontFamily: "'Inter', sans-serif" }}
             placeholder="Cast your words..."
             value={inputText}
             onChange={e => setInputText(e.target.value)}
@@ -642,21 +640,21 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button onClick={handleSpeakerToggle} style={{
-              width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer",
-              background: isSpeakerOff ? "rgba(255,100,130,0.1)" : "rgba(255,255,255,0.06)",
-              backdropFilter: "blur(8px)",
+              width: 46, height: 46, borderRadius: "50%", border: "none", cursor: "pointer",
+              background: isSpeakerOff ? "rgba(255,100,130,0.15)" : "rgba(255,255,255,0.10)",
+              backdropFilter: "blur(10px)",
               color: isSpeakerOff ? "#ff6482" : "#fff", fontSize: 20,
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: !isSpeakerOff ? "0 0 15px rgba(45,212,191,0.3)" : "none",
+              boxShadow: isSpeakerOff ? "0 0 12px rgba(255,100,130,0.4), inset 0 0 6px rgba(255,100,130,0.2)" : "0 0 10px #2dd4bf, inset 0 0 5px rgba(45,212,191,0.3)",
             }}>{isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}</button>
 
             <button onClick={handleMicToggle} style={{
-              width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer",
+              width: 54, height: 54, borderRadius: 27, border: "none", cursor: "pointer",
               background: isMuted ? "rgba(255,100,130,0.15)" : "linear-gradient(135deg, #8A2BE2, #2DD4BF)",
               color: "#fff", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: isMuted ? "0 0 18px rgba(255,100,130,0.3)" : "0 0 15px rgba(45,212,191,0.5), 0 0 30px rgba(138,43,226,0.3), 0 0 60px rgba(45,212,191,0.15)",
+              boxShadow: isMuted ? "0 0 12px rgba(255,100,130,0.4), inset 0 0 6px rgba(255,100,130,0.2)" : "0 0 15px #2dd4bf, 0 0 30px rgba(138,43,226,0.4), inset 0 0 8px rgba(45,212,191,0.3)",
               animation: !isMuted ? "mysticGlow 2s infinite" : "none",
               transition: "all 0.25s",
             }}>{isMuted ? "\u{1F507}" : "\u{1F3A4}"}</button>
@@ -664,9 +662,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button style={{
-              width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)",
-              background: "rgba(255,255,255,0.06)", backdropFilter: "blur(8px)",
-              cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.7)",
+              width: 44, height: 44, borderRadius: "50%", border: "none",
+              background: "rgba(255,255,255,0.10)", backdropFilter: "blur(10px)",
+              cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+              boxShadow: "0 0 10px rgba(138,43,226,0.3), inset 0 0 5px rgba(138,43,226,0.15)",
             }} onClick={() => {
               const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
               if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
@@ -685,19 +684,19 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
           <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
             <button onClick={() => { setShowGift(!showGift); setShowEmoji(false); setShowVolume(false); setShowReactions(false); }} style={{
-              padding: "10px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-              background: "linear-gradient(135deg, #7C3AED, #6D28D9, #8B5CF6)",
-              boxShadow: "0 0 15px rgba(124,58,237,0.5), 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)",
-              color: "#fff", fontSize: 12, fontWeight: 800, fontFamily: "inherit",
-              display: "flex", alignItems: "center", gap: 5, letterSpacing: 0.3,
-            }}>{"\u{1F3F0}"} Gift Vault</button>
+              padding: "7px 12px", borderRadius: 16, border: "none", cursor: "pointer",
+              background: "linear-gradient(135deg, #7C3AED, #EC4899)",
+              boxShadow: "0 0 12px rgba(236,72,153,0.4), 0 3px 10px rgba(0,0,0,0.3)",
+              color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: "'Inter', sans-serif",
+              display: "flex", alignItems: "center", gap: 4,
+            }}>{"\u{1F3F0}"} Gift</button>
 
             <button onClick={() => { setShowReactions(!showReactions); setShowEmoji(false); setShowGift(false); setShowVolume(false); }} style={{
-              padding: "10px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-              background: "linear-gradient(135deg, #0D9488, #2DD4BF, #14B8A6)",
-              boxShadow: "0 0 15px rgba(45,212,191,0.5), 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)",
-              color: "#fff", fontSize: 12, fontWeight: 800, fontFamily: "inherit",
-              display: "flex", alignItems: "center", gap: 5, letterSpacing: 0.3,
+              padding: "7px 12px", borderRadius: 16, border: "none", cursor: "pointer",
+              background: "linear-gradient(135deg, #8B5CF6, #EC4899)",
+              boxShadow: "0 0 12px rgba(139,92,246,0.4), 0 3px 10px rgba(0,0,0,0.3)",
+              color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: "'Inter', sans-serif",
+              display: "flex", alignItems: "center", gap: 4,
             }}>{"\u{1F48E}"} Gems</button>
           </div>
         </div>
@@ -1722,25 +1721,25 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
         <div style={{
           width: 22, height: 22, borderRadius: 11, fontSize: 12, flexShrink: 0,
           background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid rgba(255,255,255,0.15)",
         }}>{msg.avatar}</div>
       )}
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, fontFamily: "'Inter', sans-serif" }}>
         {isSystem ? (
           <span style={{
             fontSize: 12, lineHeight: 1.4,
-            color: isWelcome ? "#fff" : msg.type === "leave" ? "rgba(255,100,130,0.6)" : "#2DD4BF",
+            color: isWelcome ? "#fff" : msg.type === "leave" ? "rgba(255,100,130,0.7)" : "#2DD4BF",
             fontWeight: isWelcome ? 700 : 500, fontStyle: "italic",
           }}>{msg.text}</span>
         ) : (
           <>
             <span style={{
-              fontSize: 10, color: isMe ? "#2DD4BF" : "rgba(255,255,255,0.4)",
-              marginRight: 5, fontWeight: 700,
+              fontSize: 10, color: isMe ? "#2DD4BF" : "rgba(255,255,255,0.85)",
+              marginRight: 5, fontWeight: 600,
             }}>{msg.username}</span>
             <span style={{
               fontSize: msg.type === "emoji" ? 22 : 13, lineHeight: 1.4,
-              color: isGift ? "#FFD700" : isMe ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.7)",
+              color: isGift ? "#FFD700" : "#fff",
               fontWeight: isGift ? 700 : 400,
             }}>{msg.text}</span>
           </>
@@ -1799,21 +1798,19 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
           width: 52, height: 52, borderRadius: 26, fontSize: 23,
           display: "flex", alignItems: "center", justifyContent: "center",
           background: isActive
-            ? "rgba(0,0,0,0.3)"
-            : isLocked ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.03)",
+            ? "rgba(255,255,255,0.08)"
+            : isLocked ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.05)",
           border: isLocked ? "1.5px dashed rgba(255,255,255,0.12)"
-            : isSpeaking ? "2.5px solid #2DD4BF"
-            : isActive ? "2.5px solid rgba(138,43,226,0.7)"
-            : "1.5px dashed rgba(255,255,255,0.1)",
-          boxShadow: role === "owner" && isActive
-            ? "0 0 15px rgba(255,215,0,0.4), 0 0 30px rgba(255,215,0,0.15), inset 0 0 15px rgba(255,215,0,0.05)"
-            : isSpeaking
-            ? "0 0 15px rgba(45,212,191,0.5), 0 0 30px rgba(45,212,191,0.2), 0 0 60px rgba(45,212,191,0.1)"
+            : isSpeaking ? "2px solid #2DD4BF"
+            : isActive ? "2px solid rgba(138,43,226,0.8)"
+            : "1.5px dashed rgba(255,255,255,0.15)",
+          boxShadow: isSpeaking
+            ? "0 0 10px #2dd4bf, inset 0 0 5px #2dd4bf"
             : isActive
-            ? "0 0 15px rgba(138,43,226,0.4), 0 0 30px rgba(138,43,226,0.15)"
+            ? "0 0 10px rgba(138,43,226,0.6), inset 0 0 5px rgba(138,43,226,0.3)"
             : "none",
           transition: "all 0.3s ease",
-          backdropFilter: "blur(8px)",
+          backdropFilter: "blur(10px)",
           overflow: "hidden",
           opacity: isLocked ? 0.5 : 1,
         }}>
@@ -1824,7 +1821,7 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
               ? <img src={seat.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 26, objectFit: "cover" }} />
               : seat.avatar
           ) : (
-            <span style={{ fontSize: 16, color: "rgba(255,255,255,0.1)" }}>+</span>
+            <span style={{ fontSize: 16, color: "rgba(255,255,255,0.15)" }}>+</span>
           )}
         </div>
         {role === "owner" && isActive && (
@@ -1853,7 +1850,8 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
       </div>
       <span style={{
         fontSize: 9, fontWeight: 600, textAlign: "center", letterSpacing: 0.2,
-        color: isActive ? (isMe ? "#2DD4BF" : "rgba(255,255,255,0.7)") : "rgba(255,255,255,0.2)",
+        fontFamily: "'Inter', sans-serif",
+        color: isActive ? "#fff" : "rgba(255,255,255,0.25)",
         maxWidth: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
       }}>
         {isLocked ? "Locked" : seat.username || ""}
