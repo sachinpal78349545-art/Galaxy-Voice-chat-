@@ -483,64 +483,62 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       <div style={{
         position: "relative", zIndex: 10,
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "48px 12px 10px",
-        borderBottom: "1px solid rgba(255,255,255,0.1)", flexShrink: 0,
+        padding: "42px 12px 6px", flexShrink: 0,
         background: "transparent",
       }}>
-        <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}
-          style={{
-            width: 44, height: 44, borderRadius: 14, fontSize: 24,
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", flexShrink: 0,
-            boxShadow: "0 0 15px rgba(45,212,191,0.2)",
-            overflow: "hidden",
-          }}>
-          {(room.roomAvatar || room.coverEmoji || "\u{1F3A4}").startsWith?.("http")
-            ? <img src={room.roomAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 14 }} />
-            : (room.roomAvatar || room.coverEmoji || "\u{1F3A4}")}
-        </div>
-        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
-          onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", letterSpacing: 0.3 }}>{room.name}</h2>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 8, background: "rgba(45,212,191,0.15)", border: "1px solid rgba(45,212,191,0.3)", color: "#2DD4BF", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#2DD4BF", animation: "crystalPulse 2s ease-in-out infinite" }} /> LIVE
-            </span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.8)" }}>{liveCount} online</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>{"\u23F1"} {elapsed}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}
+            style={{
+              width: 36, height: 36, borderRadius: 18, fontSize: 20,
+              background: "transparent", border: "1.5px solid rgba(255,255,255,0.2)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", flexShrink: 0, overflow: "hidden",
+            }}>
+            {(room.roomAvatar || room.coverEmoji || "\u{1F3A4}").startsWith?.("http")
+              ? <img src={room.roomAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18 }} />
+              : (room.roomAvatar || room.coverEmoji || "\u{1F3A4}")}
           </div>
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", fontFamily: "'Poppins', monospace" }}>ID: {room.id.slice(5, 21)}</span>
+          <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+            onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>
+            <h2 style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", margin: 0, lineHeight: 1.3 }}>{room.name}</h2>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+            <button style={{ width: 30, height: 30, padding: 0, borderRadius: 15, fontSize: 14, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}
+              onClick={() => {
+                const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
+                if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
+                else { navigator.clipboard?.writeText(shareText + ` Room ID: ${room.id}`); showToast("Room link copied!", "success"); }
+              }}>{"\u{1F517}"}</button>
+            <button style={{ width: 30, height: 30, padding: 0, borderRadius: 15, fontSize: 14, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}
+              onClick={() => setShowUsersPanel(true)}>{"\u{1F465}"}</button>
+            <button style={{ width: 30, height: 30, padding: 0, borderRadius: 15, fontSize: 14, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}
+              onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>{"\u2630"}</button>
+            <button onClick={() => setShowCloseMenu(true)} style={{
+              width: 30, height: 30, borderRadius: 15, border: "none",
+              background: "transparent", cursor: "pointer", fontSize: 14, color: "rgba(255,100,130,0.6)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{"\u2715"}</button>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 44 }}>
+          <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 6, background: "transparent", border: "1px solid rgba(45,212,191,0.3)", color: "#2DD4BF", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3 }}>
+            <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#2DD4BF", animation: "crystalPulse 2s ease-in-out infinite" }} /> LIVE
+          </span>
+          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.5)" }}>{liveCount} online</span>
+          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.4)" }}>{"\u23F1"} {elapsed}</span>
+          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)" }}>ID: {room.id.slice(5, 13)}</span>
           <button onClick={() => { loadLeaderboard("daily"); setShowLeaderboard(true); }} style={{
-            display: "flex", alignItems: "center", gap: 3, padding: "4px 8px", borderRadius: 10,
-            background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.2)",
-            cursor: "pointer", fontSize: 11, color: "#FFD700", fontWeight: 700, fontFamily: "inherit",
+            display: "inline-flex", alignItems: "center", gap: 2, padding: "1px 5px", borderRadius: 6,
+            background: "transparent", border: "1px solid rgba(255,215,0,0.2)",
+            cursor: "pointer", fontSize: 8, color: "#FFD700", fontWeight: 600, fontFamily: "inherit",
           }}>{"\u{1F3C6}"} {(liveCount * 0.95 + 0.28).toFixed(2)}K</button>
-          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.6)" }}
-            onClick={() => {
-              const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
-              if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
-              else { navigator.clipboard?.writeText(shareText + ` Room ID: ${room.id}`); showToast("Room link copied!", "success"); }
-            }}>{"\u{1F517}"}</button>
-          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.6)" }}
-            onClick={() => setShowUsersPanel(true)}>{"\u{1F465}"}</button>
-          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.6)" }}
-            onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>{"\u2630"}</button>
-          <button onClick={() => setShowCloseMenu(true)} style={{
-            width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(255,100,130,0.2)",
-            background: "rgba(255,100,130,0.08)", cursor: "pointer", fontSize: 16, color: "#ff6482",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>{"\u2715"}</button>
         </div>
       </div>
 
       {myRole !== "user" && (
         <div style={{
-          display: "flex", gap: 4, padding: "6px 12px", position: "relative", zIndex: 10,
-          borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
+          display: "flex", gap: 4, padding: "4px 12px", position: "relative", zIndex: 10,
+          flexShrink: 0,
         }}>
           <span style={{
             fontSize: 9, padding: "2px 8px", borderRadius: 10, fontWeight: 700,
@@ -559,11 +557,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       )}
 
-      <div style={{ padding: "10px 10px 6px", flexShrink: 0, position: "relative", zIndex: 10 }}>
+      <div style={{ padding: "6px 6px 4px", flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8,
-          background: "rgba(255,255,255,0.05)", borderRadius: 18, padding: "12px 8px",
-          border: "1px solid rgba(255,255,255,0.1)",
+          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4,
+          background: "transparent", borderRadius: 0, padding: "4px 2px",
+          border: "none",
         }}>
           {Array.from({ length: 12 }, (_, i) => {
             const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: true, isSpeaking: false };
@@ -590,11 +588,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 12px", position: "relative", zIndex: 10 }}>
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 10px", position: "relative", zIndex: 10 }}>
         <div style={{
           flex: 1, overflowY: "auto",
-          background: "rgba(255,255,255,0.05)", borderRadius: 16, padding: "8px 10px",
-          border: "none",
+          background: "transparent", borderRadius: 0, padding: "6px 4px",
         }}>
           {messages.map(msg => (
             <ChatBubble key={msg.id} msg={msg} isMe={msg.userId === user.uid} />
@@ -605,48 +602,51 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       <div style={{ position: "absolute", right: 10, bottom: 175, zIndex: 20, animation: "sofaFloat 3s ease-in-out infinite" }}>
         <button onClick={handleRaiseHand} style={{
-          width: 50, height: 50, borderRadius: 25, border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
-          background: "rgba(138,43,226,0.3)",
-          boxShadow: "0 0 20px rgba(138,43,226,0.4), 0 0 40px rgba(138,43,226,0.15)",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+          width: 44, height: 44, borderRadius: 22, border: "1.5px solid rgba(138,43,226,0.3)", cursor: "pointer",
+          background: "transparent",
+          boxShadow: "0 0 12px rgba(138,43,226,0.3)",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
         }}>{"\u{1F6CB}\uFE0F"}</button>
       </div>
 
       <div style={{
-        padding: "10px 12px 24px", borderTop: "1px solid rgba(255,255,255,0.1)",
-        background: "rgba(255,255,255,0.05)", flexShrink: 0,
+        padding: "8px 12px 22px", borderTop: "none",
+        background: "transparent", flexShrink: 0,
         position: "relative", zIndex: 10,
       }}>
-        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           <input className="input-field"
-            style={{ flex: 1, borderRadius: 24, padding: "11px 16px", fontSize: 13, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontFamily: "'Poppins', 'Inter', sans-serif" }}
+            style={{ flex: 1, borderRadius: 24, padding: "10px 16px", fontSize: 12, background: "transparent", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", fontFamily: "'Poppins', 'Inter', sans-serif" }}
             placeholder="Cast your words..."
             value={inputText}
             onChange={e => setInputText(e.target.value)}
             onKeyDown={e => e.key === "Enter" && sendChat()}
           />
           <button style={{
-            borderRadius: 24, padding: "11px 18px", flexShrink: 0, border: "none", cursor: "pointer",
-            background: "linear-gradient(135deg, #8A2BE2, #2DD4BF)", color: "#fff", fontSize: 15, fontWeight: 700,
-            boxShadow: "0 0 15px rgba(45,212,191,0.4), 0 4px 16px rgba(138,43,226,0.3)",
+            width: 40, height: 40, borderRadius: 20, flexShrink: 0, border: "none", cursor: "pointer",
+            background: "linear-gradient(135deg, #8A2BE2, #2DD4BF)", color: "#fff", fontSize: 14, fontWeight: 700,
+            boxShadow: "0 0 12px rgba(45,212,191,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
           }} onClick={sendChat}>{"\u27A4"}</button>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button onClick={handleSpeakerToggle} style={{
-              width: 46, height: 46, borderRadius: "50%", border: "none", cursor: "pointer",
-              background: isSpeakerOff ? "rgba(255,100,130,0.15)" : "rgba(255,255,255,0.10)",
-              color: isSpeakerOff ? "#ff6482" : "#fff", fontSize: 20,
+              width: 42, height: 42, borderRadius: "50%", cursor: "pointer",
+              background: "transparent",
+              border: isSpeakerOff ? "1.5px solid rgba(255,100,130,0.4)" : "1.5px solid rgba(45,212,191,0.3)",
+              color: isSpeakerOff ? "#ff6482" : "#fff", fontSize: 18,
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: isSpeakerOff ? "0 0 12px rgba(255,100,130,0.4), inset 0 0 6px rgba(255,100,130,0.2)" : "0 0 10px #2dd4bf, inset 0 0 5px rgba(45,212,191,0.3)",
+              boxShadow: isSpeakerOff ? "0 0 8px rgba(255,100,130,0.3)" : "0 0 8px rgba(45,212,191,0.2)",
             }}>{isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}</button>
 
             <button onClick={handleMicToggle} style={{
-              width: 54, height: 54, borderRadius: 27, border: "none", cursor: "pointer",
-              background: isMuted ? "rgba(255,100,130,0.15)" : "linear-gradient(135deg, #8A2BE2, #2DD4BF)",
-              color: "#fff", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: isMuted ? "0 0 12px rgba(255,100,130,0.4), inset 0 0 6px rgba(255,100,130,0.2)" : "0 0 15px #2dd4bf, 0 0 30px rgba(138,43,226,0.4), inset 0 0 8px rgba(45,212,191,0.3)",
+              width: 50, height: 50, borderRadius: 25, cursor: "pointer",
+              background: isMuted ? "transparent" : "transparent",
+              border: isMuted ? "2px solid rgba(255,100,130,0.4)" : "2px solid rgba(45,212,191,0.5)",
+              color: "#fff", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: isMuted ? "0 0 10px rgba(255,100,130,0.3)" : "0 0 14px rgba(45,212,191,0.4), 0 0 28px rgba(138,43,226,0.2)",
               animation: !isMuted ? "mysticGlow 2s infinite" : "none",
               transition: "all 0.25s",
             }}>{isMuted ? "\u{1F507}" : "\u{1F3A4}"}</button>
@@ -654,10 +654,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button style={{
-              width: 44, height: 44, borderRadius: "50%", border: "none",
-              background: "rgba(255,255,255,0.10)",
-              cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
-              boxShadow: "0 0 10px rgba(138,43,226,0.3), inset 0 0 5px rgba(138,43,226,0.15)",
+              width: 40, height: 40, borderRadius: "50%",
+              background: "transparent", border: "1.5px solid rgba(138,43,226,0.3)",
+              cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+              boxShadow: "0 0 8px rgba(138,43,226,0.2)",
             }} onClick={() => {
               const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
               if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
@@ -676,20 +676,20 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
           <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
             <button onClick={() => { setShowGift(!showGift); setShowEmoji(false); setShowVolume(false); setShowReactions(false); }} style={{
-              padding: "7px 12px", borderRadius: 16, border: "none", cursor: "pointer",
-              background: "linear-gradient(135deg, #7C3AED, #EC4899)",
-              boxShadow: "0 0 12px rgba(236,72,153,0.4), 0 3px 10px rgba(0,0,0,0.3)",
-              color: "#fff", fontSize: 11, fontWeight: 600, fontFamily: "'Poppins', 'Inter', sans-serif",
-              display: "flex", alignItems: "center", gap: 4,
-            }}>{"\u{1F3F0}"} Gift</button>
+              width: 40, height: 40, borderRadius: "50%", cursor: "pointer",
+              background: "transparent", border: "1.5px solid rgba(236,72,153,0.3)",
+              boxShadow: "0 0 8px rgba(236,72,153,0.2)",
+              color: "#fff", fontSize: 11, fontWeight: 500, fontFamily: "'Poppins', 'Inter', sans-serif",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0,
+            }}><span style={{ fontSize: 16 }}>{"\u{1F381}"}</span><span style={{ fontSize: 7, marginTop: -2 }}>Gift</span></button>
 
             <button onClick={() => { setShowReactions(!showReactions); setShowEmoji(false); setShowGift(false); setShowVolume(false); }} style={{
-              padding: "7px 12px", borderRadius: 16, border: "none", cursor: "pointer",
-              background: "linear-gradient(135deg, #8B5CF6, #EC4899)",
-              boxShadow: "0 0 12px rgba(139,92,246,0.4), 0 3px 10px rgba(0,0,0,0.3)",
-              color: "#fff", fontSize: 11, fontWeight: 600, fontFamily: "'Poppins', 'Inter', sans-serif",
-              display: "flex", alignItems: "center", gap: 4,
-            }}>{"\u{1F48E}"} Gems</button>
+              width: 40, height: 40, borderRadius: "50%", cursor: "pointer",
+              background: "transparent", border: "1.5px solid rgba(139,92,246,0.3)",
+              boxShadow: "0 0 8px rgba(139,92,246,0.2)",
+              color: "#fff", fontSize: 11, fontWeight: 500, fontFamily: "'Poppins', 'Inter', sans-serif",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0,
+            }}><span style={{ fontSize: 16 }}>{"\u{1F48E}"}</span><span style={{ fontSize: 7, marginTop: -2 }}>Gems</span></button>
           </div>
         </div>
 
@@ -1663,11 +1663,13 @@ function PopupBtn({ icon, active, onToggle, children }: { icon: string; active: 
   return (
     <div style={{ position: "relative" }}>
       <button style={{
-        width: 44, height: 44, borderRadius: "50%", padding: 0, fontSize: 20,
-        background: active ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer",
+        width: 40, height: 40, borderRadius: "50%", padding: 0, fontSize: 18,
+        background: "transparent",
+        border: active ? "1.5px solid rgba(138,43,226,0.4)" : "1.5px solid rgba(255,255,255,0.15)",
+        cursor: "pointer",
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: "rgba(255,255,255,0.7)", transition: "all 0.2s",
+        color: "rgba(255,255,255,0.6)", transition: "all 0.2s",
+        boxShadow: active ? "0 0 8px rgba(138,43,226,0.2)" : "none",
       }} onClick={onToggle}>{icon}</button>
       {active && (
         <div style={{
