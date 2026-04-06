@@ -18,3 +18,9 @@ id = "ZTbTzhEA3fqGUAN7sVCIZ"
 uri = "file://artifacts/galaxy-web/public/logo.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "0oXrmVCx-s1x5VLhoBBDR"
+uri = "file://artifacts/galaxy-web/public/bg-mystical.png"
+type = "image"
+title = "generated_image"
