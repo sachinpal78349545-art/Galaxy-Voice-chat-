@@ -45,7 +45,7 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
 
   useEffect(() => {
     if (initialChatUid && convs.length > 0 && !active) {
-      const match = convs.find(c => c.otherUid === initialChatUid);
+      const match = convs.find(c => c.participants.includes(initialChatUid));
       if (match) setActive(match);
     }
   }, [initialChatUid, convs, active]);

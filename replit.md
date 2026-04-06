@@ -53,9 +53,10 @@ artifacts/galaxy-web/src/
   pages/
     AuthPage.tsx           — Email signup/login, Google sign-in, Phone OTP (demo), Guest login,
                              galaxy theme with feature cards, state-machine auth modes
-    SearchPage.tsx         — Dedicated user search page (by name or 9-digit User ID),
-                             user profile cards, follow/friend request actions
-    NotificationPage.tsx   — Full-page notification center with mark read/clear all
+    SearchPage.tsx         — Dedicated search page with Users/Rooms tabs, user profile
+                             cards with Follow/Message buttons, room search via fetchRooms
+    NotificationPage.tsx   — Full notification center with Follow Back/Ignore/Message
+                             actions, mark read, deep-link to chat via chatTargetUid
     supportService.ts      — Feedback form (bug/suggestion/feedback), help center articles (8)
     HomePage.tsx           — Gift leaderboard, quick-join category buttons, trending rooms,
                              search, infinite scroll, online users strip, Hot/New/Following tabs,
@@ -69,7 +70,18 @@ artifacts/galaxy-web/src/
                              per-user volume sliders, room timer, room ID display,
                              bottom sheet on empty seat (Take Mic / Lock Mic),
                              slide-up profile card on occupied seat (ID, Level, Follow),
-                             anti-screenshot CSS protection
+                             anti-screenshot CSS protection,
+                             sticky room header (Share + ⋮ + ❌),
+                             control panel (5 tabs: Profile/Followers/Mic/Banned/Events),
+                             room DP gallery upload (Firebase Storage),
+                             level progress bar, announcement editor,
+                             enter permission (Everyone/Invite Only), mic seats count,
+                             mode selector (Voice/Chat), admin count display,
+                             enhanced user profile popup (VIP badge, intimacy,
+                             gift wall, badges, Follow state, Chat/Gift/Invite Mic,
+                             Make Admin/Remove Admin, Mute, Kick),
+                             maxMics enforcement in seat rendering + join paths,
+                             enterPermission enforcement in joinRoom
     ChatsPage.tsx          — Firebase real-time conversations, emoji picker (32 emojis),
                              image send, typing indicator, seen/delivered ticks (✔/✔✔),
                              voice message recording + VoicePlayer component,

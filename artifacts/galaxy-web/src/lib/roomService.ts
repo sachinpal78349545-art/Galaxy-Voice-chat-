@@ -56,6 +56,11 @@ export interface Room {
   bannedUsers?: string[];
   roomUsers?: Record<string, RoomUser>;
   roomFollowers?: Record<string, { uid: string; name: string; avatar: string; followedAt: number }>;
+  announcement?: string;
+  enterPermission?: "everyone" | "invite_only";
+  maxMics?: number;
+  mode?: "voice" | "chat";
+  country?: string;
 }
 
 const ROOM_COVERS: Record<string, string> = {
@@ -247,6 +252,10 @@ export async function joinRoom(roomId: string, uid: string, name: string, avatar
     if (password !== room.password) return { joined: false, reason: "Incorrect password" };
   }
   if (room.isPrivate && !room.password && room.hostId !== uid && !(room.adminIds || []).includes(uid)) return { joined: false, reason: "This room is private" };
+  if (room.enterPermission === "invite_only" && room.hostId !== uid && !(room.adminIds || []).includes(uid)) {
+    const inv = await get(ref(db, `rooms/${roomId}/invitedUsers/${uid}`));
+    if (!inv.exists()) return { joined: false, reason: "This room is invite only" };
+  }
   const existing = await get(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
   if (existing.exists()) return { joined: true };
   const roomUser: RoomUser = { uid, name, avatar, role: "user", joinedAt: Date.now(), seatIndex: null };
@@ -262,11 +271,21 @@ export async function leaveRoom(roomId: string, uid: string): Promise<void> {
   await runTransaction(ref(db, `rooms/${roomId}/listeners`), (c: number | null) => Math.max(0, (c ?? 0) - 1));
 }
 
-export async function joinSeat(roomId: string, seatIndex: number, userId: string, username: string, avatar: string): Promise<void> {
+export async function joinSeat(roomId: string, seatIndex: number, userId: string, username: string, avatar: string): Promise<boolean> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}`));
+  if (roomSnap.exists()) {
+    const room = roomSnap.val();
+    const maxMics = room.maxMics || 8;
+    if (seatIndex >= maxMics) return false;
+    const seats: RoomSeat[] = room.seats || [];
+    const occupied = seats.filter((s: RoomSeat, i: number) => i < maxMics && s.userId).length;
+    if (occupied >= maxMics) return false;
+  }
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
     userId, username, avatar, isMuted: false, isLocked: false, isSpeaking: false, handRaised: false,
   });
   await update(ref(db, `rooms/${roomId}/roomUsers/${userId}`), { seatIndex });
+  return true;
 }
 
 export async function leaveSeat(roomId: string, seatIndex: number): Promise<void> {
@@ -379,7 +398,7 @@ export async function kickUserFromRoom(roomId: string, uid: string): Promise<voi
   await runTransaction(ref(db, `rooms/${roomId}/listeners`), (c: number | null) => Math.max(0, (c ?? 0) - 1));
 }
 
-export async function updateRoomSettings(roomId: string, settings: Partial<Pick<Room, "name" | "roomAvatar" | "isPrivate" | "micPermission" | "theme">>): Promise<void> {
+export async function updateRoomSettings(roomId: string, settings: Partial<Pick<Room, "name" | "roomAvatar" | "isPrivate" | "micPermission" | "theme" | "announcement" | "enterPermission" | "maxMics" | "mode" | "country">>): Promise<void> {
   await update(ref(db, `rooms/${roomId}`), settings);
 }
 

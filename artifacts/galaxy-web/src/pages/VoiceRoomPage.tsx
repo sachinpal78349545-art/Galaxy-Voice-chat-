@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../lib/firebase";
 import {
   Room, RoomSeat, RoomUser, RoomMessage, ROOM_THEMES, ROOM_AVATARS,
   subscribeRoom, subscribeRoomMessages, sendRoomMessage,
@@ -69,14 +71,18 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
   const [settingsTab, setSettingsTab] = useState<"general" | "mic" | "banned">("general");
   const [editName, setEditName] = useState("");
   const [controlPanel, setControlPanel] = useState(false);
-  const [cpTab, setCpTab] = useState<"info" | "mic" | "banned" | "members">("info");
+  const [cpTab, setCpTab] = useState<"info" | "mic" | "banned" | "members" | "events">("info");
   const [cpEditName, setCpEditName] = useState("");
+  const [cpAnnouncement, setCpAnnouncement] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
   const [showReportModal, setShowReportModal] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [isSpeakerOff, setIsSpeakerOff] = useState(false);
   const [giftCombo, setGiftCombo] = useState(1);
   const [showReactions, setShowReactions] = useState(false);
   const [inviteSeatIdx, setInviteSeatIdx] = useState<number | null>(null);
+  const [cpDpUploading, setCpDpUploading] = useState(false);
+  const cpDpRef = useRef<HTMLInputElement>(null);
   const floatId = useRef(0);
   const msgEnd = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
@@ -235,7 +241,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
     const ru = room.roomUsers?.[uid];
     const uname = ru?.name || "User";
     try {
-      await joinSeat(roomId, seatIdx, uid, uname, ru?.avatar || "\u{1F464}");
+      const ok = await joinSeat(roomId, seatIdx, uid, uname, ru?.avatar || "\u{1F464}");
+      if (!ok) { showToast("Seat not available", "warning"); setInviteSeatIdx(null); return; }
       showToast(`${uname} invited to seat ${seatIdx + 1}`, "success");
       sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F3A4}", text: `${uname} was invited to seat ${seatIdx + 1}`, type: "system" }).catch(console.error);
     } catch {
@@ -256,15 +263,17 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         showToast("Only owner/admins can take seats", "warning");
         return;
       }
-      const emptySeat = room.seats.findIndex(s => !s.userId && !s.isLocked);
+      const maxMics = room.maxMics || 8;
+      const emptySeat = room.seats.findIndex((s, i) => i < maxMics && !s.userId && !s.isLocked);
       if (emptySeat >= 0) {
         if (room.micPermission === "request" && !hasControl) {
           showToast("Mic request sent to owner/admin", "info");
           sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u270B", text: `${user.name} is requesting to speak`, type: "system" }).catch(console.error);
           return;
         }
-        await joinSeat(roomId, emptySeat, user.uid, user.name, user.avatar);
-        showToast("Joined a seat!", "success");
+        const ok = await joinSeat(roomId, emptySeat, user.uid, user.name, user.avatar);
+        if (ok) showToast("Joined a seat!", "success");
+        else showToast("No seats available", "warning");
       } else {
         showToast("No seats available", "warning");
       }
@@ -448,20 +457,25 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       )}
 
       <div style={{
+        position: "sticky", top: 0, zIndex: 1000,
         display: "flex", alignItems: "center", gap: 10,
         padding: "48px 12px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
+        background: roomTheme.bg,
       }}>
-        <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpTab("info"); }}
+        <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}
           style={{
             width: 44, height: 44, borderRadius: 14, fontSize: 24,
             background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
             border: "2px solid rgba(108,92,231,0.4)", display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 12px rgba(108,92,231,0.2)",
+            overflow: "hidden",
           }}>
-          {room.roomAvatar || room.coverEmoji || "\u{1F3A4}"}
+          {(room.roomAvatar || room.coverEmoji || "\u{1F3A4}").startsWith?.("http")
+            ? <img src={room.roomAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 14 }} />
+            : (room.roomAvatar || room.coverEmoji || "\u{1F3A4}")}
         </div>
         <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
-          onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpTab("info"); }}>
+          onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.name}</h2>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span className="badge badge-live" style={{ fontSize: 9, padding: "1px 6px", gap: 3 }}>
@@ -474,9 +488,15 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
           <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15 }}
+            onClick={() => {
+              const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
+              if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
+              else { navigator.clipboard?.writeText(shareText + ` Room ID: ${room.id}`); showToast("Room link copied!", "success"); }
+            }}>{"\u{1F517}"}</button>
+          <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15 }}
             onClick={() => setShowUsersPanel(true)}>{"\u{1F465}"}</button>
           <button className="btn btn-ghost btn-sm" style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15 }}
-            onClick={() => { setShowLeaderboard(true); loadLeaderboard("daily"); }}>{"\u{1F3C6}"}</button>
+            onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>{"\u22EE"}</button>
           <button onClick={() => setShowCloseMenu(true)} style={{
             width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(255,100,130,0.3)",
             background: "rgba(255,100,130,0.1)", cursor: "pointer", fontSize: 16, color: "#ff6482",
@@ -508,7 +528,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           background: "rgba(108,92,231,0.03)", borderRadius: 20, padding: "14px 6px",
           border: "1px solid rgba(108,92,231,0.06)",
         }}>
-          {room.seats.map((seat, i) => (
+          {room.seats.slice(0, room.maxMics || 8).map((seat, i) => (
             <SeatCell
               key={i}
               seat={seat}
@@ -783,10 +803,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
           <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             {([
-              { key: "info", icon: "\u2139\uFE0F", label: "Info" },
+              { key: "info", icon: "\u2139\uFE0F", label: "Profile" },
+              { key: "members", icon: "\u{1F465}", label: "Followers" },
               { key: "mic", icon: "\u{1F3A4}", label: "Mic" },
               { key: "banned", icon: "\u26D4", label: "Banned" },
-              { key: "members", icon: "\u{1F465}", label: "Members" },
+              { key: "events", icon: "\u{1F389}", label: "Events" },
             ] as const).map(t => (
               <button key={t.key} onClick={() => setCpTab(t.key)} style={{
                 flex: 1, padding: "10px 0", border: "none", cursor: "pointer", fontFamily: "inherit",
@@ -806,13 +827,42 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
             {cpTab === "info" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{
+                  <input type="file" accept="image/*" ref={cpDpRef} style={{ display: "none" }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setCpDpUploading(true);
+                      try {
+                        const ext = file.name.split(".").pop() || "jpg";
+                        const path = `room-avatars/${roomId}_${Date.now()}.${ext}`;
+                        const sRef = storageRef(storage, path);
+                        await uploadBytes(sRef, file);
+                        const url = await getDownloadURL(sRef);
+                        await updateRoomSettings(roomId, { roomAvatar: url });
+                        showToast("Room DP updated!", "success");
+                      } catch { showToast("Upload failed", "error"); }
+                      setCpDpUploading(false);
+                    }} />
+                  <div onClick={() => hasControl && cpDpRef.current?.click()} style={{
                     width: 80, height: 80, borderRadius: 24, fontSize: 40, margin: "0 auto 10px",
                     background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.08))",
                     border: "3px solid rgba(108,92,231,0.4)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     boxShadow: "0 4px 24px rgba(108,92,231,0.25)",
-                  }}>{room.roomAvatar || "\u{1F3A4}"}</div>
+                    cursor: hasControl ? "pointer" : "default", overflow: "hidden", position: "relative",
+                  }}>
+                    {cpDpUploading ? (
+                      <div style={{ width: 28, height: 28, borderRadius: 14, border: "3px solid rgba(108,92,231,0.2)", borderTopColor: "#6C5CE7", animation: "spin 0.8s linear infinite" }} />
+                    ) : (room.roomAvatar || "\u{1F3A4}").startsWith?.("http") ? (
+                      <img src={room.roomAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 24 }} />
+                    ) : (room.roomAvatar || "\u{1F3A4}")}
+                    {hasControl && !cpDpUploading && (
+                      <div style={{
+                        position: "absolute", bottom: 0, left: 0, right: 0, padding: "3px 0",
+                        background: "rgba(0,0,0,0.5)", fontSize: 8, color: "#fff", fontWeight: 700,
+                      }}>{"\u{1F4F7}"} Change</div>
+                    )}
+                  </div>
                   {hasControl && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", marginTop: 10 }}>
                       {ROOM_AVATARS.map(a => (
@@ -825,6 +875,21 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                       ))}
                     </div>
                   )}
+                </div>
+                
+                <div style={{ background: "rgba(108,92,231,0.06)", borderRadius: 16, padding: 14, border: "1px solid rgba(108,92,231,0.1)" }}>
+                  <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 8, display: "block" }}>Level Progress</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22, fontWeight: 900, color: "#FFD700" }}>Lv.{room.roomLevel || 1}</span>
+                    <div style={{ flex: 1, height: 10, borderRadius: 5, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                      <div style={{
+                        width: `${Math.min(((room.roomLevel || 1) % 10) * 10 + 30, 100)}%`, height: "100%",
+                        background: "linear-gradient(90deg, #6C5CE7, #FFD700)", borderRadius: 5,
+                        transition: "width 0.5s ease",
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 10, color: "rgba(162,155,254,0.4)", fontWeight: 700 }}>Lv.{(room.roomLevel || 1) + 1}</span>
+                  </div>
                 </div>
 
                 <div style={{ background: "rgba(108,92,231,0.06)", borderRadius: 16, padding: 14, border: "1px solid rgba(108,92,231,0.1)" }}>
@@ -873,6 +938,82 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                           color: (room.theme || "galaxy") === t.id ? "#A29BFE" : "rgba(162,155,254,0.4)", fontFamily: "inherit",
                         }}>{t.name}</button>
                     ))}
+                  </div>
+                </div>
+
+                <div style={{ background: "rgba(108,92,231,0.06)", borderRadius: 16, padding: 14, border: "1px solid rgba(108,92,231,0.1)" }}>
+                  <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 6, display: "block" }}>{"\u{1F4E2}"} Announcement</label>
+                  {hasControl ? (
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input className="input-field" value={cpAnnouncement} onChange={e => setCpAnnouncement(e.target.value)}
+                        placeholder="Set room announcement..."
+                        style={{ flex: 1, borderRadius: 14, padding: "10px 14px", fontSize: 12 }} />
+                      <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "8px 14px" }}
+                        onClick={() => {
+                          updateRoomSettings(roomId, { announcement: cpAnnouncement.trim() } as any)
+                            .then(() => showToast("Announcement updated!", "success")).catch(console.error);
+                        }}>Save</button>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: 12, color: "rgba(162,155,254,0.6)" }}>{room.announcement || "No announcement"}</p>
+                  )}
+                </div>
+
+                <div style={{ background: "rgba(108,92,231,0.06)", borderRadius: 16, padding: 14, border: "1px solid rgba(108,92,231,0.1)" }}>
+                  <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 8, display: "block" }}>Room Enter Permission</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {(["everyone", "invite_only"] as const).map(ep => (
+                      <button key={ep} onClick={() => hasControl && updateRoomSettings(roomId, { enterPermission: ep } as any).then(() => showToast("Updated!", "success")).catch(console.error)}
+                        style={{
+                          flex: 1, padding: "10px 8px", borderRadius: 12, fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+                          border: (room.enterPermission || "everyone") === ep ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
+                          background: (room.enterPermission || "everyone") === ep ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.03)",
+                          color: (room.enterPermission || "everyone") === ep ? "#A29BFE" : "rgba(162,155,254,0.4)",
+                          cursor: hasControl ? "pointer" : "default",
+                        }}>
+                        {ep === "everyone" ? "\u{1F30D} Everyone" : "\u{1F512} Invite Only"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <div style={{ flex: 1, background: "rgba(108,92,231,0.06)", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,92,231,0.1)" }}>
+                    <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700, marginBottom: 4 }}>{"\u{1F3A4}"} Mic Seats</p>
+                    {hasControl ? (
+                      <select value={room.maxMics || room.seats.length}
+                        onChange={e => updateRoomSettings(roomId, { maxMics: parseInt(e.target.value) } as any).then(() => showToast("Updated!", "success")).catch(console.error)}
+                        style={{
+                          width: "100%", padding: "6px 8px", borderRadius: 8, fontSize: 14, fontWeight: 800,
+                          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(108,92,231,0.2)",
+                          color: "#A29BFE", fontFamily: "inherit",
+                        }}>
+                        {[4, 6, 8, 10, 12].map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    ) : (
+                      <p style={{ fontSize: 18, fontWeight: 900, color: "#A29BFE" }}>{room.maxMics || room.seats.length}</p>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, background: "rgba(108,92,231,0.06)", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,92,231,0.1)" }}>
+                    <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700, marginBottom: 4 }}>Mode</p>
+                    {hasControl ? (
+                      <select value={room.mode || "voice"}
+                        onChange={e => updateRoomSettings(roomId, { mode: e.target.value as "voice" | "chat" } as any).then(() => showToast("Updated!", "success")).catch(console.error)}
+                        style={{
+                          width: "100%", padding: "6px 8px", borderRadius: 8, fontSize: 14, fontWeight: 800,
+                          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(108,92,231,0.2)",
+                          color: "#A29BFE", fontFamily: "inherit",
+                        }}>
+                        <option value="voice">{"\u{1F3A4}"} Voice</option>
+                        <option value="chat">{"\u{1F4AC}"} Chat</option>
+                      </select>
+                    ) : (
+                      <p style={{ fontSize: 14, fontWeight: 800, color: "#A29BFE" }}>{room.mode === "chat" ? "\u{1F4AC} Chat" : "\u{1F3A4} Voice"}</p>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, background: "rgba(108,92,231,0.06)", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,92,231,0.1)", textAlign: "center" }}>
+                    <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700 }}>Admins</p>
+                    <p style={{ fontSize: 18, fontWeight: 900, color: "#6C5CE7", marginTop: 2 }}>{(room.adminIds || []).length}</p>
                   </div>
                 </div>
 
@@ -990,15 +1131,40 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
               </div>
             )}
 
+            {cpTab === "events" && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px", gap: 16 }}>
+                <div style={{ fontSize: 56, animation: "float 3s ease-in-out infinite" }}>{"\u{1F389}"}</div>
+                <h3 style={{ fontSize: 18, fontWeight: 900 }}>Events Coming Soon</h3>
+                <p style={{ fontSize: 13, color: "rgba(162,155,254,0.4)", textAlign: "center", lineHeight: 1.6 }}>
+                  Host exciting events in your room like karaoke nights, talent shows, Q&A sessions and more!
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 8 }}>
+                  {["\u{1F3A4} Karaoke Night", "\u{1F3AD} Talent Show", "\u{1F4AC} Q&A", "\u{1F3B6} Music Battle", "\u{1F3C6} Tournament"].map(e => (
+                    <span key={e} style={{
+                      padding: "8px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                      background: "rgba(108,92,231,0.08)", border: "1px solid rgba(108,92,231,0.15)",
+                      color: "rgba(162,155,254,0.5)",
+                    }}>{e}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {cpTab === "members" && (() => {
               const followers = room.roomFollowers ? Object.values(room.roomFollowers) : [];
+              const searchQ = memberSearch.toLowerCase();
+              const filteredUsers = searchQ ? roomUsers.filter(u => u.name.toLowerCase().includes(searchQ) || u.uid.includes(searchQ)) : roomUsers;
+              const filteredFollowers = searchQ ? followers.filter(f => f.name.toLowerCase().includes(searchQ) || f.uid.includes(searchQ)) : followers;
               return (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <input className="input-field" placeholder="Search by name or ID..."
+                    value={memberSearch} onChange={e => setMemberSearch(e.target.value)}
+                    style={{ borderRadius: 14, padding: "10px 14px", fontSize: 12, marginBottom: 4 }} />
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: "#A29BFE" }}>{"\u{1F465}"} Online ({roomUsers.length})</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#A29BFE" }}>{"\u{1F465}"} Online ({filteredUsers.length})</p>
                     </div>
-                    {roomUsers.map(ru => (
+                    {filteredUsers.map(ru => (
                       <div key={ru.uid} style={{
                         display: "flex", alignItems: "center", gap: 10, padding: "10px 8px",
                         borderBottom: "1px solid rgba(255,255,255,0.04)", borderRadius: 12,
@@ -1020,7 +1186,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                             {ru.seatIndex === null && (
                               <button className="btn btn-ghost btn-sm" style={{ fontSize: 9, padding: "4px 8px", color: "#00b894" }}
                                 onClick={() => {
-                                  const emptySeat = room.seats.findIndex(s => !s.userId && !s.isLocked);
+                                  const mxM = room.maxMics || 8;
+                                  const emptySeat = room.seats.findIndex((s, si) => si < mxM && !s.userId && !s.isLocked);
                                   if (emptySeat >= 0) handleInviteToSeat(ru.uid, emptySeat);
                                   else showToast("No empty seats available", "warning");
                                 }}>{"\u{1F4BA}"} Seat</button>
@@ -1049,14 +1216,14 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
                   <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700" }}>{"\u2B50"} Followers ({followers.length})</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700" }}>{"\u2B50"} Followers ({filteredFollowers.length})</p>
                     </div>
-                    {followers.length === 0 ? (
+                    {filteredFollowers.length === 0 ? (
                       <div style={{ textAlign: "center", padding: "20px 0" }}>
                         <p style={{ fontSize: 12, color: "rgba(162,155,254,0.3)" }}>No room followers yet</p>
                       </div>
                     ) : (
-                      followers.sort((a, b) => b.followedAt - a.followedAt).map(f => (
+                      filteredFollowers.sort((a, b) => b.followedAt - a.followedAt).map(f => (
                         <div key={f.uid} style={{
                           display: "flex", alignItems: "center", gap: 10, padding: "8px 8px",
                           borderBottom: "1px solid rgba(255,255,255,0.04)",
@@ -1147,8 +1314,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                       sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u270B", text: `${user.name} is requesting to speak`, type: "system" }).catch(console.error);
                       return;
                     }
-                    joinSeat(roomId, idx, user.uid, user.name, user.avatar).then(() => {
-                      showToast("Joined seat!", "success");
+                    joinSeat(roomId, idx, user.uid, user.name, user.avatar).then((ok) => {
+                      if (ok) showToast("Joined seat!", "success");
+                      else showToast("Seat not available", "warning");
                     }).catch(console.error);
                   }
                 }}>
@@ -1178,67 +1346,127 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           <div className="card" style={{
             position: "absolute", bottom: 0, left: 0, right: 0,
             borderRadius: "24px 24px 0 0", padding: "20px 20px 32px",
-            animation: "sheetUp 0.3s ease",
+            animation: "sheetUp 0.3s ease", maxHeight: "80vh", overflowY: "auto",
           }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 16px" }} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <div style={{
-                width: 72, height: 72, borderRadius: 36, fontSize: 36,
-                background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-                border: "3px solid rgba(108,92,231,0.5)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 4px 20px rgba(108,92,231,0.3)",
-              }}>
-                {showProfileCard.avatar?.startsWith("http")
-                  ? <img src={showProfileCard.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 36, objectFit: "cover" }} />
-                  : showProfileCard.avatar}
+              <div style={{ position: "relative" }}>
+                <div style={{
+                  width: 80, height: 80, borderRadius: 40, fontSize: 40,
+                  background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
+                  border: "3px solid rgba(108,92,231,0.5)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 4px 20px rgba(108,92,231,0.3), 0 0 0 4px rgba(108,92,231,0.15)",
+                  overflow: "hidden",
+                }}>
+                  {showProfileCard.avatar?.startsWith("http")
+                    ? <img src={showProfileCard.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 40, objectFit: "cover" }} />
+                    : showProfileCard.avatar}
+                </div>
               </div>
-              <h3 style={{ fontSize: 18, fontWeight: 900 }}>{showProfileCard.name}</h3>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 900 }}>{showProfileCard.name}</h3>
+              </div>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
                 {(() => {
                   const ru = room?.roomUsers?.[showProfileCard.uid];
+                  const role = ru?.role || getUserRole(room!, showProfileCard.uid);
                   return (
                     <>
                       <span style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", fontFamily: "monospace" }}>ID: {showProfileCard.uid.slice(0, 8)}</span>
-                      <RoleBadge role={ru?.role || getUserRole(room!, showProfileCard.uid)} />
+                      <RoleBadge role={role} />
                     </>
                   );
                 })()}
               </div>
-              <span className="badge badge-accent" style={{ fontSize: 10 }}>{"\u{1F3C6}"} Lv.{room?.roomLevel || 1}</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+                <span className="badge badge-accent" style={{ fontSize: 10, padding: "2px 8px" }}>{"\u{1F3C6}"} Lv.{room?.roomLevel || 1}</span>
+                <span className="badge badge-vip" style={{ fontSize: 10, padding: "2px 8px" }}>{"\u{1F451}"} VIP</span>
+                <span style={{
+                  fontSize: 10, padding: "2px 8px", borderRadius: 8,
+                  background: "rgba(255,100,130,0.1)", border: "1px solid rgba(255,100,130,0.2)", color: "#ff6482",
+                }}>{"\u2764\uFE0F"} Intimacy</span>
+              </div>
+            </div>
+
+            <div style={{
+              display: "flex", justifyContent: "space-around", marginBottom: 14, padding: "12px 10px",
+              background: "rgba(108,92,231,0.06)", borderRadius: 16, border: "1px solid rgba(108,92,231,0.1)",
+            }}>
+              <div style={{ textAlign: "center" }}>
+                <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700 }}>GIFTS</p>
+                <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
+                  {["\u{1F381}", "\u{1F48E}", "\u{1F451}", "\u{1F339}"].map(g => (
+                    <span key={g} style={{ fontSize: 16 }}>{g}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{ width: 1, background: "rgba(255,255,255,0.06)" }} />
+              <div style={{ textAlign: "center" }}>
+                <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700 }}>BADGES</p>
+                <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
+                  {["\u{1F31F}", "\u{1F525}", "\u{1F3C6}", "\u{1F48E}"].map(b => (
+                    <span key={b} style={{ fontSize: 16 }}>{b}</span>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               <button className="btn btn-primary" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }}
                 onClick={async () => {
                   try {
-                    const res = await followUser(user.uid, showProfileCard!.uid);
-                    showToast(res.isMutual ? "You're now friends!" : "Followed!", "success");
+                    const isFollowing = (user.followingList || []).includes(showProfileCard!.uid);
+                    if (isFollowing) { showToast("Already following!", "info"); }
+                    else {
+                      const res = await followUser(user.uid, showProfileCard!.uid);
+                      showToast(res.isMutual ? "You're now friends!" : "Followed!", "success");
+                    }
                   } catch { showToast("Follow failed", "error"); }
                   setShowProfileCard(null);
                 }}>
-                {"\u2795"} Follow
+                {(user.followingList || []).includes(showProfileCard.uid) ? "\u2705 Following" : "\u2795 Follow"}
               </button>
               <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }}
                 onClick={() => {
-                  showToast("Chat feature — mutual follow required", "info");
+                  showToast("Opening chat...", "info");
                   setShowProfileCard(null);
                 }}>
-                {"\u{1F4AC}"} Message
+                {"\u{1F4AC}"} Chat
+              </button>
+              <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }}
+                onClick={() => {
+                  setShowProfileCard(null);
+                  setShowGift(true);
+                }}>
+                {"\u{1F381}"} Gift
               </button>
             </div>
 
-            <div style={{ display: "flex", gap: 6, marginBottom: hasControl ? 10 : 0 }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: hasControl ? 10 : 0, flexWrap: "wrap" }}>
               {hasControl && (
-                <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
-                  onClick={() => {
-                    const pc = showProfileCard;
-                    setShowProfileCard(null);
-                    setSelectedSeat(pc!.seatIdx);
-                    setShowHostControls(true);
-                  }}>
-                  {"\u2699\uFE0F"} Manage
-                </button>
+                <>
+                  <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
+                    onClick={() => {
+                      const pc = showProfileCard;
+                      setShowProfileCard(null);
+                      const mxM2 = room?.maxMics || 8;
+                      const emptySeat = room?.seats.findIndex((s, si) => si < mxM2 && !s.userId && !s.isLocked);
+                      if (emptySeat !== undefined && emptySeat >= 0) handleInviteToSeat(pc!.uid, emptySeat);
+                      else showToast("No empty seats", "warning");
+                    }}>
+                    {"\u{1F3A4}"} Invite Mic
+                  </button>
+                  <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
+                    onClick={() => {
+                      const pc = showProfileCard;
+                      setShowProfileCard(null);
+                      setSelectedSeat(pc!.seatIdx);
+                      setShowHostControls(true);
+                    }}>
+                    {"\u2699\uFE0F"} Manage
+                  </button>
+                </>
               )}
               <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12, color: "rgba(255,100,130,0.7)" }}
                 onClick={() => {
@@ -1251,13 +1479,25 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
             {hasControl && (
               <div style={{ display: "flex", gap: 6 }}>
+                {isOwner && (
+                  <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
+                    onClick={async () => {
+                      const uid = showProfileCard!.uid;
+                      const isAdm = (room?.adminIds || []).includes(uid);
+                      if (isAdm) { await removeAdmin(roomId, uid); showToast("Admin removed", "info"); }
+                      else { await setAdmin(roomId, uid); showToast("Admin set!", "success"); }
+                      setShowProfileCard(null);
+                    }}>
+                    {(room?.adminIds || []).includes(showProfileCard.uid) ? "\u274C Remove Admin" : "\u{1F6E1}\uFE0F Make Admin"}
+                  </button>
+                )}
                 <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
                   onClick={() => { handleSeatAction("mute", showProfileCard!.seatIdx); setShowProfileCard(null); }}>
                   {"\u{1F507}"} Mute
                 </button>
                 <button className="btn btn-danger btn-sm" style={{ flex: 1, fontSize: 11, borderRadius: 12 }}
                   onClick={() => { handleSeatAction("kick", showProfileCard!.seatIdx); setShowProfileCard(null); }}>
-                  {"\u{1F6AB}"} Remove
+                  {"\u{1F6AB}"} Kick
                 </button>
               </div>
             )}
