@@ -471,9 +471,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         }}>
           <div style={{ fontSize: 40, marginBottom: 8, animation: "float 1s ease-in-out infinite", filter: "drop-shadow(0 0 12px rgba(138,43,226,0.8))" }}>{"\u{1F52E}"}</div>
           <div style={{
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.12)", borderRadius: 28, padding: "14px 28px",
-            backdropFilter: "blur(20px)",
+            background: "rgba(255,255,255,0.1)",
+            border: "1px solid rgba(255,255,255,0.2)", borderRadius: 28, padding: "14px 28px",
             boxShadow: "0 8px 32px rgba(138,43,226,0.35), 0 0 60px rgba(138,43,226,0.15), inset 0 1px 0 rgba(255,255,255,0.15)",
           }}>
             <p style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: 0.5 }}>Welcome {welcomeAnim}!</p>
@@ -487,17 +486,16 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         display: "flex", alignItems: "center", gap: 10,
         padding: "48px 12px 10px",
         borderBottom: "1px solid rgba(255,255,255,0.15)", flexShrink: 0,
-        background: "rgba(255,255,255,0.08)",
-        backdropFilter: "blur(15px)",
+        background: "rgba(255,255,255,0.1)",
       }}>
         <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}
           style={{
             width: 44, height: 44, borderRadius: 14, fontSize: 24,
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(255,255,255,0.1)",
+            border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer", flexShrink: 0,
             boxShadow: "0 0 15px rgba(45,212,191,0.2)",
-            overflow: "hidden", backdropFilter: "blur(8px)",
+            overflow: "hidden",
           }}>
           {(room.roomAvatar || room.coverEmoji || "\u{1F3A4}").startsWith?.("http")
             ? <img src={room.roomAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 14 }} />
@@ -520,22 +518,21 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
             display: "flex", alignItems: "center", gap: 3, padding: "4px 8px", borderRadius: 10,
             background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.2)",
             cursor: "pointer", fontSize: 11, color: "#FFD700", fontWeight: 700, fontFamily: "inherit",
-            backdropFilter: "blur(8px)",
           }}>{"\u{1F3C6}"} {(liveCount * 0.95 + 0.28).toFixed(2)}K</button>
-          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", color: "rgba(255,255,255,0.6)" }}
+          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.7)" }}
             onClick={() => {
               const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
               if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
               else { navigator.clipboard?.writeText(shareText + ` Room ID: ${room.id}`); showToast("Room link copied!", "success"); }
             }}>{"\u{1F517}"}</button>
-          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", color: "rgba(255,255,255,0.6)" }}
+          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.7)" }}
             onClick={() => setShowUsersPanel(true)}>{"\u{1F465}"}</button>
-          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", color: "rgba(255,255,255,0.6)" }}
+          <button style={{ width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 15, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.7)" }}
             onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>{"\u2630"}</button>
           <button onClick={() => setShowCloseMenu(true)} style={{
             width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(255,100,130,0.2)",
             background: "rgba(255,100,130,0.08)", cursor: "pointer", fontSize: 16, color: "#ff6482",
-            display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
           }}>{"\u2715"}</button>
         </div>
       </div>
@@ -544,14 +541,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         <div style={{
           display: "flex", gap: 4, padding: "6px 12px", position: "relative", zIndex: 10,
           borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
-          backdropFilter: "blur(8px)",
         }}>
           <span style={{
             fontSize: 9, padding: "2px 8px", borderRadius: 10, fontWeight: 700,
             background: myRole === "owner" ? "rgba(255,215,0,0.1)" : "rgba(255,255,255,0.06)",
             border: myRole === "owner" ? "1px solid rgba(255,215,0,0.2)" : "1px solid rgba(255,255,255,0.1)",
             color: myRole === "owner" ? "#FFD700" : "rgba(255,255,255,0.6)",
-            backdropFilter: "blur(8px)",
           }}>
             {myRole === "owner" ? "\u{1F451} Owner" : "\u{1F6E1}\uFE0F Admin"}
           </span>
@@ -567,9 +562,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       <div style={{ padding: "10px 10px 6px", flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12,
-          background: "rgba(255,255,255,0.08)", borderRadius: 22, padding: "18px 10px",
+          background: "rgba(255,255,255,0.1)", borderRadius: 22, padding: "18px 10px",
           border: "1px solid rgba(255,255,255,0.15)",
-          backdropFilter: "blur(15px)",
           boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
         }}>
           {Array.from({ length: 12 }, (_, i) => {
@@ -600,8 +594,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 12px", position: "relative", zIndex: 10 }}>
         <div style={{
           flex: 1, overflowY: "auto",
-          background: "rgba(255,255,255,0.08)", borderRadius: 18, padding: "10px 12px",
-          backdropFilter: "blur(15px)",
+          background: "rgba(255,255,255,0.1)", borderRadius: 18, padding: "10px 12px",
           border: "1px solid rgba(255,255,255,0.15)",
           boxShadow: "0 4px 24px rgba(0,0,0,0.2)",
         }}>
@@ -616,7 +609,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         <button onClick={handleRaiseHand} style={{
           width: 50, height: 50, borderRadius: 25, border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
           background: "rgba(138,43,226,0.3)",
-          backdropFilter: "blur(12px)",
           boxShadow: "0 0 20px rgba(138,43,226,0.4), 0 0 40px rgba(138,43,226,0.15)",
           display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
         }}>{"\u{1F6CB}\uFE0F"}</button>
@@ -624,7 +616,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       <div style={{
         padding: "10px 12px 24px", borderTop: "1px solid rgba(255,255,255,0.15)",
-        background: "rgba(255,255,255,0.08)", backdropFilter: "blur(15px)", flexShrink: 0,
+        background: "rgba(255,255,255,0.1)", flexShrink: 0,
         position: "relative", zIndex: 10,
       }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
@@ -647,7 +639,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
             <button onClick={handleSpeakerToggle} style={{
               width: 46, height: 46, borderRadius: "50%", border: "none", cursor: "pointer",
               background: isSpeakerOff ? "rgba(255,100,130,0.15)" : "rgba(255,255,255,0.10)",
-              backdropFilter: "blur(10px)",
               color: isSpeakerOff ? "#ff6482" : "#fff", fontSize: 20,
               display: "flex", alignItems: "center", justifyContent: "center",
               boxShadow: isSpeakerOff ? "0 0 12px rgba(255,100,130,0.4), inset 0 0 6px rgba(255,100,130,0.2)" : "0 0 10px #2dd4bf, inset 0 0 5px rgba(45,212,191,0.3)",
@@ -666,7 +657,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button style={{
               width: 44, height: 44, borderRadius: "50%", border: "none",
-              background: "rgba(255,255,255,0.10)", backdropFilter: "blur(10px)",
+              background: "rgba(255,255,255,0.10)",
               cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
               boxShadow: "0 0 10px rgba(138,43,226,0.3), inset 0 0 5px rgba(138,43,226,0.15)",
             }} onClick={() => {
@@ -708,7 +699,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           <div style={{
             position: "absolute", bottom: "100%", left: 12, right: 12, marginBottom: 6,
             background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 20, padding: 14, backdropFilter: "blur(16px)",
+            borderRadius: 20, padding: 14,
             boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 30px rgba(138,43,226,0.1)",
             animation: "popIn 0.15s ease", zIndex: 20,
           }}>
@@ -735,7 +726,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                     cursor: user.coins >= totalCost ? "pointer" : "not-allowed",
                     padding: "6px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                     opacity: user.coins >= totalCost ? 1 : 0.35,
-                    backdropFilter: "blur(6px)",
                   }}>
                     <span style={{ fontSize: 20 }}>{g.emoji}</span>
                     <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 700 }}>{totalCost}</span>
@@ -750,7 +740,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           <div style={{
             position: "absolute", bottom: "100%", right: 12, marginBottom: 6,
             background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 20, padding: "10px 14px", backdropFilter: "blur(16px)",
+            borderRadius: 20, padding: "10px 14px",
             boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
             animation: "popIn 0.15s ease", zIndex: 20,
             display: "flex", gap: 8,
@@ -1663,7 +1653,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(5,1,18,0.75)", backdropFilter: "blur(8px)",
+      position: "fixed", inset: 0, background: "rgba(5,1,18,0.75)",
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600,
     }} onClick={onClose}>
       {children}
@@ -1677,15 +1667,15 @@ function PopupBtn({ icon, active, onToggle, children }: { icon: string; active: 
       <button style={{
         width: 44, height: 44, borderRadius: "50%", padding: 0, fontSize: 20,
         background: active ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer",
-        backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center",
+        border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
         color: "rgba(255,255,255,0.7)", transition: "all 0.2s",
       }} onClick={onToggle}>{icon}</button>
       {active && (
         <div style={{
           position: "absolute", bottom: 52, left: "50%", transform: "translateX(-50%)",
           background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 18, padding: 10, backdropFilter: "blur(16px)",
+          borderRadius: 18, padding: 10,
           boxShadow: "0 8px 40px rgba(0,0,0,0.5)", zIndex: 20,
           animation: "popIn 0.15s ease",
         }}>
@@ -1717,7 +1707,6 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
         : isSystem ? "rgba(255,255,255,0.03)"
         : "transparent",
       border: isWelcome ? "1px solid rgba(255,255,255,0.12)" : "none",
-      backdropFilter: isWelcome ? "blur(12px)" : "none",
       boxShadow: isWelcome ? "0 4px 16px rgba(138,43,226,0.2)" : "none",
     }}>
       {!isSystem && (
