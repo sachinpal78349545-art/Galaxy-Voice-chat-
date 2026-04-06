@@ -1,21 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { ref, onValue, off } from "firebase/database";
+import { db } from "../lib/firebase";
 import { UserProfile } from "../lib/userService";
 import { Room, subscribeRooms } from "../lib/roomService";
 import { getGiftLeaderboard, LeaderboardEntry } from "../lib/giftService";
 
+interface OnlineUser { uid: string; name: string; avatar: string; }
 interface Props { user: UserProfile; onJoinRoom: (room: Room) => void; }
 type Tab = "Hot" | "New" | "Following";
-
-const FAKE_USERS_ONLINE = [
-  { name: "StarGazer", avatar: "\u{1F31F}", status: "In Room" },
-  { name: "CosmicDJ", avatar: "\u{1F3B5}", status: "Online" },
-  { name: "LunaRose", avatar: "\u{1F319}", status: "Chilling" },
-  { name: "NightOwl", avatar: "\u{1F989}", status: "Online" },
-  { name: "VoidWalk", avatar: "\u{1F30C}", status: "In Room" },
-  { name: "NebulaDev", avatar: "\u{1F4BB}", status: "Online" },
-  { name: "RocketX", avatar: "\u{1F680}", status: "Singing" },
-  { name: "ArcKnight", avatar: "\u26A1", status: "Online" },
-];
 
 const QUICK_CATEGORIES = [
   { emoji: "\u{1F3B5}", label: "Music", topic: "Music" },
@@ -39,6 +31,7 @@ export default function HomePage({ user, onJoinRoom }: Props) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [topGifters, setTopGifters] = useState<LeaderboardEntry[]>([]);
   const [quickFilter, setQuickFilter] = useState<string | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,6 +41,23 @@ export default function HomePage({ user, onJoinRoom }: Props) {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    const usersRef = ref(db, "users");
+    const handler = onValue(usersRef, snap => {
+      if (!snap.exists()) { setOnlineUsers([]); return; }
+      const val = snap.val();
+      const online: OnlineUser[] = [];
+      Object.keys(val).forEach(uid => {
+        const u = val[uid];
+        if (u.online && uid !== user.uid) {
+          online.push({ uid, name: u.name || "User", avatar: u.avatar || "\u{1F464}" });
+        }
+      });
+      setOnlineUsers(online.slice(0, 20));
+    });
+    return () => off(usersRef);
+  }, [user.uid]);
 
   useEffect(() => {
     getGiftLeaderboard("weekly", "senders")
@@ -147,26 +157,32 @@ export default function HomePage({ user, onJoinRoom }: Props) {
         </div>
       </div>
 
-      <div style={{ padding: "0 16px 14px", display: "flex", gap: 10, overflowX: "auto" }}>
-        {FAKE_USERS_ONLINE.map((u, i) => (
-          <div key={u.name} style={{
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flexShrink: 0,
-            animation: `slide-up 0.3s ease ${i * 0.05}s both`,
-          }}>
-            <div style={{ position: "relative" }}>
-              <div style={{
-                width: 50, height: 50, borderRadius: 25, fontSize: 24,
-                background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.08))",
-                border: "2px solid rgba(108,92,231,0.3)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 2px 12px rgba(108,92,231,0.15)",
-              }}>{u.avatar}</div>
-              <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11, borderRadius: 6, background: "#00e676", border: "2px solid #0F0F1A" }} />
+      {onlineUsers.length > 0 && (
+        <div style={{ padding: "0 16px 14px", display: "flex", gap: 10, overflowX: "auto" }}>
+          {onlineUsers.map((u, i) => (
+            <div key={u.uid} style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flexShrink: 0,
+              animation: `slide-up 0.3s ease ${i * 0.05}s both`,
+            }}>
+              <div style={{ position: "relative" }}>
+                <div style={{
+                  width: 50, height: 50, borderRadius: 25, fontSize: 24,
+                  background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.08))",
+                  border: "2px solid rgba(108,92,231,0.3)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 2px 12px rgba(108,92,231,0.15)", overflow: "hidden",
+                }}>
+                  {u.avatar.startsWith("http") ? (
+                    <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : u.avatar}
+                </div>
+                <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11, borderRadius: 6, background: "#00e676", border: "2px solid #0F0F1A" }} />
+              </div>
+              <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(162,155,254,0.55)", width: 50, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</span>
             </div>
-            <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(162,155,254,0.55)", width: 50, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {topGifters.length > 0 && !search && (
         <div style={{ padding: "0 16px 14px" }}>

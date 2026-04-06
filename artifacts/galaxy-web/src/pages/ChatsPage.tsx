@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked, canChatSync } from "../lib/userService";
-import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, sendVoiceMessage, addReaction, setTyping, subscribeTyping, markRead } from "../lib/chatService";
+import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, sendVoiceMessage, addReaction, setTyping, subscribeTyping, markRead, clearChat } from "../lib/chatService";
 import { sendNotification } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
 
@@ -258,6 +258,11 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
           >
             {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
           </button>
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: 14, width: 34, height: 34, padding: 0, borderRadius: 10 }} onClick={async () => {
+            if (!active) return;
+            await clearChat(active.id);
+            showToast("Chat cleared", "info");
+          }}>{"\u{1F5D1}\uFE0F"}</button>
           <button className="btn btn-ghost btn-sm" style={{ fontSize: 16, width: 34, height: 34, padding: 0, borderRadius: 10 }} onClick={handleBlock}>{"\u{1F6AB}"}</button>
         </div>
 

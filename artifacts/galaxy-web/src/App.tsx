@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, User as FBUser, getRedirectResult } from "firebase/auth";
 import { auth } from "./lib/firebase";
 import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward } from "./lib/userService";
-import { seedRoomsIfEmpty, Room } from "./lib/roomService";
-import { seedConversations, subscribeConversations, Conversation } from "./lib/chatService";
+import { Room } from "./lib/roomService";
+import { subscribeConversations, Conversation } from "./lib/chatService";
 import { Notification, subscribeNotifications } from "./lib/notificationService";
 import { ToastProvider, useToast } from "./lib/toastContext";
 import AuthPage from "./pages/AuthPage";
@@ -66,9 +66,6 @@ function AppContent() {
           userSubCleanup.current = subscribeUser(u.uid, up => { if (up) setProfile(up); });
           presenceCleanup.current = setupOnlinePresence(u.uid);
           notifSubCleanup.current = subscribeNotifications(u.uid, setNotifications);
-          await seedRoomsIfEmpty();
-          await seedConversations(u.uid, p.name, p.avatar);
-
           const reward = await claimDailyReward(u.uid, p);
           if (reward) {
             showToast(`Daily reward: +${reward.coins} coins! (Day ${reward.streak} streak)`, "success", "\u{1F381}");

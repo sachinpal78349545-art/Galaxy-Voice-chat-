@@ -1,10 +1,12 @@
-import { ref, set, get, update, push, onValue, off } from "firebase/database";
+import { ref, set, get, update, push, onValue, off, remove } from "firebase/database";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage as fbStorage } from "./firebase";
 
 export interface ChatMessage {
   id: string;
   senderId: string;
+  senderName?: string;
+  senderDP?: string;
   text: string;
   timestamp: number;
   type?: "text" | "image" | "emoji" | "voice";
@@ -25,51 +27,6 @@ export interface Conversation {
   unread: Record<string, number>;
   typing?: Record<string, boolean>;
   lastSeen?: Record<string, number>;
-}
-
-const FAKE_CONTACTS = [
-  { id: "fake_1", name: "StarGazer", avatar: "\u{1F31F}", lastMsg: "Hey! Let's voice chat \u{1F3A4}" },
-  { id: "fake_2", name: "CosmicDJ", avatar: "\u{1F3B5}", lastMsg: "That room was fire \u{1F525}" },
-  { id: "fake_3", name: "LunaRose", avatar: "\u{1F319}", lastMsg: "Want to collab? \u{1F4AB}" },
-  { id: "fake_4", name: "NightOwl", avatar: "\u{1F989}", lastMsg: "GM! Good energy today \u{1F31F}" },
-  { id: "fake_5", name: "VoidWalker", avatar: "\u{1F30C}", lastMsg: "Thanks for the gift! \u2764\uFE0F" },
-  { id: "fake_6", name: "NebulaDev", avatar: "\u{1F4BB}", lastMsg: "Let me know when you're online" },
-];
-
-const AUTO_REPLIES = [
-  "That's so cool! \u{1F525}", "Haha agreed! \u{1F602}", "Send me the link!", "For real? \u{1F92F}",
-  "Totally vibe with that \u2728", "Let's do it! \u{1F680}", "\u2764\uFE0F", "\u{1F4AF}", "Sounds good!",
-  "I'm in! \u{1F389}", "What time? \u23F0", "Miss you in the room!", "Omg yes! \u{1F64C}",
-  "Can't wait! \u{1F31F}", "That's amazing \u{1F48E}",
-];
-
-export async function seedConversations(userId: string, userName: string, userAvatar: string): Promise<void> {
-  const snap = await get(ref(db, `userConvs/${userId}`));
-  if (snap.exists() && Object.keys(snap.val()).length > 0) return;
-
-  for (const fc of FAKE_CONTACTS) {
-    const convId = [userId, fc.id].sort().join("_");
-    const conv: Omit<Conversation, "id"> = {
-      participants: [userId, fc.id],
-      participantNames: [userName, fc.name],
-      participantAvatars: [userAvatar, fc.avatar],
-      lastMessage: fc.lastMsg,
-      lastTime: Date.now() - Math.floor(Math.random() * 3600000),
-      unread: { [userId]: 1, [fc.id]: 0 },
-    };
-    await set(ref(db, `conversations/${convId}`), conv);
-    await set(ref(db, `userConvs/${userId}/${convId}`), true);
-    await set(ref(db, `userConvs/${fc.id}/${convId}`), true);
-
-    const msgRef = push(ref(db, `messages/${convId}`));
-    await set(msgRef, {
-      senderId: fc.id,
-      text: fc.lastMsg,
-      timestamp: conv.lastTime,
-      type: "text",
-      status: "delivered",
-    });
-  }
 }
 
 export function subscribeConversations(userId: string, cb: (convs: Conversation[]) => void): () => void {
@@ -153,8 +110,20 @@ async function checkMutualFollow(senderUid: string, convId: string): Promise<boo
 export async function sendMessage(convId: string, senderId: string, text: string, type: "text" | "emoji" = "text"): Promise<void> {
   const allowed = await checkMutualFollow(senderId, convId);
   if (!allowed) throw new Error("Chat locked: mutual follow required");
+
+  const senderSnap = await get(ref(db, `users/${senderId}`));
+  const senderData = senderSnap.exists() ? senderSnap.val() : {};
+
   const msgRef = push(ref(db, `messages/${convId}`));
-  await set(msgRef, { senderId, text, timestamp: Date.now(), type, status: "sent" });
+  await set(msgRef, {
+    senderId,
+    senderName: senderData.name || "User",
+    senderDP: senderData.avatar || "",
+    text,
+    timestamp: Date.now(),
+    type,
+    status: "sent",
+  });
 
   setTimeout(async () => {
     try {
@@ -176,36 +145,44 @@ export async function sendMessage(convId: string, senderId: string, text: string
       unread[otherId] = (unread[otherId] || 0) + 1;
       await update(ref(db, `conversations/${convId}`), { unread });
     }
-
-    if (otherId && otherId.startsWith("fake_")) {
-      setTimeout(async () => {
-        await update(ref(db, `messages/${convId}/${msgRef.key}`), { status: "seen" });
-      }, 1000);
-
-      setTimeout(async () => {
-        const reply = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)];
-        const replyRef = push(ref(db, `messages/${convId}`));
-        await set(replyRef, { senderId: otherId, text: reply, timestamp: Date.now(), type: "text", status: "delivered" });
-        await update(ref(db, `conversations/${convId}`), {
-          lastMessage: reply, lastTime: Date.now(),
-          [`unread/${senderId}`]: ((conv.unread || {})[senderId] || 0) + 1,
-        });
-      }, 1200 + Math.random() * 2000);
-    }
   }
 }
 
 export async function sendImageMessage(convId: string, senderId: string, file: File): Promise<void> {
   const allowed = await checkMutualFollow(senderId, convId);
   if (!allowed) throw new Error("Chat locked: mutual follow required");
+
+  const senderSnap = await get(ref(db, `users/${senderId}`));
+  const senderData = senderSnap.exists() ? senderSnap.val() : {};
+
   const path = `chatImages/${convId}/${Date.now()}_${file.name}`;
   const sRef = storageRef(fbStorage, path);
   await uploadBytes(sRef, file);
   const url = await getDownloadURL(sRef);
 
   const msgRef = push(ref(db, `messages/${convId}`));
-  await set(msgRef, { senderId, text: "\u{1F4F7} Photo", timestamp: Date.now(), type: "image", imageUrl: url, status: "sent" });
+  await set(msgRef, {
+    senderId,
+    senderName: senderData.name || "User",
+    senderDP: senderData.avatar || "",
+    text: "\u{1F4F7} Photo",
+    timestamp: Date.now(),
+    type: "image",
+    imageUrl: url,
+    status: "sent",
+  });
   await update(ref(db, `conversations/${convId}`), { lastMessage: "\u{1F4F7} Photo", lastTime: Date.now() });
+
+  const convSnap = await get(ref(db, `conversations/${convId}`));
+  if (convSnap.exists()) {
+    const conv = convSnap.val();
+    const otherId = conv.participants.find((p: string) => p !== senderId);
+    if (otherId) {
+      const unread = conv.unread || {};
+      unread[otherId] = (unread[otherId] || 0) + 1;
+      await update(ref(db, `conversations/${convId}`), { unread });
+    }
+  }
 
   setTimeout(async () => {
     try {
@@ -217,6 +194,10 @@ export async function sendImageMessage(convId: string, senderId: string, file: F
 export async function sendVoiceMessage(convId: string, senderId: string, audioBlob: Blob, duration: number): Promise<void> {
   const allowed = await checkMutualFollow(senderId, convId);
   if (!allowed) throw new Error("Chat locked: mutual follow required");
+
+  const senderSnap = await get(ref(db, `users/${senderId}`));
+  const senderData = senderSnap.exists() ? senderSnap.val() : {};
+
   const path = `chatVoice/${convId}/${Date.now()}.webm`;
   const sRef = storageRef(fbStorage, path);
   await uploadBytes(sRef, audioBlob);
@@ -225,6 +206,8 @@ export async function sendVoiceMessage(convId: string, senderId: string, audioBl
   const msgRef = push(ref(db, `messages/${convId}`));
   await set(msgRef, {
     senderId,
+    senderName: senderData.name || "User",
+    senderDP: senderData.avatar || "",
     text: "\u{1F3A4} Voice message",
     timestamp: Date.now(),
     type: "voice",
@@ -299,6 +282,11 @@ export async function markRead(convId: string, userId: string): Promise<void> {
   } catch (err) {
     console.warn("Mark read error:", err);
   }
+}
+
+export async function clearChat(convId: string): Promise<void> {
+  await remove(ref(db, `messages/${convId}`));
+  await update(ref(db, `conversations/${convId}`), { lastMessage: "Chat cleared", lastTime: Date.now() });
 }
 
 export async function getOrCreateConversation(
