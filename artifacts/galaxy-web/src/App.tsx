@@ -164,7 +164,8 @@ function AppContent() {
       <div className="app-container">
         {(page === "home" || page === "rooms" || page === "chats") && (
           <div style={{
-            position: "absolute", top: 0, left: 0, right: 0, zIndex: 100,
+            position: "fixed", top: 0, left: 0, right: 0, maxWidth: 400, margin: "0 auto",
+            zIndex: 100,
             display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
             background: "linear-gradient(180deg, rgba(8,4,24,0.98) 60%, transparent)",
           }}>

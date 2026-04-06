@@ -232,7 +232,7 @@ export async function createRoom(
     roomAvatar: options?.roomAvatar || ROOM_COVERS[topic] || "\u{1F3A4}",
     tags: [topic.toLowerCase()],
     isPrivate: options?.isPrivate || false,
-    password: options?.password || undefined,
+    ...(options?.password ? { password: options.password } : {}),
     micPermission: options?.micPermission || "all",
     roomLevel: 1,
     theme: "galaxy",

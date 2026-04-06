@@ -5,6 +5,18 @@ import { UserProfile } from "../lib/userService";
 import { Room, subscribeRooms, createRoom } from "../lib/roomService";
 import { useToast } from "../lib/toastContext";
 
+const CATEGORIES = [
+  { id: "Chill", icon: "\u{1F319}", label: "Chill" },
+  { id: "Music", icon: "\u{1F3B5}", label: "Music" },
+  { id: "Talk", icon: "\u{1F4AC}", label: "Talk" },
+  { id: "Gaming", icon: "\u{1F3AE}", label: "Gaming" },
+  { id: "Comedy", icon: "\u{1F602}", label: "Comedy" },
+  { id: "Study", icon: "\u{1F4DA}", label: "Study" },
+  { id: "Debate", icon: "\u26A1", label: "Debate" },
+  { id: "News", icon: "\u{1F4F0}", label: "News" },
+  { id: "Sports", icon: "\u26BD", label: "Sports" },
+];
+
 interface Props { user: UserProfile; onJoinRoom: (r: Room) => void; }
 
 export default function RoomsPage({ user, onJoinRoom }: Props) {
@@ -13,11 +25,20 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
   const [filter, setFilter] = useState<"All" | "Hot" | "New">("All");
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
+  const [category, setCategory] = useState("Talk");
   const [creating, setCreating] = useState(false);
   const [dpPreview, setDpPreview] = useState<string | null>(null);
   const [dpFile, setDpFile] = useState<File | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [password, setPassword] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const createTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const createOpId = useRef(0);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    return () => { if (createTimeout.current) clearTimeout(createTimeout.current); };
+  }, []);
 
   useEffect(() => {
     const unsub = subscribeRooms(r => { setRooms(r); setLoading(false); });
@@ -25,7 +46,7 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
   }, []);
 
   const filtered = rooms.filter(r => {
-    if (filter === "Hot") return r.listeners > 10;
+    if (filter === "Hot") return r.listeners > 5;
     if (filter === "New") return Date.now() - r.createdAt < 3600000;
     return true;
   });
@@ -47,9 +68,30 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
     reader.readAsDataURL(file);
   };
 
+  const resetForm = () => {
+    setName("");
+    setCategory("Talk");
+    setDpFile(null);
+    setDpPreview(null);
+    setIsPrivate(false);
+    setPassword("");
+    setCreating(false);
+    if (createTimeout.current) { clearTimeout(createTimeout.current); createTimeout.current = null; }
+  };
+
   const handleCreate = async () => {
     if (!name.trim()) { showToast("Please enter a room name", "warning"); return; }
+    if (creating) return;
     setCreating(true);
+    const opId = ++createOpId.current;
+
+    createTimeout.current = setTimeout(() => {
+      if (createOpId.current === opId) {
+        setCreating(false);
+        showToast("Room creation timed out. Please try again.", "error");
+      }
+    }, 15000);
+
     try {
       let roomAvatarUrl: string | undefined;
       if (dpFile) {
@@ -63,18 +105,20 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
           console.warn("Image upload failed, creating room without DP:", uploadErr);
         }
       }
-      const room = await createRoom(user.uid, user.name, user.avatar, name.trim(), "Talk", {
-        roomAvatar: roomAvatarUrl || undefined,
+      const room = await createRoom(user.uid, user.name, user.avatar, name.trim(), category, {
+        ...(roomAvatarUrl ? { roomAvatar: roomAvatarUrl } : {}),
+        isPrivate: isPrivate,
+        ...(isPrivate && password.trim() ? { password: password.trim() } : {}),
       });
+      if (createTimeout.current) { clearTimeout(createTimeout.current); createTimeout.current = null; }
       setShowCreate(false);
-      setName("");
-      setDpFile(null);
-      setDpPreview(null);
+      resetForm();
+      showToast("Room created!", "success");
       onJoinRoom(room);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Create room error:", err);
-      showToast("Failed to create room. Try again.", "error");
-    } finally {
+      if (createTimeout.current) { clearTimeout(createTimeout.current); createTimeout.current = null; }
+      showToast(err?.message || "Failed to create room. Try again.", "error");
       setCreating(false);
     }
   };
@@ -162,19 +206,21 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
         <div style={{
           position: "fixed", inset: 0, background: "rgba(5,1,18,0.9)", backdropFilter: "blur(16px)",
           display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200,
-        }} onClick={() => !creating && setShowCreate(false)}>
+        }} onClick={() => !creating && (setShowCreate(false), resetForm())}>
           <div style={{
-            width: "90%", maxWidth: 340, padding: "32px 24px",
-            background: "rgba(15,15,30,0.95)", borderRadius: 28,
-            border: "1px solid rgba(108,92,231,0.2)",
+            width: "92%", maxWidth: 360, maxHeight: "85vh", overflowY: "auto",
+            padding: "28px 22px",
+            background: "linear-gradient(160deg, rgba(20,15,40,0.98), rgba(10,8,25,0.98))",
+            borderRadius: 28,
+            border: "1px solid rgba(108,92,231,0.25)",
             animation: "popIn 0.25s ease",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 20,
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 18,
           }} onClick={e => e.stopPropagation()}>
 
             <h2 style={{ fontSize: 20, fontWeight: 900, textAlign: "center" }}>Create Room</h2>
 
             <button onClick={() => fileRef.current?.click()} disabled={creating} style={{
-              width: 110, height: 110, borderRadius: "50%", cursor: "pointer",
+              width: 100, height: 100, borderRadius: "50%", cursor: "pointer",
               border: dpPreview ? "3px solid #6C5CE7" : "2px dashed rgba(108,92,231,0.4)",
               background: dpPreview ? "transparent" : "rgba(108,92,231,0.08)",
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -184,8 +230,8 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
                 <img src={dpPreview} alt="Room DP" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
                 <>
-                  <span style={{ fontSize: 32, marginBottom: 4 }}>{"\u{1F4F7}"}</span>
-                  <span style={{ fontSize: 10, color: "rgba(162,155,254,0.5)", fontWeight: 700 }}>Upload DP</span>
+                  <span style={{ fontSize: 28, marginBottom: 2 }}>{"\u{1F4F7}"}</span>
+                  <span style={{ fontSize: 9, color: "rgba(162,155,254,0.5)", fontWeight: 700 }}>Upload DP</span>
                 </>
               )}
             </button>
@@ -197,13 +243,55 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
               onChange={e => setName(e.target.value)}
               disabled={creating}
               maxLength={40}
-              style={{ width: "100%", textAlign: "center", fontSize: 16, padding: "14px 16px" }}
+              style={{ width: "100%", textAlign: "center", fontSize: 15, padding: "13px 16px" }}
               autoFocus
             />
 
+            <div style={{ width: "100%" }}>
+              <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 8, display: "block" }}>Category</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {CATEGORIES.map(c => (
+                  <button key={c.id} onClick={() => setCategory(c.id)} disabled={creating} style={{
+                    padding: "6px 12px", borderRadius: 12, cursor: "pointer",
+                    border: category === c.id ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.06)",
+                    background: category === c.id ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.03)",
+                    color: category === c.id ? "#A29BFE" : "rgba(162,155,254,0.5)",
+                    fontSize: 12, fontWeight: 700, fontFamily: "inherit",
+                    display: "flex", alignItems: "center", gap: 4, transition: "all 0.15s",
+                  }}>
+                    <span style={{ fontSize: 14 }}>{c.icon}</span> {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ width: "100%", display: "flex", gap: 10, alignItems: "center" }}>
+              <button onClick={() => { setIsPrivate(!isPrivate); if (isPrivate) setPassword(""); }} disabled={creating} style={{
+                padding: "8px 14px", borderRadius: 12, cursor: "pointer",
+                border: isPrivate ? "1.5px solid #ff6482" : "1px solid rgba(255,255,255,0.06)",
+                background: isPrivate ? "rgba(255,100,130,0.1)" : "rgba(255,255,255,0.03)",
+                color: isPrivate ? "#ff6482" : "rgba(162,155,254,0.4)",
+                fontSize: 12, fontWeight: 700, fontFamily: "inherit",
+              }}>
+                {isPrivate ? "\u{1F512} Private" : "\u{1F30D} Public"}
+              </button>
+              {isPrivate && (
+                <input
+                  className="input-field"
+                  placeholder="Password (optional)"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  disabled={creating}
+                  type="password"
+                  maxLength={20}
+                  style={{ flex: 1, fontSize: 12, padding: "8px 12px" }}
+                />
+              )}
+            </div>
+
             <button
               className="btn btn-primary btn-full"
-              style={{ padding: "15px 0", fontSize: 16, fontWeight: 800, borderRadius: 16, width: "100%" }}
+              style={{ padding: "14px 0", fontSize: 16, fontWeight: 800, borderRadius: 16, width: "100%" }}
               onClick={handleCreate}
               disabled={creating || !name.trim()}
             >
@@ -214,6 +302,13 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
                 </div>
               ) : "Create Room"}
             </button>
+
+            {!creating && (
+              <button onClick={() => { setShowCreate(false); resetForm(); }} style={{
+                background: "none", border: "none", cursor: "pointer",
+                color: "rgba(162,155,254,0.4)", fontSize: 13, fontWeight: 600, fontFamily: "inherit",
+              }}>Cancel</button>
+            )}
           </div>
         </div>
       )}

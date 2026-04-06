@@ -63,7 +63,9 @@ artifacts/galaxy-web/src/
                              room cards with host avatar and user count (6/9 format)
     MomentPage.tsx         — Social feed page with sample moments, like/comment/share,
                              post composer, community updates
-    RoomsPage.tsx          — Firebase room list, create room modal, real-time updates
+    RoomsPage.tsx          — Firebase room list, create room modal with 9-category
+                             selector, DP upload, Public/Private toggle with password,
+                             15s timeout safeguard, proper error handling, real-time updates
     VoiceRoomPage.tsx      — 10-seat 2x5-column grid, real Agora voice (join/leave/mute),
                              co-host controls, animated gift system (fly/reveal/bounce),
                              gift leaderboard modal (daily/weekly/monthly tabs),
