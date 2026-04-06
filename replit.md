@@ -37,7 +37,7 @@ artifacts/galaxy-web/src/
                              achievements, transactions, XP/level, gift sending,
                              block/unblock, friend requests, privacy settings, report user,
                              daily tasks (4 tasks with progress tracking), searchUsers (name + userId)
-    roomService.ts         — Firebase rooms CRUD, 10-seat management (2x5 grid), real-time
+    roomService.ts         — Firebase rooms CRUD, 12-seat management (4x3 grid), real-time
                              listeners, room messages, seed data (5 rooms), raise hand,
                              host controls, co-host role (setCoHost, removeCoHost)
     chatService.ts         — Firebase conversations, real-time messaging, typing indicators,
