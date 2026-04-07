@@ -17,6 +17,7 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
   });
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStep, setUploadStep] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -36,76 +37,62 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 15 * 1024 * 1024) {
-      showToast("Image must be under 15MB", "warning");
-      return;
-    }
     setUploading(true);
     setUploadProgress(0);
-
-    let progressSim: ReturnType<typeof setInterval> | null = null;
-    let uploadTimedOut = false;
+    setUploadStep("Compressing...");
 
     try {
-      console.log(`[DP Upload] Original file: ${file.name}, Size: ${(file.size / 1024).toFixed(1)}KB`);
-      setUploadProgress(5);
+      const origKB = (file.size / 1024).toFixed(1);
+      console.log(`[DP Upload] Original: ${file.name}, ${origKB}KB, ${file.type}`);
+      setUploadProgress(10);
 
-      let compressed: File;
+      let blob: Blob;
       try {
-        compressed = await imageCompression(file, {
-          maxSizeMB: 0.19,
-          maxWidthOrHeight: 512,
+        const compressed = await imageCompression(file, {
+          maxSizeMB: 0.1,
+          maxWidthOrHeight: 800,
           useWebWorker: true,
           fileType: "image/jpeg",
-          initialQuality: 0.7,
+          initialQuality: 0.6,
+          alwaysKeepResolution: false,
         });
-        console.log(`[DP Upload] Final Compressed Size: ${(compressed.size / 1024).toFixed(1)}KB (was ${(file.size / 1024).toFixed(1)}KB)`);
+        blob = compressed;
+        const compKB = (compressed.size / 1024).toFixed(1);
+        console.log(`[DP Upload] Final Compressed Size: ${compKB}KB (was ${origKB}KB)`);
+        setUploadStep(`Compressed to ${compKB}KB`);
       } catch (compErr) {
-        console.warn("[DP Upload] Compression failed, using original:", compErr);
-        compressed = file;
+        console.warn("[DP Upload] Compression fallback to original:", compErr);
+        blob = file;
+        setUploadStep("Uploading original...");
       }
-      setUploadProgress(35);
+      setUploadProgress(40);
 
-      progressSim = setInterval(() => {
-        setUploadProgress(prev => prev >= 85 ? 85 : prev + 4);
-      }, 400);
-
-      const uploadTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => { uploadTimedOut = true; reject(new Error("Upload timed out after 120s")); }, 120000)
-      );
-
+      setUploadStep("Uploading...");
       const path = `avatars/${user.uid}_${Date.now()}.jpg`;
       const sRef = storageRef(fbStorage, path);
-      const doUpload = async () => {
-        await uploadBytes(sRef, compressed);
-        console.log("[DP Upload] uploadBytes complete, fetching download URL...");
-        const url = await getDownloadURL(sRef);
-        console.log("[DP Upload] Got download URL, upload successful!");
-        return url;
-      };
 
-      const url = await Promise.race([doUpload(), uploadTimeout]);
+      console.log(`[DP Upload] Uploading ${(blob.size / 1024).toFixed(1)}KB to Firebase...`);
+      await uploadBytes(sRef, blob);
+      setUploadProgress(80);
 
-      if (progressSim) clearInterval(progressSim);
-      progressSim = null;
+      setUploadStep("Finishing...");
+      console.log("[DP Upload] uploadBytes done, getting URL...");
+      const url = await getDownloadURL(sRef);
+      console.log("[DP Upload] Success! URL obtained.");
+
       setUploadProgress(100);
+      setUploadStep("Done!");
       setForm(f => ({ ...f, avatar: url }));
       showToast("Photo uploaded!", "success", "\u{1F4F7}");
     } catch (err) {
-      if (progressSim) clearInterval(progressSim);
-      progressSim = null;
       setUploadProgress(0);
-      console.error("[DP Upload] Upload failed:", err);
-
-      if (uploadTimedOut) {
-        showToast("Upload timed out. Check your network and try again.", "error");
-      } else {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        showToast(`Upload failed: ${msg}`, "error");
-      }
+      setUploadStep("");
+      console.error("[DP Upload] Failed:", err);
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      showToast(`Upload failed: ${msg}`, "error");
     } finally {
       setUploading(false);
-      setTimeout(() => setUploadProgress(0), 800);
+      setTimeout(() => { setUploadProgress(0); setUploadStep(""); }, 1000);
       if (e.target) e.target.value = "";
     }
   };
@@ -189,21 +176,25 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
             </div>
             {uploading && (
               <div style={{
-                position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", borderRadius: 48,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+                position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", borderRadius: 48,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
               }}>
-                <div style={{ width: 24, height: 24, borderRadius: 12, border: "2.5px solid rgba(162,155,254,0.3)", borderTopColor: "#A29BFE", animation: "spin 0.7s linear infinite" }} />
-                <span style={{ fontSize: 10, color: "#A29BFE", fontWeight: 700 }}>{uploadProgress}%</span>
+                <div style={{ width: 26, height: 26, borderRadius: 13, border: "2.5px solid rgba(162,155,254,0.3)", borderTopColor: "#A29BFE", animation: "spin 0.7s linear infinite" }} />
+                <span style={{ fontSize: 12, color: "#fff", fontWeight: 800 }}>{uploadProgress}%</span>
+                <span style={{ fontSize: 8, color: "rgba(162,155,254,0.8)", fontWeight: 600 }}>{uploadStep}</span>
               </div>
             )}
-            {uploadProgress > 0 && uploadProgress < 100 && !uploading && (
+            {uploadProgress > 0 && (
               <div style={{
-                position: "absolute", bottom: -4, left: 8, right: 8, height: 3, borderRadius: 2,
+                position: "absolute", bottom: -6, left: 4, right: 4, height: 4, borderRadius: 2,
                 background: "rgba(255,255,255,0.1)",
               }}>
                 <div style={{
                   height: "100%", borderRadius: 2, width: `${uploadProgress}%`,
-                  background: "linear-gradient(90deg,#6C5CE7,#A29BFE)", transition: "width 0.3s",
+                  background: uploadProgress === 100
+                    ? "linear-gradient(90deg,#00e676,#00c853)"
+                    : "linear-gradient(90deg,#6C5CE7,#A29BFE)",
+                  transition: "width 0.3s ease",
                 }} />
               </div>
             )}
