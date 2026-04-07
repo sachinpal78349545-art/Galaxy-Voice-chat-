@@ -32,36 +32,95 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
     return Object.keys(errs).length === 0;
   };
 
+  const compressImage = (file: File, maxW = 600, maxH = 600, quality = 0.7): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxW || h > maxH) {
+          const ratio = Math.min(maxW / w, maxH / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Canvas not supported")); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(
+          blob => blob ? resolve(blob) : reject(new Error("Compression failed")),
+          "image/jpeg",
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showToast("Image must be under 5MB", "warning");
+    if (file.size > 10 * 1024 * 1024) {
+      showToast("Image must be under 10MB", "warning");
       return;
     }
     setUploading(true);
     setUploadProgress(0);
+
+    let progressSim: ReturnType<typeof setInterval> | null = null;
+    let uploadTimedOut = false;
+
     try {
-      const progressSim = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 15, 90));
-      }, 200);
-      const path = `avatars/${user.uid}`;
+      setUploadProgress(10);
+      let blob: Blob;
+      try {
+        blob = await compressImage(file);
+        setUploadProgress(30);
+      } catch {
+        blob = file;
+        setUploadProgress(30);
+      }
+
+      progressSim = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 85) { return 85; }
+          return prev + 5;
+        });
+      }, 300);
+
+      const uploadTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => { uploadTimedOut = true; reject(new Error("Upload timed out")); }, 60000)
+      );
+
+      const path = `avatars/${user.uid}_${Date.now()}`;
       const sRef = storageRef(fbStorage, path);
-      await uploadBytes(sRef, file);
-      const url = await getDownloadURL(sRef);
-      clearInterval(progressSim);
+      const doUpload = async () => {
+        await uploadBytes(sRef, blob);
+        return await getDownloadURL(sRef);
+      };
+
+      const url = await Promise.race([doUpload(), uploadTimeout]);
+
+      if (progressSim) clearInterval(progressSim);
       setUploadProgress(100);
       setForm(f => ({ ...f, avatar: url }));
       showToast("Photo uploaded!", "success", "\u{1F4F7}");
     } catch (err) {
+      if (progressSim) clearInterval(progressSim);
+      setUploadProgress(0);
       console.error("Upload failed:", err);
-      const reader = new FileReader();
-      reader.onload = ev => setForm(f => ({ ...f, avatar: ev.target?.result as string }));
-      reader.readAsDataURL(file);
-      showToast("Upload to cloud failed, using local preview", "warning");
+
+      if (uploadTimedOut) {
+        showToast("Upload timed out. Try a smaller photo.", "error");
+      } else {
+        showToast("Upload failed. Please try again.", "error");
+      }
     } finally {
       setUploading(false);
-      setTimeout(() => setUploadProgress(0), 500);
+      setTimeout(() => setUploadProgress(0), 800);
+      if (e.target) e.target.value = "";
     }
   };
 
