@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "agora-rtc-sdk-ng": "^4.24.3",
+    "browser-image-compression": "^2.0.2",
     "firebase": "^12.11.0"
   }
 }

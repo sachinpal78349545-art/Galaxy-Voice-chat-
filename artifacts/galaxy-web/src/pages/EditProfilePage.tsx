@@ -3,6 +3,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage
 import { storage as fbStorage } from "../lib/firebase";
 import { UserProfile, updateUser, AVATAR_LIST } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
+import imageCompression from "browser-image-compression";
 
 interface Props { user: UserProfile; onUpdate: (u: UserProfile) => void; onBack: () => void; }
 
@@ -32,38 +33,11 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
     return Object.keys(errs).length === 0;
   };
 
-  const compressImage = (file: File, maxW = 600, maxH = 600, quality = 0.7): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > maxW || h > maxH) {
-          const ratio = Math.min(maxW / w, maxH / h);
-          w = Math.round(w * ratio);
-          h = Math.round(h * ratio);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { reject(new Error("Canvas not supported")); return; }
-        ctx.drawImage(img, 0, 0, w, h);
-        canvas.toBlob(
-          blob => blob ? resolve(blob) : reject(new Error("Compression failed")),
-          "image/jpeg",
-          quality
-        );
-      };
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      showToast("Image must be under 10MB", "warning");
+    if (file.size > 15 * 1024 * 1024) {
+      showToast("Image must be under 15MB", "warning");
       return;
     }
     setUploading(true);
@@ -73,49 +47,61 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
     let uploadTimedOut = false;
 
     try {
-      setUploadProgress(10);
-      let blob: Blob;
+      console.log(`[DP Upload] Original file: ${file.name}, Size: ${(file.size / 1024).toFixed(1)}KB`);
+      setUploadProgress(5);
+
+      let compressed: File;
       try {
-        blob = await compressImage(file);
-        setUploadProgress(30);
-      } catch {
-        blob = file;
-        setUploadProgress(30);
+        compressed = await imageCompression(file, {
+          maxSizeMB: 0.19,
+          maxWidthOrHeight: 512,
+          useWebWorker: true,
+          fileType: "image/jpeg",
+          initialQuality: 0.7,
+        });
+        console.log(`[DP Upload] Final Compressed Size: ${(compressed.size / 1024).toFixed(1)}KB (was ${(file.size / 1024).toFixed(1)}KB)`);
+      } catch (compErr) {
+        console.warn("[DP Upload] Compression failed, using original:", compErr);
+        compressed = file;
       }
+      setUploadProgress(35);
 
       progressSim = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 85) { return 85; }
-          return prev + 5;
-        });
-      }, 300);
+        setUploadProgress(prev => prev >= 85 ? 85 : prev + 4);
+      }, 400);
 
       const uploadTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => { uploadTimedOut = true; reject(new Error("Upload timed out")); }, 60000)
+        setTimeout(() => { uploadTimedOut = true; reject(new Error("Upload timed out after 120s")); }, 120000)
       );
 
-      const path = `avatars/${user.uid}_${Date.now()}`;
+      const path = `avatars/${user.uid}_${Date.now()}.jpg`;
       const sRef = storageRef(fbStorage, path);
       const doUpload = async () => {
-        await uploadBytes(sRef, blob);
-        return await getDownloadURL(sRef);
+        await uploadBytes(sRef, compressed);
+        console.log("[DP Upload] uploadBytes complete, fetching download URL...");
+        const url = await getDownloadURL(sRef);
+        console.log("[DP Upload] Got download URL, upload successful!");
+        return url;
       };
 
       const url = await Promise.race([doUpload(), uploadTimeout]);
 
       if (progressSim) clearInterval(progressSim);
+      progressSim = null;
       setUploadProgress(100);
       setForm(f => ({ ...f, avatar: url }));
       showToast("Photo uploaded!", "success", "\u{1F4F7}");
     } catch (err) {
       if (progressSim) clearInterval(progressSim);
+      progressSim = null;
       setUploadProgress(0);
-      console.error("Upload failed:", err);
+      console.error("[DP Upload] Upload failed:", err);
 
       if (uploadTimedOut) {
-        showToast("Upload timed out. Try a smaller photo.", "error");
+        showToast("Upload timed out. Check your network and try again.", "error");
       } else {
-        showToast("Upload failed. Please try again.", "error");
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        showToast(`Upload failed: ${msg}`, "error");
       }
     } finally {
       setUploading(false);
