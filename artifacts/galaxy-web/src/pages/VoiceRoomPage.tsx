@@ -443,11 +443,20 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         position: "absolute", inset: 0, zIndex: 0,
         backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)`,
         backgroundSize: "cover", backgroundPosition: "center",
+        filter: "saturate(1.4) brightness(1.15)",
+      }} />
+
+      <div className="galaxy-stars" />
+
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none",
+        background: "radial-gradient(ellipse at 30% 20%, rgba(138,43,226,0.25) 0%, transparent 50%), radial-gradient(ellipse at 75% 70%, rgba(45,212,191,0.15) 0%, transparent 45%)",
+        animation: "nebulaGlow 8s ease-in-out infinite",
       }} />
 
       <div style={{
-        position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-        background: "linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6))",
+        position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.55))",
       }} />
 
       {floats.map(f => (

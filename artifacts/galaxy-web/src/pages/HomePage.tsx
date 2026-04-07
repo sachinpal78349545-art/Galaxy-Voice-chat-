@@ -136,29 +136,29 @@ export default function HomePage({ user, onJoinRoom }: Props) {
         </div>
       )}
 
-      <div style={{ padding: "0 16px 12px" }}>
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+      <div style={{ padding: "4px 16px 18px" }}>
+        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, justifyContent: "space-between" }}>
           {QUICK_CATEGORIES.map(cat => (
             <button
               key={cat.label}
               onClick={() => handleQuickJoin(cat.topic)}
               style={{
-                flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                padding: "10px 14px", borderRadius: 16,
+                flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+                padding: "12px 14px", borderRadius: 16,
                 background: quickFilter === cat.topic ? "rgba(108,92,231,0.25)" : "rgba(255,255,255,0.03)",
                 border: quickFilter === cat.topic ? "1px solid rgba(108,92,231,0.5)" : "1px solid rgba(255,255,255,0.06)",
-                cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", minWidth: 56,
+                cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", minWidth: 52,
               }}
             >
-              <span style={{ fontSize: 22 }}>{cat.emoji}</span>
-              <span style={{ fontSize: 9, fontWeight: 700, color: quickFilter === cat.topic ? "#A29BFE" : "rgba(162,155,254,0.5)" }}>{cat.label}</span>
+              <span style={{ fontSize: 24 }}>{cat.emoji}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: quickFilter === cat.topic ? "#A29BFE" : "rgba(162,155,254,0.5)" }}>{cat.label}</span>
             </button>
           ))}
         </div>
       </div>
 
       {onlineUsers.length > 0 && (
-        <div style={{ padding: "0 16px 14px", display: "flex", gap: 10, overflowX: "auto" }}>
+        <div style={{ padding: "0 16px 18px", display: "flex", gap: 10, overflowX: "auto" }}>
           {onlineUsers.map((u, i) => (
             <div key={u.uid} style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flexShrink: 0,
@@ -185,8 +185,8 @@ export default function HomePage({ user, onJoinRoom }: Props) {
       )}
 
       {topGifters.length > 0 && !search && (
-        <div style={{ padding: "0 16px 14px" }}>
-          <h3 style={{ fontSize: 12, fontWeight: 800, color: "rgba(162,155,254,0.5)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1.5 }}>{"\u{1F451}"} Top Gifters This Week</h3>
+        <div style={{ padding: "0 16px 20px" }}>
+          <h3 style={{ fontSize: 12, fontWeight: 800, color: "rgba(162,155,254,0.5)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1.5 }}>{"\u{1F451}"} Top Gifters This Week</h3>
           <div style={{
             display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2,
             background: "linear-gradient(160deg, rgba(255,215,0,0.06), rgba(108,92,231,0.04))",
