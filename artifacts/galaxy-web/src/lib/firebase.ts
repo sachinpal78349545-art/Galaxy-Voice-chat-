@@ -19,8 +19,13 @@ export const auth = getAuth(app);
 export const db = getDatabase(app);
 export const storage = getStorage(app);
 
-if (import.meta.env.DEV) {
-  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+const isDev = import.meta.env.DEV
+  || window.location.hostname.includes("replit")
+  || window.location.hostname === "localhost";
+
+if (isDev) {
+  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = "ec8ffa53-77e7-4771-bc83-342174ea5237";
+  console.log("[AppCheck] Debug mode ON — using registered debug token");
 }
 
 let appCheckInstance: AppCheck | null = null;
@@ -29,26 +34,32 @@ try {
     provider: new ReCaptchaEnterpriseProvider("6LeBPqssAAAAACKXUtcHmVeZMK2IrqhS4dwkWRY"),
     isTokenAutoRefreshEnabled: true,
   });
-  console.log("[AppCheck] Initialized with reCAPTCHA Enterprise");
+  console.log("[AppCheck] Initialized with reCAPTCHA Enterprise, isDev:", isDev);
 } catch (err) {
-  console.warn("[AppCheck] Init failed:", err);
+  console.error("[AppCheck] Init FAILED:", err);
 }
 
 export const appCheck = appCheckInstance;
 
 export async function ensureAppCheckToken(): Promise<void> {
   if (!appCheckInstance) {
-    console.warn("[AppCheck] Not initialized — uploads may be rejected by Storage rules");
+    console.error("[AppCheck] ensureAppCheckToken called but appCheckInstance is null");
     return;
   }
   try {
+    console.log("[AppCheck] Requesting token (forceRefresh=true)...");
     const result = await getToken(appCheckInstance, true);
     if (!result.token) {
+      console.error("[AppCheck] getToken returned empty token object:", result);
       throw new Error("App Check returned empty token");
     }
-    console.log("[AppCheck] Token acquired, length:", result.token.length);
-  } catch (err) {
-    console.error("[AppCheck] Token fetch failed — upload will likely be rejected:", err);
-    throw new Error("App Check verification failed. Please refresh the page and try again.");
+    console.log("[AppCheck] Token acquired successfully, length:", result.token.length);
+  } catch (err: any) {
+    console.error("[AppCheck] getToken FAILED:");
+    console.error("[AppCheck]   Error name:", err?.name);
+    console.error("[AppCheck]   Error message:", err?.message);
+    console.error("[AppCheck]   Error code:", err?.code);
+    console.error("[AppCheck]   Full error:", err);
+    throw new Error(`App Check verification failed: ${err?.message || "Unknown error"}. Refresh the page and try again.`);
   }
 }
