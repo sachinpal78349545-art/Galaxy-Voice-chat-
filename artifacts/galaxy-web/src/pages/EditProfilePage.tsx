@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage as fbStorage, ensureAppCheckToken } from "../lib/firebase";
+import { storage as fbStorage, getVerifiedToken } from "../lib/firebase";
 import { UserProfile, updateUser, AVATAR_LIST } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 import imageCompression from "browser-image-compression";
@@ -68,17 +68,25 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
       setUploadProgress(40);
 
       setUploadStep("Verifying...");
-      await ensureAppCheckToken();
+      const token = await getVerifiedToken();
+      if (!token) {
+        throw new Error("App Check token is empty — cannot upload");
+      }
       setUploadProgress(45);
 
       setUploadStep("Uploading...");
       const path = `avatars/${user.uid}_${Date.now()}.jpg`;
       const sRef = storageRef(fbStorage, path);
       const blobKB = (blob.size / 1024).toFixed(1);
+      console.log(`[DP Upload] Final Token Check before upload: ${token.substring(0, 40)}...`);
       console.log(`[DP Upload] Uploading ${blobKB}KB to Firebase Storage...`);
 
+      const metadata = {
+        contentType: "image/jpeg",
+        customMetadata: { "X-Firebase-AppCheck": token },
+      };
       const url = await new Promise<string>((resolve, reject) => {
-        const task = uploadBytesResumable(sRef, blob, { contentType: "image/jpeg" });
+        const task = uploadBytesResumable(sRef, blob, metadata);
         task.on("state_changed",
           (snap) => {
             const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);

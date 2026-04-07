@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage, ensureAppCheckToken } from "../lib/firebase";
+import { storage, getVerifiedToken } from "../lib/firebase";
 import {
   Room, RoomSeat, RoomUser, RoomMessage, ROOM_THEMES, ROOM_AVATARS,
   subscribeRoom, subscribeRoomMessages, sendRoomMessage,
@@ -958,11 +958,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                       if (!file) return;
                       setCpDpUploading(true);
                       try {
-                        await ensureAppCheckToken();
+                        const token = await getVerifiedToken();
+                        console.log(`[Room DP] Final Token Check before upload: ${token ? token.substring(0, 40) + "..." : "EMPTY"}`);
                         const ext = file.name.split(".").pop() || "jpg";
                         const path = `room-avatars/${roomId}_${Date.now()}.${ext}`;
                         const sRef = storageRef(storage, path);
-                        await uploadBytes(sRef, file);
+                        await uploadBytes(sRef, file, { customMetadata: { "X-Firebase-AppCheck": token } });
                         const url = await getDownloadURL(sRef);
                         await updateRoomSettings(roomId, { roomAvatar: url });
                         showToast("Room DP updated!", "success");
