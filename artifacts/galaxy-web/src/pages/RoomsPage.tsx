@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage, getVerifiedToken } from "../lib/firebase";
+import { uploadWithAppCheck } from "../lib/firebase";
 import { UserProfile } from "../lib/userService";
 import { Room, subscribeRooms, createRoom } from "../lib/roomService";
 import { useToast } from "../lib/toastContext";
@@ -80,13 +79,10 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
     try {
       let roomAvatarUrl: string | undefined;
       if (dpFile) {
-        const token = await getVerifiedToken();
-        console.log(`[Room Create] Final Token Check before upload: ${token ? token.substring(0, 40) + "..." : "EMPTY"}`);
         const fileExt = dpFile.name.split(".").pop() || "jpg";
         const path = `room-avatars/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-        const sRef = storageRef(storage, path);
-        await uploadBytes(sRef, dpFile, { customMetadata: { "X-Firebase-AppCheck": token } });
-        roomAvatarUrl = await getDownloadURL(sRef);
+        const result = await uploadWithAppCheck(dpFile, path);
+        roomAvatarUrl = result.url;
       }
       const room = await createRoom(user.uid, user.name, user.avatar, name.trim(), category, {
         ...(roomAvatarUrl ? { roomAvatar: roomAvatarUrl } : {}),

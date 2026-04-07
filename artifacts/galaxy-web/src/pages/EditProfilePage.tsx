@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage as fbStorage, getVerifiedToken } from "../lib/firebase";
+import { uploadWithAppCheck } from "../lib/firebase";
 import { UserProfile, updateUser, AVATAR_LIST } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 import imageCompression from "browser-image-compression";
@@ -68,46 +67,15 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
       setUploadProgress(40);
 
       setUploadStep("Verifying...");
-      const token = await getVerifiedToken();
-      if (!token) {
-        throw new Error("App Check token is empty — cannot upload");
-      }
       setUploadProgress(45);
 
       setUploadStep("Uploading...");
       const path = `avatars/${user.uid}_${Date.now()}.jpg`;
-      const sRef = storageRef(fbStorage, path);
-      const blobKB = (blob.size / 1024).toFixed(1);
-      console.log(`[DP Upload] Final Token Check before upload: ${token.substring(0, 40)}...`);
-      console.log(`[DP Upload] Uploading ${blobKB}KB to Firebase Storage...`);
+      console.log(`[DP Upload] Uploading ${(blob.size / 1024).toFixed(1)}KB via REST API...`);
 
-      const metadata = {
-        contentType: "image/jpeg",
-        customMetadata: { "X-Firebase-AppCheck": token },
-      };
-      const url = await new Promise<string>((resolve, reject) => {
-        const task = uploadBytesResumable(sRef, blob, metadata);
-        task.on("state_changed",
-          (snap) => {
-            const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-            setUploadProgress(45 + Math.round(pct * 0.5));
-            setUploadStep(`Uploading... ${pct}%`);
-            console.log(`[DP Upload] Progress: ${pct}% (${snap.bytesTransferred}/${snap.totalBytes})`);
-          },
-          (err) => {
-            console.error("[DP Upload] uploadBytesResumable failed:", err);
-            reject(err);
-          },
-          async () => {
-            try {
-              console.log("[DP Upload] Upload complete, getting URL...");
-              setUploadStep("Finishing...");
-              const downloadUrl = await getDownloadURL(task.snapshot.ref);
-              console.log("[DP Upload] Success! URL obtained.");
-              resolve(downloadUrl);
-            } catch (e) { reject(e); }
-          }
-        );
+      const { url } = await uploadWithAppCheck(blob, path, "image/jpeg", (pct) => {
+        setUploadProgress(45 + Math.round(pct * 0.5));
+        setUploadStep(`Uploading... ${pct}%`);
       });
 
       setUploadProgress(100);

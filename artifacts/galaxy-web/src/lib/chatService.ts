@@ -1,6 +1,5 @@
 import { ref, set, get, update, push, onValue, off, remove } from "firebase/database";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage as fbStorage, getVerifiedToken } from "./firebase";
+import { db, uploadWithAppCheck } from "./firebase";
 
 export interface ChatMessage {
   id: string;
@@ -155,12 +154,8 @@ export async function sendImageMessage(convId: string, senderId: string, file: F
   const senderSnap = await get(ref(db, `users/${senderId}`));
   const senderData = senderSnap.exists() ? senderSnap.val() : {};
 
-  const token = await getVerifiedToken();
-  console.log(`[Chat Upload] Final Token Check before upload: ${token ? token.substring(0, 40) + "..." : "EMPTY"}`);
   const path = `chatImages/${convId}/${Date.now()}_${file.name}`;
-  const sRef = storageRef(fbStorage, path);
-  await uploadBytes(sRef, file, { customMetadata: { "X-Firebase-AppCheck": token } });
-  const url = await getDownloadURL(sRef);
+  const { url } = await uploadWithAppCheck(file, path);
 
   const msgRef = push(ref(db, `messages/${convId}`));
   await set(msgRef, {
@@ -200,12 +195,8 @@ export async function sendVoiceMessage(convId: string, senderId: string, audioBl
   const senderSnap = await get(ref(db, `users/${senderId}`));
   const senderData = senderSnap.exists() ? senderSnap.val() : {};
 
-  const voiceToken = await getVerifiedToken();
-  console.log(`[Voice Upload] Final Token Check before upload: ${voiceToken ? voiceToken.substring(0, 40) + "..." : "EMPTY"}`);
   const path = `chatVoice/${convId}/${Date.now()}.webm`;
-  const sRef = storageRef(fbStorage, path);
-  await uploadBytes(sRef, audioBlob, { contentType: "audio/webm", customMetadata: { "X-Firebase-AppCheck": voiceToken } });
-  const url = await getDownloadURL(sRef);
+  const { url } = await uploadWithAppCheck(audioBlob, path, "audio/webm");
 
   const msgRef = push(ref(db, `messages/${convId}`));
   await set(msgRef, {
