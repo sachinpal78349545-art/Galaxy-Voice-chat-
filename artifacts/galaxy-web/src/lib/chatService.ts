@@ -1,6 +1,6 @@
 import { ref, set, get, update, push, onValue, off, remove } from "firebase/database";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage as fbStorage } from "./firebase";
+import { db, storage as fbStorage, ensureAppCheckToken } from "./firebase";
 
 export interface ChatMessage {
   id: string;
@@ -155,6 +155,7 @@ export async function sendImageMessage(convId: string, senderId: string, file: F
   const senderSnap = await get(ref(db, `users/${senderId}`));
   const senderData = senderSnap.exists() ? senderSnap.val() : {};
 
+  await ensureAppCheckToken();
   const path = `chatImages/${convId}/${Date.now()}_${file.name}`;
   const sRef = storageRef(fbStorage, path);
   await uploadBytes(sRef, file);
@@ -198,6 +199,7 @@ export async function sendVoiceMessage(convId: string, senderId: string, audioBl
   const senderSnap = await get(ref(db, `users/${senderId}`));
   const senderData = senderSnap.exists() ? senderSnap.val() : {};
 
+  await ensureAppCheckToken();
   const path = `chatVoice/${convId}/${Date.now()}.webm`;
   const sRef = storageRef(fbStorage, path);
   await uploadBytes(sRef, audioBlob);

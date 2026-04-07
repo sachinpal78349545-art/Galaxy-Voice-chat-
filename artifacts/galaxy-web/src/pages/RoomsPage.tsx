@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../lib/firebase";
+import { storage, ensureAppCheckToken } from "../lib/firebase";
 import { UserProfile } from "../lib/userService";
 import { Room, subscribeRooms, createRoom } from "../lib/roomService";
 import { useToast } from "../lib/toastContext";
@@ -80,6 +80,7 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
     try {
       let roomAvatarUrl: string | undefined;
       if (dpFile) {
+        await ensureAppCheckToken();
         const fileExt = dpFile.name.split(".").pop() || "jpg";
         const path = `room-avatars/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
         const sRef = storageRef(storage, path);

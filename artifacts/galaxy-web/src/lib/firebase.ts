@@ -19,6 +19,10 @@ export const auth = getAuth(app);
 export const db = getDatabase(app);
 export const storage = getStorage(app);
 
+if (import.meta.env.DEV) {
+  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
 let appCheckInstance: AppCheck | null = null;
 try {
   appCheckInstance = initializeAppCheck(app, {
@@ -32,17 +36,19 @@ try {
 
 export const appCheck = appCheckInstance;
 
-export async function ensureAppCheckToken(): Promise<boolean> {
+export async function ensureAppCheckToken(): Promise<void> {
   if (!appCheckInstance) {
-    console.warn("[AppCheck] Not initialized, skipping token check");
-    return false;
+    console.warn("[AppCheck] Not initialized — uploads may be rejected by Storage rules");
+    return;
   }
   try {
-    const result = await getToken(appCheckInstance, false);
-    console.log("[AppCheck] Token valid, expires:", new Date(result.token ? Date.now() + 3600000 : 0).toISOString());
-    return true;
+    const result = await getToken(appCheckInstance, true);
+    if (!result.token) {
+      throw new Error("App Check returned empty token");
+    }
+    console.log("[AppCheck] Token acquired, length:", result.token.length);
   } catch (err) {
-    console.error("[AppCheck] Token fetch failed:", err);
-    return false;
+    console.error("[AppCheck] Token fetch failed — upload will likely be rejected:", err);
+    throw new Error("App Check verification failed. Please refresh the page and try again.");
   }
 }

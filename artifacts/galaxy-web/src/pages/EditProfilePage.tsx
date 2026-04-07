@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage as fbStorage, ensureAppCheckToken } from "../lib/firebase";
 import { UserProfile, updateUser, AVATAR_LIST } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
@@ -74,15 +74,33 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
       setUploadStep("Uploading...");
       const path = `avatars/${user.uid}_${Date.now()}.jpg`;
       const sRef = storageRef(fbStorage, path);
+      const blobKB = (blob.size / 1024).toFixed(1);
+      console.log(`[DP Upload] Uploading ${blobKB}KB to Firebase Storage...`);
 
-      console.log(`[DP Upload] Uploading ${(blob.size / 1024).toFixed(1)}KB to Firebase...`);
-      await uploadBytes(sRef, blob);
-      setUploadProgress(80);
-
-      setUploadStep("Finishing...");
-      console.log("[DP Upload] uploadBytes done, getting URL...");
-      const url = await getDownloadURL(sRef);
-      console.log("[DP Upload] Success! URL obtained.");
+      const url = await new Promise<string>((resolve, reject) => {
+        const task = uploadBytesResumable(sRef, blob, { contentType: "image/jpeg" });
+        task.on("state_changed",
+          (snap) => {
+            const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+            setUploadProgress(45 + Math.round(pct * 0.5));
+            setUploadStep(`Uploading... ${pct}%`);
+            console.log(`[DP Upload] Progress: ${pct}% (${snap.bytesTransferred}/${snap.totalBytes})`);
+          },
+          (err) => {
+            console.error("[DP Upload] uploadBytesResumable failed:", err);
+            reject(err);
+          },
+          async () => {
+            try {
+              console.log("[DP Upload] Upload complete, getting URL...");
+              setUploadStep("Finishing...");
+              const downloadUrl = await getDownloadURL(task.snapshot.ref);
+              console.log("[DP Upload] Success! URL obtained.");
+              resolve(downloadUrl);
+            } catch (e) { reject(e); }
+          }
+        );
+      });
 
       setUploadProgress(100);
       setUploadStep("Done!");
