@@ -18,6 +18,12 @@ import { useToast } from "../lib/toastContext";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; }
 
+function cleanName(name: string | undefined): string {
+  if (!name) return "User";
+  if (name.length > 20 && /^[a-zA-Z0-9]{15,}$/.test(name)) return name.slice(0, 6) + "..";
+  return name.length > 14 ? name.slice(0, 12) + ".." : name;
+}
+
 const EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u2728", "\u{1F602}", "\u{1F3B5}", "\u{1F44F}", "\u{1F31F}", "\u{1F4AF}", "\u{1F680}", "\u{1F60D}", "\u{1F389}", "\u{1F48E}"];
 const GIFTS = [
   { emoji: "\u{1F381}", name: "Gift Box", cost: 10 },
@@ -106,8 +112,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
             return;
           }
           incrementStat(user.uid, "roomsJoined").catch(console.error);
-          sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F389}", text: `Welcome ${user.name} to the room \u{1F389}`, type: "welcome" }).catch(console.error);
-          setWelcomeAnim(user.name);
+          sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F389}", text: `Welcome ${cleanName(user.name)} to the room \u{1F389}`, type: "welcome" }).catch(console.error);
+          setWelcomeAnim(cleanName(user.name));
           setTimeout(() => setWelcomeAnim(null), 3500);
         }).catch(err => {
           console.error("Join error:", err);
@@ -244,7 +250,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       const ok = await joinSeat(roomId, seatIdx, uid, uname, ru?.avatar || "\u{1F464}");
       if (!ok) { showToast("Seat not available", "warning"); setInviteSeatIdx(null); return; }
       showToast(`${uname} invited to seat ${seatIdx + 1}`, "success");
-      sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F3A4}", text: `${uname} was invited to seat ${seatIdx + 1}`, type: "system" }).catch(console.error);
+      sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F3A4}", text: `${cleanName(uname)} was invited to seat ${seatIdx + 1}`, type: "system" }).catch(console.error);
     } catch {
       showToast("Failed to invite", "error");
     }
@@ -268,7 +274,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       if (emptySeat >= 0) {
         if (room.micPermission === "request" && !hasControl) {
           showToast("Mic request sent to owner/admin", "info");
-          sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u270B", text: `${user.name} is requesting to speak`, type: "system" }).catch(console.error);
+          sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u270B", text: `${cleanName(user.name)} is requesting to speak`, type: "system" }).catch(console.error);
           return;
         }
         const ok = await joinSeat(roomId, emptySeat, user.uid, user.name, user.avatar);
@@ -325,18 +331,18 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       if (action === "make_admin") {
         await setAdmin(roomId, uid);
         showToast(`${uname} is now an Admin`, "success");
-        sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6E1}\uFE0F", text: `${uname} was promoted to Admin`, type: "system" }).catch(console.error);
+        sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6E1}\uFE0F", text: `${cleanName(uname)} was promoted to Admin`, type: "system" }).catch(console.error);
       } else if (action === "remove_admin") {
         await removeAdmin(roomId, uid);
         showToast(`${uname} admin removed`, "info");
       } else if (action === "kick") {
         await kickUserFromRoom(roomId, uid);
         showToast(`${uname} kicked from room`, "info");
-        sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6AB}", text: `${uname} was kicked from the room`, type: "system" }).catch(console.error);
+        sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6AB}", text: `${cleanName(uname)} was kicked from the room`, type: "system" }).catch(console.error);
       } else if (action === "ban") {
         await banUser(roomId, uid);
         showToast(`${uname} banned`, "info");
-        sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u26D4", text: `${uname} was banned from the room`, type: "system" }).catch(console.error);
+        sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u26D4", text: `${cleanName(uname)} was banned from the room`, type: "system" }).catch(console.error);
       } else if (action === "mute") {
         const seatIdx = room.seats.findIndex(s => s.userId === uid);
         if (seatIdx >= 0) { await muteUserSeat(roomId, seatIdx); showToast(`${uname} muted`, "info"); }
@@ -369,7 +375,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       const mySeat = room.seats.findIndex(s => s.userId === user.uid);
       if (mySeat >= 0) await leaveSeat(roomId, mySeat).catch(console.error);
       await leaveRoom(roomId, user.uid).catch(console.error);
-      sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F44B}", text: `${user.name} left the room`, type: "leave" }).catch(console.error);
+      sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F44B}", text: `${cleanName(user.name)} left the room`, type: "leave" }).catch(console.error);
     }
     onLeave();
   };
@@ -502,20 +508,20 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
             onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>
             <h2 style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", margin: 0, lineHeight: 1.3 }}>{room.name}</h2>
           </div>
-          <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-            <button style={{ width: 30, height: 30, padding: 0, borderRadius: 15, fontSize: 14, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}
+          <div style={{ display: "flex", gap: 2, flexShrink: 0, alignItems: "center" }}>
+            <button style={{ width: 26, height: 26, padding: 0, borderRadius: 13, fontSize: 12, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.45)" }}
               onClick={() => {
                 const shareText = `Join ${room.name} on Galaxy Voice Chat!`;
                 if (navigator.share) navigator.share({ title: room.name, text: shareText }).catch(() => {});
                 else { navigator.clipboard?.writeText(shareText + ` Room ID: ${room.id}`); showToast("Room link copied!", "success"); }
               }}>{"\u{1F517}"}</button>
-            <button style={{ width: 30, height: 30, padding: 0, borderRadius: 15, fontSize: 14, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}
+            <button style={{ width: 26, height: 26, padding: 0, borderRadius: 13, fontSize: 12, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.45)" }}
               onClick={() => setShowUsersPanel(true)}>{"\u{1F465}"}</button>
-            <button style={{ width: 30, height: 30, padding: 0, borderRadius: 15, fontSize: 14, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}
+            <button style={{ width: 26, height: 26, padding: 0, borderRadius: 13, fontSize: 12, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.45)" }}
               onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}>{"\u2630"}</button>
             <button onClick={() => setShowCloseMenu(true)} style={{
-              width: 30, height: 30, borderRadius: 15, border: "none",
-              background: "transparent", cursor: "pointer", fontSize: 14, color: "rgba(255,100,130,0.6)",
+              width: 26, height: 26, borderRadius: 13, border: "none",
+              background: "transparent", cursor: "pointer", fontSize: 12, color: "rgba(255,100,130,0.5)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>{"\u2715"}</button>
           </div>
@@ -557,11 +563,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       )}
 
-      <div style={{ padding: "6px 6px 4px", flexShrink: 0, position: "relative", zIndex: 10 }}>
+      <div style={{ padding: "6px 10px 4px", flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4,
-          background: "transparent", borderRadius: 0, padding: "4px 2px",
-          border: "none",
+          background: "transparent", borderRadius: 0, padding: "4px 0",
+          border: "none", justifyItems: "center",
         }}>
           {Array.from({ length: 12 }, (_, i) => {
             const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: true, isSpeaking: false };
@@ -1414,7 +1420,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                     }
                     if (room.micPermission === "request" && !hasControl) {
                       showToast("Mic request sent to owner/admin", "info");
-                      sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u270B", text: `${user.name} is requesting to speak`, type: "system" }).catch(console.error);
+                      sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u270B", text: `${cleanName(user.name)} is requesting to speak`, type: "system" }).catch(console.error);
                       return;
                     }
                     joinSeat(roomId, idx, user.uid, user.name, user.avatar).then((ok) => {
@@ -1696,46 +1702,45 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
   const isSystem = msg.type === "system" || msg.type === "join" || msg.type === "leave" || msg.type === "welcome";
   const isGift = msg.type === "gift";
   const isWelcome = msg.type === "welcome";
+  const displayName = cleanName(msg.username);
 
   return (
     <div style={{
-      display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 6,
+      marginBottom: 3,
       animation: isWelcome ? "welcomeMsg 0.5s ease" : "slide-up 0.15s ease",
-      padding: isWelcome ? "6px 10px" : "3px 6px", borderRadius: isWelcome ? 16 : 10,
-      background: isWelcome ? "rgba(255,255,255,0.05)"
-        : isGift ? "rgba(255,215,0,0.04)"
-        : "transparent",
-      border: isWelcome ? "1px solid rgba(255,255,255,0.1)" : "none",
-      boxShadow: isWelcome ? "0 2px 12px rgba(138,43,226,0.15)" : "none",
     }}>
-      {!isSystem && (
+      {isSystem ? (
         <div style={{
-          width: 22, height: 22, borderRadius: 11, fontSize: 12, flexShrink: 0,
-          background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center",
-          border: "1px solid rgba(255,255,255,0.15)",
-        }}>{msg.avatar}</div>
-      )}
-      <div style={{ flex: 1, fontFamily: "'Poppins', 'Inter', sans-serif" }}>
-        {isSystem ? (
+          display: "inline-block",
+          padding: "3px 10px", borderRadius: 20,
+          background: isWelcome ? "rgba(138,43,226,0.2)" : "rgba(0,0,0,0.25)",
+          fontSize: 10, lineHeight: 1.4, fontFamily: "'Poppins', 'Inter', sans-serif",
+          color: isWelcome ? "#fff" : msg.type === "leave" ? "rgba(255,100,130,0.7)" : "rgba(45,212,191,0.8)",
+          fontWeight: isWelcome ? 600 : 400, fontStyle: "italic",
+        }}>{msg.text}</div>
+      ) : (
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "4px 10px", borderRadius: 20,
+          background: "rgba(0,0,0,0.3)",
+          maxWidth: "85%",
+        }}>
+          {msg.avatar?.startsWith?.("http") ? (
+            <img src={msg.avatar} alt="" style={{ width: 18, height: 18, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
+          ) : (
+            <span style={{ fontSize: 12, flexShrink: 0 }}>{msg.avatar || "\u{1F464}"}</span>
+          )}
           <span style={{
-            fontSize: 12, lineHeight: 1.4,
-            color: isWelcome ? "#fff" : msg.type === "leave" ? "rgba(255,100,130,0.7)" : "#2DD4BF",
-            fontWeight: isWelcome ? 700 : 500, fontStyle: "italic",
+            fontSize: 10, color: isMe ? "#2DD4BF" : "rgba(255,255,255,0.7)",
+            fontWeight: 600, flexShrink: 0, fontFamily: "'Poppins', 'Inter', sans-serif",
+          }}>{displayName}</span>
+          <span style={{
+            fontSize: msg.type === "emoji" ? 20 : 12, lineHeight: 1.3,
+            color: isGift ? "#FFD700" : "#fff",
+            fontWeight: isGift ? 600 : 400, fontFamily: "'Poppins', 'Inter', sans-serif",
           }}>{msg.text}</span>
-        ) : (
-          <>
-            <span style={{
-              fontSize: 10, color: isMe ? "#2DD4BF" : "rgba(255,255,255,0.85)",
-              marginRight: 5, fontWeight: 600,
-            }}>{msg.username}</span>
-            <span style={{
-              fontSize: msg.type === "emoji" ? 22 : 13, lineHeight: 1.4,
-              color: isGift ? "#FFD700" : "#fff",
-              fontWeight: isGift ? 700 : 400,
-            }}>{msg.text}</span>
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1842,15 +1847,23 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
           }}>{"\u270B"}</div>
         )}
       </div>
-      <span style={{
-        fontSize: 7, fontWeight: 500, textAlign: "center",
-        fontFamily: "'Poppins', 'Inter', sans-serif",
-        color: isActive ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)",
-        maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        lineHeight: 1.2, marginTop: 1,
-      }}>
-        {isActive && seat.username ? seat.username : seatNum}
-      </span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, marginTop: 1 }}>
+        {isActive && seat.username && (
+          <span style={{
+            fontSize: 7, fontWeight: 500, textAlign: "center",
+            fontFamily: "'Poppins', 'Inter', sans-serif",
+            color: "rgba(255,255,255,0.85)",
+            maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            lineHeight: 1.2,
+          }}>{cleanName(seat.username)}</span>
+        )}
+        <span style={{
+          fontSize: 6, fontWeight: 400, textAlign: "center",
+          fontFamily: "'Poppins', 'Inter', sans-serif",
+          color: "rgba(255,255,255,0.25)",
+          lineHeight: 1.2,
+        }}>{seatNum}</span>
+      </div>
     </div>
   );
 }
