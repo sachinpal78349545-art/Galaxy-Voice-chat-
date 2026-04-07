@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage as fbStorage } from "../lib/firebase";
+import { storage as fbStorage, ensureAppCheckToken } from "../lib/firebase";
 import { UserProfile, updateUser, AVATAR_LIST } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 import imageCompression from "browser-image-compression";
@@ -66,6 +66,10 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
         setUploadStep("Uploading original...");
       }
       setUploadProgress(40);
+
+      setUploadStep("Verifying...");
+      await ensureAppCheckToken();
+      setUploadProgress(45);
 
       setUploadStep("Uploading...");
       const path = `avatars/${user.uid}_${Date.now()}.jpg`;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../lib/firebase";
+import { storage, ensureAppCheckToken } from "../lib/firebase";
 import {
   Room, RoomSeat, RoomUser, RoomMessage, ROOM_THEMES, ROOM_AVATARS,
   subscribeRoom, subscribeRoomMessages, sendRoomMessage,
@@ -958,6 +958,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                       if (!file) return;
                       setCpDpUploading(true);
                       try {
+                        await ensureAppCheckToken();
                         const ext = file.name.split(".").pop() || "jpg";
                         const path = `room-avatars/${roomId}_${Date.now()}.${ext}`;
                         const sRef = storageRef(storage, path);
@@ -965,7 +966,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                         const url = await getDownloadURL(sRef);
                         await updateRoomSettings(roomId, { roomAvatar: url });
                         showToast("Room DP updated!", "success");
-                      } catch { showToast("Upload failed", "error"); }
+                      } catch (err) { console.error("[Room DP] Upload failed:", err); showToast("Upload failed", "error"); }
                       setCpDpUploading(false);
                     }} />
                   <div onClick={() => hasControl && cpDpRef.current?.click()} style={{

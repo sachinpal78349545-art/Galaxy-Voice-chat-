@@ -28,7 +28,7 @@ artifacts/galaxy-web/src/
                              speaking-ring, handWave, float, confetti, mysticGlow,
                              crystalPulse, mysticFloat, sofaFloat, runeGlow, borderRotate)
   lib/
-    firebase.ts            — Firebase SDK init (auth, db, storage)
+    firebase.ts            — Firebase SDK init (auth, db, storage, App Check with reCAPTCHA Enterprise)
     voiceService.ts        — Agora RTC: join/leave/mute, AEC/ANS/AGC, volume monitoring,
                              active speaker detection, per-user volume control
     userService.ts         — User CRUD, online presence, follow/unfollow (returns isMutual),

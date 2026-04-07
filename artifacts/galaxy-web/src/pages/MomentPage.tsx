@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ref, push, set, onValue, off, update, get } from "firebase/database";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "../lib/firebase";
+import { db, storage, ensureAppCheckToken } from "../lib/firebase";
 import { UserProfile } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 
@@ -52,6 +52,7 @@ export default function MomentPage({ user }: Props) {
     try {
       let imageUrl: string | undefined;
       if (postImage) {
+        await ensureAppCheckToken();
         const ext = postImage.name.split(".").pop() || "jpg";
         const path = `moments/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const sRef = storageRef(storage, path);
