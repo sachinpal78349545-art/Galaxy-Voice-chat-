@@ -2,7 +2,7 @@ import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
-import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken, AppCheck } from "firebase/app-check";
+import { initializeAppCheck, ReCaptchaV3Provider, getToken, AppCheck } from "firebase/app-check";
 
 const DEBUG_TOKEN = "ec8ffa53-77e7-4771-bc83-342174ea5237";
 
@@ -26,31 +26,33 @@ const isReplit = window.location.hostname.includes("replit.dev")
   || window.location.hostname.includes("repl.co");
 const isDev = import.meta.env.DEV || isReplit || window.location.hostname === "localhost";
 
-if (isDev) {
-  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = DEBUG_TOKEN;
-  (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = DEBUG_TOKEN;
-}
+(self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = isDev ? DEBUG_TOKEN : undefined;
+(window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = isDev ? DEBUG_TOKEN : undefined;
+
+const globalTokenSet = typeof (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN === "string"
+  && (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN === DEBUG_TOKEN;
 
 console.log("[AppCheck] Environment:", {
   hostname: window.location.hostname,
   isDev,
   isReplit,
-  debugTokenSet: !!(self as any).FIREBASE_APPCHECK_DEBUG_TOKEN,
 });
+console.log(`[AppCheck] AppCheck Global Debug Token Set: ${globalTokenSet ? "Yes" : "No"}`);
 
 let appCheckInstance: AppCheck | null = null;
 try {
   appCheckInstance = initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider("6LeBPqssAAAAACKXUtcHmVeZMK2IrqhS4dwkWRY"),
+    provider: new ReCaptchaV3Provider("6LeBPqssAAAAACKXUtcHmVeZMK2IrqhS4dwkWRY"),
     isTokenAutoRefreshEnabled: true,
   });
-  console.log("[AppCheck] Initialized OK, debug:", isDev);
+  console.log("[AppCheck] Initialized with ReCaptchaV3Provider, debug:", isDev);
 } catch (err) {
-  console.error("[AppCheck] Init FAILED, retrying:", err);
+  console.error("[AppCheck] Init FAILED:", err);
   try {
     (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = DEBUG_TOKEN;
+    console.log("[AppCheck] Re-set debug token on self, retrying init...");
     appCheckInstance = initializeAppCheck(app, {
-      provider: new ReCaptchaEnterpriseProvider("6LeBPqssAAAAACKXUtcHmVeZMK2IrqhS4dwkWRY"),
+      provider: new ReCaptchaV3Provider("6LeBPqssAAAAACKXUtcHmVeZMK2IrqhS4dwkWRY"),
       isTokenAutoRefreshEnabled: true,
     });
     console.log("[AppCheck] Retry init succeeded");
@@ -79,7 +81,18 @@ function delay(ms: number): Promise<void> {
       console.log("[AppCheck] Warm-up OK, token length:", result.token.length);
     }
   } catch (err: any) {
-    console.warn("[AppCheck] Warm-up failed:", err?.message);
+    console.warn("[AppCheck] Warm-up token failed, will retry on upload:", err?.message);
+    await delay(3000);
+    try {
+      const retry = await getToken(appCheckInstance!, true);
+      if (retry.token) {
+        cachedToken = retry.token;
+        warmUpDone = true;
+        console.log("[AppCheck] Warm-up retry OK, token length:", retry.token.length);
+      }
+    } catch (retryErr: any) {
+      console.warn("[AppCheck] Warm-up retry also failed:", retryErr?.message);
+    }
   }
 })();
 
@@ -90,7 +103,7 @@ export async function getVerifiedToken(): Promise<string> {
   }
 
   if (!warmUpDone) {
-    console.log("[AppCheck] Token not ready, waiting 2s...");
+    console.log("[AppCheck] Token not ready, waiting 2s for handshake...");
     await delay(2000);
   }
 
@@ -105,9 +118,15 @@ export async function getVerifiedToken(): Promise<string> {
       console.log(`[AppCheck] Token OK, length: ${result.token.length}`);
       return result.token;
     } catch (err: any) {
-      console.error(`[AppCheck] Attempt ${attempt} failed:`, err?.message);
-      if (attempt < 3) await delay(attempt * 1500);
-      else throw new Error(`App Check failed after 3 attempts: ${err?.message}`);
+      console.error(`[AppCheck] Attempt ${attempt} failed:`, err?.code, err?.message);
+      if (attempt < 3) {
+        const waitMs = attempt === 1 ? 3000 : 3000;
+        console.log(`[AppCheck] Waiting ${waitMs}ms before retry...`);
+        await delay(waitMs);
+      } else {
+        console.error("[AppCheck] All 3 attempts exhausted:", err);
+        throw new Error(`App Check failed after 3 attempts: ${err?.message}`);
+      }
     }
   }
   return "";
@@ -182,7 +201,7 @@ export async function uploadWithAppCheck(
           console.log("[Upload] Download URL obtained");
           resolve({ url });
         } catch (urlErr) {
-          console.error("[Upload] getDownloadURL failed:", urlErr);
+          console.error("[Upload] getDownloadURL failed, using fallback:", urlErr);
           try {
             const resp = JSON.parse(xhr.responseText);
             const token = resp?.downloadTokens;
@@ -196,7 +215,7 @@ export async function uploadWithAppCheck(
         }
       } else {
         console.error(`[Upload] REST upload failed: ${xhr.status} ${xhr.statusText}`);
-        console.error("[Upload] Response:", xhr.responseText);
+        console.error("[Upload] Response body:", xhr.responseText);
         reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText} — ${xhr.responseText}`));
       }
     };
