@@ -443,20 +443,27 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         position: "absolute", inset: 0, zIndex: 0,
         backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)`,
         backgroundSize: "cover", backgroundPosition: "center",
-        filter: "saturate(1.4) brightness(1.15)",
+        filter: "saturate(1.6) brightness(1.2) contrast(1.05)",
       }} />
 
       <div className="galaxy-stars" />
+      <div className="galaxy-twinkle" />
 
       <div style={{
         position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none",
-        background: "radial-gradient(ellipse at 30% 20%, rgba(138,43,226,0.25) 0%, transparent 50%), radial-gradient(ellipse at 75% 70%, rgba(45,212,191,0.15) 0%, transparent 45%)",
-        animation: "nebulaGlow 8s ease-in-out infinite",
+        background: "radial-gradient(ellipse at 25% 15%, rgba(160,50,255,0.35) 0%, transparent 50%), radial-gradient(ellipse at 80% 75%, rgba(80,230,220,0.2) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(138,43,226,0.15) 0%, transparent 60%)",
+        animation: "nebulaGlow 7s ease-in-out infinite",
+      }} />
+
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none",
+        background: "radial-gradient(circle at 70% 30%, rgba(45,212,191,0.12) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(160,50,255,0.1) 0%, transparent 35%)",
+        animation: "nebulaDrift 12s ease-in-out infinite",
       }} />
 
       <div style={{
         position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
-        background: "linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.55))",
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.5))",
       }} />
 
       {floats.map(f => (
