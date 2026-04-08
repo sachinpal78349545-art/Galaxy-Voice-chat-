@@ -390,12 +390,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       <div style={{
         position: "fixed", inset: 0, zIndex: -7, pointerEvents: "none",
-        background: "radial-gradient(ellipse at 25% 15%, rgba(160,50,255,0.3) 0%, transparent 50%), radial-gradient(ellipse at 80% 75%, rgba(80,230,220,0.15) 0%, transparent 45%)",
+        background: "radial-gradient(ellipse at 25% 15%, rgba(191,0,255,0.35) 0%, transparent 50%), radial-gradient(ellipse at 80% 75%, rgba(0,230,230,0.25) 0%, transparent 45%)",
         animation: "nebulaGlow 7s ease-in-out infinite",
       }} />
       <div style={{
         position: "fixed", inset: 0, zIndex: -6, pointerEvents: "none",
-        background: "radial-gradient(circle at 70% 30%, rgba(45,212,191,0.1) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(160,50,255,0.08) 0%, transparent 35%)",
+        background: "radial-gradient(circle at 70% 30%, rgba(0,230,230,0.18) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(191,0,255,0.15) 0%, transparent 35%)",
         animation: "nebulaDrift 12s ease-in-out infinite",
       }} />
 
