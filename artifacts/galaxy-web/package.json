@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
+    "build:android": "PORT=3000 BASE_PATH=/ vite build --config vite.config.ts && npx cap copy android && npx cap sync android",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -75,6 +76,9 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
     "agora-rtc-sdk-ng": "^4.24.3",
     "browser-image-compression": "^2.0.2",
     "firebase": "^12.11.0"
