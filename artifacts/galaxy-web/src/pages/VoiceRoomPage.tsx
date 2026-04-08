@@ -440,10 +440,15 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       background: "#050310", fontFamily: "'Poppins', 'Inter', sans-serif",
     }}>
       <div style={{
-        position: "fixed", inset: 0, zIndex: 0,
+        position: "fixed", inset: 0, zIndex: 0, opacity: 1,
         backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)`,
-        backgroundSize: "cover", backgroundPosition: "center",
+        backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed",
         filter: "saturate(1.6) brightness(1.2) contrast(1.05)",
+      }} />
+
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none",
+        background: "rgba(0,0,0,0.5)",
       }} />
 
       <div className="galaxy-stars" />
@@ -463,7 +468,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       <div style={{
         position: "fixed", inset: 0, zIndex: 4, pointerEvents: "none",
-        background: "linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.5))",
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.4))",
       }} />
 
       {floats.map(f => (
@@ -1787,9 +1792,11 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
   const bubbleBase: React.CSSProperties = {
     width: 52, height: 52, borderRadius: 26, fontSize: 22,
     display: "flex", alignItems: "center", justifyContent: "center",
-    background: "transparent",
+    background: "rgba(0,0,0,0.4)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
     border: "1px solid rgba(255,255,255,0.2)",
-    boxShadow: "inset 0 4px 8px rgba(255,255,255,0.1)",
+    boxShadow: "inset 0 4px 8px rgba(255,255,255,0.05)",
     transition: "all 0.3s ease",
     overflow: "hidden",
     opacity: isLocked ? 0.5 : 1,
@@ -1797,12 +1804,12 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
 
   const speakingExtra: React.CSSProperties = isSpeaking ? {
     border: "2px solid #2DD4BF",
-    boxShadow: "0 0 10px #2dd4bf, inset 0 0 5px #2dd4bf",
+    boxShadow: "0 0 15px rgba(45,212,191,0.5), 0 0 30px rgba(45,212,191,0.2), inset 0 0 5px #2dd4bf",
   } : {};
 
   const activeExtra: React.CSSProperties = isActive && !isSpeaking ? {
-    border: "1.5px solid rgba(138,43,226,0.5)",
-    boxShadow: "0 0 10px rgba(138,43,226,0.3), inset 0 4px 8px rgba(255,255,255,0.1)",
+    border: "1.5px solid rgba(255,255,255,0.8)",
+    boxShadow: "0 0 15px rgba(255,255,255,0.4), 0 0 6px rgba(138,43,226,0.3)",
   } : {};
 
   return (
