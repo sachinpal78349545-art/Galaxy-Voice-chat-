@@ -455,6 +455,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         speakingUids={speakingUids}
         voiceJoined={voiceService.joined}
         hashCode={hashCode}
+        isOwnerSeat={(seat) => seat.userId === room.hostId}
         onSeatTap={(i, seat) => {
           if (seat.userId === user.uid) return;
           if (seat.userId) {

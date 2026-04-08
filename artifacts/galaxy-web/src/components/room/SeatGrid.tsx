@@ -10,9 +10,10 @@ interface SeatGridProps {
   voiceJoined: boolean;
   hashCode: (s: string) => number;
   onSeatTap: (seatIndex: number, seat: RoomSeat) => void;
+  isOwnerSeat?: (seat: RoomSeat) => boolean;
 }
 
-export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap }: SeatGridProps) {
+export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat }: SeatGridProps) {
   return (
     <div className="room-seat-area">
       <div className="room-seat-grid">
@@ -29,6 +30,7 @@ export default function SeatGrid({ room, userUid, hasControl, speakingUids, voic
               role={seat.userId ? getUserRole(room, seat.userId) : "user"}
               isMe={seat.userId === userUid}
               isSpeaking={isSpeaking}
+              isOwner={isOwnerSeat ? isOwnerSeat(seat) : false}
               onTap={() => onSeatTap(i, seat)}
             />
           );
@@ -44,16 +46,17 @@ interface SeatCellProps {
   role: "owner" | "admin" | "user";
   isMe: boolean;
   isSpeaking: boolean;
+  isOwner: boolean;
   onTap: () => void;
 }
 
-function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, onTap }: SeatCellProps) {
+function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: SeatCellProps) {
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
 
   const seatClass = [
     "seat-bubble",
-    isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty",
+    isSpeaking ? "seat-speaking" : isOwner ? "seat-owner" : isActive ? "seat-active" : "seat-empty",
     isLocked ? "seat-locked" : "",
   ].filter(Boolean).join(" ");
 

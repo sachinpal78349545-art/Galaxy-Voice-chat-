@@ -10,12 +10,10 @@ interface ChatSectionProps {
 export default function ChatSection({ messages, userId, msgEndRef }: ChatSectionProps) {
   return (
     <div className="room-chat">
-      <div className="room-chat-scroll">
-        {messages.map(msg => (
-          <ChatBubble key={msg.id} msg={msg} isMe={msg.userId === userId} />
-        ))}
-        <div ref={msgEndRef} />
-      </div>
+      {messages.map(msg => (
+        <ChatBubble key={msg.id} msg={msg} isMe={msg.userId === userId} />
+      ))}
+      <div ref={msgEndRef} />
     </div>
   );
 }
@@ -43,11 +41,11 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
           ) : (
             <span style={{ fontSize: 12, flexShrink: 0 }}>{msg.avatar || "\u{1F464}"}</span>
           )}
-          <span style={{
+          <span className="chat-pill-name" style={{
             fontSize: 10, color: isMe ? "#2DD4BF" : "rgba(255,255,255,0.7)",
             fontWeight: 600, flexShrink: 0, fontFamily: "'Poppins', 'Inter', sans-serif",
           }}>{displayName}</span>
-          <span style={{
+          <span className="chat-pill-text" style={{
             fontSize: msg.type === "emoji" ? 20 : 12, lineHeight: 1.3,
             color: isGift ? "#FFD700" : "#fff",
             fontWeight: isGift ? 600 : 400, fontFamily: "'Poppins', 'Inter', sans-serif",

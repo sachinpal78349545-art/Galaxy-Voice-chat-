@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Room, UserProfile } from "./types";
-import { LeaderboardPeriod } from "../../lib/giftService";
 
 const EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u2728", "\u{1F602}", "\u{1F3B5}", "\u{1F44F}", "\u{1F31F}", "\u{1F4AF}", "\u{1F680}", "\u{1F60D}", "\u{1F389}", "\u{1F48E}"];
 const GIFTS = [
@@ -69,65 +68,42 @@ export default function BottomBar({
 
       <div className="room-bottom">
         <div className="room-bottom-input">
-          <input className="input-field"
-            style={{ flex: 1, borderRadius: 24, padding: "10px 16px", fontSize: 12, background: "transparent", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", fontFamily: "'Poppins', 'Inter', sans-serif" }}
+          <input className="room-bottom-chat-input"
             placeholder="Cast your words..."
             value={inputText}
             onChange={e => setInputText(e.target.value)}
             onKeyDown={e => e.key === "Enter" && onSendChat()}
           />
-          <button style={{
-            width: 40, height: 40, borderRadius: 20, flexShrink: 0, border: "none", cursor: "pointer",
-            background: "linear-gradient(135deg, #8A2BE2, #2DD4BF)", color: "#fff", fontSize: 14, fontWeight: 700,
-            boxShadow: "0 0 12px rgba(45,212,191,0.3)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }} onClick={onSendChat}>{"\u27A4"}</button>
+          <button className="room-bottom-send-btn" onClick={onSendChat}>{"\u27A4"}</button>
         </div>
 
         <div className="room-bottom-controls">
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button onClick={onSpeakerToggle} className="room-btn-circle" style={{
-              width: 42, height: 42,
-              border: isSpeakerOff ? "1.5px solid rgba(255,100,130,0.4)" : "1.5px solid rgba(45,212,191,0.3)",
-              color: isSpeakerOff ? "#ff6482" : "#fff", fontSize: 18,
-              boxShadow: isSpeakerOff ? "0 0 8px rgba(255,100,130,0.3)" : "0 0 8px rgba(45,212,191,0.2)",
-            }}>{isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}</button>
-
-            <button onClick={onMicToggle} className={`room-btn-circle ${isMuted ? "mic-btn-muted" : "mic-btn-active"}`} style={{
-              width: 50, height: 50, fontSize: 20, transition: "all 0.25s",
-            }}>{isMuted ? "\u{1F507}" : "\u{1F3A4}"}</button>
+            <button onClick={onSpeakerToggle}
+              className={`room-btn-circle room-btn-speaker ${isSpeakerOff ? "room-btn-speaker-off" : "room-btn-speaker-on"}`}>
+              {isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}
+            </button>
+            <button onClick={onMicToggle}
+              className={`room-btn-circle room-btn-mic ${isMuted ? "mic-btn-muted" : "mic-btn-active"}`}>
+              {isMuted ? "\u{1F507}" : "\u{1F3A4}"}
+            </button>
           </div>
 
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button className="room-btn-circle" style={{
-              width: 40, height: 40, border: "1.5px solid rgba(138,43,226,0.3)",
-              fontSize: 18, boxShadow: "0 0 8px rgba(138,43,226,0.2)",
-            }} onClick={onShare}>{"\u{1F517}"}</button>
-
-            <PopupBtn icon={"\u{1F4AC}"} active={showEmoji} onToggle={() => { const next = !showEmoji; closeAllPopups(); if (next) setShowEmoji(true); }}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, width: 200 }}>
-                {EMOJIS.map(e => (
-                  <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
-                    onClick={() => { onSendEmoji(e); closeAllPopups(); }}>{e}</button>
-                ))}
-              </div>
-            </PopupBtn>
+            <button className="room-btn-circle room-btn-share" onClick={onShare}>{"\u{1F517}"}</button>
+            <EmojiPopup active={showEmoji} onToggle={() => { const next = !showEmoji; closeAllPopups(); if (next) setShowEmoji(true); }}
+              onSelect={(e) => { onSendEmoji(e); closeAllPopups(); }} />
           </div>
 
           <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <button onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }} className="room-btn-circle" style={{
-              width: 40, height: 40, border: "1.5px solid rgba(236,72,153,0.3)",
-              boxShadow: "0 0 8px rgba(236,72,153,0.2)",
-              fontSize: 11, fontWeight: 500, fontFamily: "'Poppins', 'Inter', sans-serif",
-              flexDirection: "column", gap: 0,
-            }}><span style={{ fontSize: 16 }}>{"\u{1F381}"}</span><span style={{ fontSize: 7, marginTop: -2 }}>Gift</span></button>
-
-            <button onClick={() => { const next = !showReactions; closeAllPopups(); if (next) setShowReactions(true); }} className="room-btn-circle" style={{
-              width: 40, height: 40, border: "1.5px solid rgba(139,92,246,0.3)",
-              boxShadow: "0 0 8px rgba(139,92,246,0.2)",
-              fontSize: 11, fontWeight: 500, fontFamily: "'Poppins', 'Inter', sans-serif",
-              flexDirection: "column", gap: 0,
-            }}><span style={{ fontSize: 16 }}>{"\u{1F48E}"}</span><span style={{ fontSize: 7, marginTop: -2 }}>Gems</span></button>
+            <button onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }} className="room-btn-circle room-btn-gift">
+              <span style={{ fontSize: 16 }}>{"\u{1F381}"}</span>
+              <span style={{ fontSize: 7, marginTop: -2 }}>Gift</span>
+            </button>
+            <button onClick={() => { const next = !showReactions; closeAllPopups(); if (next) setShowReactions(true); }} className="room-btn-circle room-btn-gems">
+              <span style={{ fontSize: 16 }}>{"\u{1F48E}"}</span>
+              <span style={{ fontSize: 7, marginTop: -2 }}>Gems</span>
+            </button>
           </div>
         </div>
 
@@ -167,21 +143,16 @@ export default function BottomBar({
         )}
 
         {showReactions && (
-          <div style={{
-            position: "absolute", bottom: "100%", right: 12, marginBottom: 6,
-            background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 20, padding: "10px 14px",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-            animation: "popIn 0.15s ease", zIndex: 20,
-            display: "flex", gap: 8,
-          }}>
-            {REACTIONS.map(r => (
-              <button key={r.emoji} onClick={() => { onHandleReaction(r.emoji); closeAllPopups(); }} style={{
-                background: "none", border: "none", cursor: "pointer", fontSize: 30, padding: 4,
-                transition: "transform 0.15s", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
-              }} onMouseOver={e => (e.currentTarget.style.transform = "scale(1.3)")}
-                onMouseOut={e => (e.currentTarget.style.transform = "scale(1)")}>{r.emoji}</button>
-            ))}
+          <div className="room-popup" style={{ left: "auto", right: 12 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              {REACTIONS.map(r => (
+                <button key={r.emoji} onClick={() => { onHandleReaction(r.emoji); closeAllPopups(); }} style={{
+                  background: "none", border: "none", cursor: "pointer", fontSize: 30, padding: 4,
+                  transition: "transform 0.15s", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+                }} onMouseOver={e => (e.currentTarget.style.transform = "scale(1.3)")}
+                  onMouseOut={e => (e.currentTarget.style.transform = "scale(1)")}>{r.emoji}</button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -189,24 +160,18 @@ export default function BottomBar({
   );
 }
 
-function PopupBtn({ icon, active, onToggle, children }: { icon: string; active: boolean; onToggle: () => void; children: React.ReactNode }) {
+function EmojiPopup({ active, onToggle, onSelect }: { active: boolean; onToggle: () => void; onSelect: (e: string) => void }) {
   return (
     <div style={{ position: "relative" }}>
-      <button className="room-btn-circle" style={{
-        width: 40, height: 40, fontSize: 18,
-        border: active ? "1.5px solid rgba(138,43,226,0.4)" : "1.5px solid rgba(255,255,255,0.15)",
-        color: "rgba(255,255,255,0.6)",
-        boxShadow: active ? "0 0 8px rgba(138,43,226,0.2)" : "none",
-      }} onClick={onToggle}>{icon}</button>
+      <button className={`room-btn-circle room-btn-emoji ${active ? "room-btn-emoji-active" : ""}`} onClick={onToggle}>{"\u{1F4AC}"}</button>
       {active && (
-        <div style={{
-          position: "absolute", bottom: 52, left: "50%", transform: "translateX(-50%)",
-          background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 18, padding: 10,
-          boxShadow: "0 8px 40px rgba(0,0,0,0.5)", zIndex: 20,
-          animation: "popIn 0.15s ease",
-        }}>
-          {children}
+        <div className="room-popup" style={{ left: "50%", right: "auto", transform: "translateX(-50%)", width: 220 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {EMOJIS.map(e => (
+              <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
+                onClick={() => onSelect(e)}>{e}</button>
+            ))}
+          </div>
         </div>
       )}
     </div>

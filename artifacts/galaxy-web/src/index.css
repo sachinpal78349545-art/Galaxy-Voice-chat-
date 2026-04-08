@@ -415,6 +415,7 @@ textarea.input-field { resize: none; line-height: 1.5; }
   max-width: 430px; margin: 0 auto;
   height: 100vh; height: 100dvh;
   display: flex; flex-direction: column;
+  justify-content: space-between;
   overflow: hidden;
   background: #050310;
   font-family: 'Poppins', 'Inter', sans-serif;
@@ -434,15 +435,97 @@ textarea.input-field { resize: none; line-height: 1.5; }
 }
 
 .room-header {
-  position: relative; z-index: 10;
+  position: sticky; top: 0; z-index: 10;
   padding: 44px 12px 6px;
   flex-shrink: 0;
+}
+
+.room-header-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+}
+
+.room-header-avatar {
+  width: 36px; height: 36px; border-radius: 18px; font-size: 20px;
+  background: transparent; border: 1.5px solid rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; overflow: hidden;
+}
+
+.room-header-title {
+  font-size: 14px; font-weight: 600; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  color: #fff; margin: 0; line-height: 1.3;
+}
+
+.room-header-actions {
+  display: flex; gap: 2px; flex-shrink: 0; align-items: center;
+}
+
+.room-header-btn {
+  width: 26px; height: 26px; padding: 0; border-radius: 13px; font-size: 12px;
+  border: none; background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.45);
+}
+
+.room-header-btn-danger { color: rgba(255,100,130,0.5); }
+
+.room-header-meta {
+  display: flex; align-items: center; gap: 8px; padding-left: 44px;
+}
+
+.room-header-live-badge {
+  font-size: 8px; padding: 1px 5px; border-radius: 6px;
+  background: transparent; border: 1px solid rgba(45,212,191,0.3);
+  color: #2DD4BF; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+
+.room-header-live-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #2DD4BF; animation: crystalPulse 2s ease-in-out infinite;
+}
+
+.room-header-stat {
+  font-size: 8px; color: rgba(255,255,255,0.5);
+}
+
+.room-header-id {
+  font-size: 8px; color: rgba(255,255,255,0.3);
+}
+
+.room-header-lb-btn {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 1px 5px; border-radius: 6px;
+  background: transparent; border: 1px solid rgba(255,215,0,0.2);
+  cursor: pointer; font-size: 8px; color: #FFD700;
+  font-weight: 600; font-family: inherit;
 }
 
 .room-role-bar {
   display: flex; gap: 4px; padding: 4px 12px;
   position: relative; z-index: 10;
   flex-shrink: 0;
+}
+
+.room-role-tag {
+  font-size: 9px; padding: 2px 8px; border-radius: 10px; font-weight: 700;
+}
+
+.room-role-owner {
+  background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.2); color: #FFD700;
+}
+
+.room-role-admin {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
+}
+
+.room-role-mic {
+  background: rgba(45,212,191,0.08); border: 1px solid rgba(45,212,191,0.2); color: #2DD4BF;
+}
+
+.room-role-private {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);
 }
 
 .room-seat-area {
@@ -501,6 +584,14 @@ textarea.input-field { resize: none; line-height: 1.5; }
 }
 
 .seat-locked { opacity: 0.4; }
+
+.seat-owner {
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid #FFD700;
+  box-shadow: 0 0 20px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2), inset 0 0 10px rgba(255,215,0,0.1);
+}
 
 .seat-name {
   font-size: 7px; font-weight: 500; text-align: center;
@@ -568,19 +659,12 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .room-chat {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  display: flex; flex-direction: column;
-  padding: 0 10px;
-  position: relative; z-index: 10;
-}
-
-.room-chat-scroll {
-  flex: 1;
   overflow-y: auto;
-  padding: 4px 4px;
+  padding: 10px;
+  position: relative; z-index: 10;
   scrollbar-width: none;
 }
-.room-chat-scroll::-webkit-scrollbar { display: none; }
+.room-chat::-webkit-scrollbar { display: none; }
 
 .chat-pill {
   display: inline-flex;
@@ -617,11 +701,25 @@ textarea.input-field { resize: none; line-height: 1.5; }
   padding: 8px 12px 32px;
   background: linear-gradient(to top, rgba(5,3,16,0.95) 0%, rgba(5,3,16,0.7) 60%, transparent 100%);
   flex-shrink: 0;
-  position: relative; z-index: 20;
+  position: sticky; bottom: 0; z-index: 20;
 }
 
 .room-bottom-input {
   display: flex; gap: 6px; margin-bottom: 8px;
+}
+
+.room-bottom-chat-input {
+  flex: 1; border-radius: 24px; padding: 10px 16px; font-size: 12px;
+  background: transparent; border: 1px solid rgba(255,255,255,0.12);
+  color: #fff; font-family: 'Poppins', 'Inter', sans-serif;
+  outline: none;
+}
+
+.room-bottom-send-btn {
+  width: 40px; height: 40px; border-radius: 20px; flex-shrink: 0; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #8A2BE2, #2DD4BF); color: #fff; font-size: 14px; font-weight: 700;
+  box-shadow: 0 0 12px rgba(45,212,191,0.3);
+  display: flex; align-items: center; justify-content: center;
 }
 
 .room-bottom-controls {
@@ -633,6 +731,57 @@ textarea.input-field { resize: none; line-height: 1.5; }
   background: transparent;
   display: flex; align-items: center; justify-content: center;
   color: #fff; transition: all 0.2s;
+}
+
+.room-btn-speaker {
+  width: 42px; height: 42px; font-size: 18px;
+}
+
+.room-btn-speaker-off {
+  border: 1.5px solid rgba(255,100,130,0.4); color: #ff6482;
+  box-shadow: 0 0 8px rgba(255,100,130,0.3);
+}
+
+.room-btn-speaker-on {
+  border: 1.5px solid rgba(45,212,191,0.3); color: #fff;
+  box-shadow: 0 0 8px rgba(45,212,191,0.2);
+}
+
+.room-btn-mic {
+  width: 50px; height: 50px; font-size: 20px; transition: all 0.25s;
+}
+
+.room-btn-share {
+  width: 40px; height: 40px; font-size: 18px;
+  border: 1.5px solid rgba(138,43,226,0.3);
+  box-shadow: 0 0 8px rgba(138,43,226,0.2);
+}
+
+.room-btn-emoji {
+  width: 40px; height: 40px; font-size: 18px;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.6);
+}
+
+.room-btn-emoji-active {
+  border: 1.5px solid rgba(138,43,226,0.4);
+  box-shadow: 0 0 8px rgba(138,43,226,0.2);
+}
+
+.room-btn-gift {
+  width: 40px; height: 40px; font-size: 11px; font-weight: 500;
+  font-family: 'Poppins', 'Inter', sans-serif;
+  flex-direction: column; gap: 0;
+  border: 1.5px solid rgba(236,72,153,0.3);
+  box-shadow: 0 0 8px rgba(236,72,153,0.2);
+}
+
+.room-btn-gems {
+  width: 40px; height: 40px; font-size: 11px; font-weight: 500;
+  font-family: 'Poppins', 'Inter', sans-serif;
+  flex-direction: column; gap: 0;
+  border: 1.5px solid rgba(139,92,246,0.3);
+  box-shadow: 0 0 8px rgba(139,92,246,0.2);
 }
 
 .mic-btn-active {
