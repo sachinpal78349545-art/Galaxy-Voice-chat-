@@ -1,0 +1,106 @@
+import React from "react";
+import { Room, RoomSeat, cleanName } from "./types";
+import { getUserRole } from "../../lib/roomService";
+
+interface SeatGridProps {
+  room: Room;
+  userUid: string;
+  hasControl: boolean;
+  speakingUids: Set<number>;
+  voiceJoined: boolean;
+  hashCode: (s: string) => number;
+  onSeatTap: (seatIndex: number, seat: RoomSeat) => void;
+}
+
+export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap }: SeatGridProps) {
+  return (
+    <div className="room-seat-area">
+      <div className="room-seat-grid">
+        {Array.from({ length: 12 }, (_, i) => {
+          const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: true, isSpeaking: false };
+          const isSpeaking = seat.userId
+            ? (voiceJoined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking)
+            : false;
+          return (
+            <SeatCell
+              key={i}
+              seat={seat}
+              seatIndex={i}
+              role={seat.userId ? getUserRole(room, seat.userId) : "user"}
+              isMe={seat.userId === userUid}
+              isSpeaking={isSpeaking}
+              onTap={() => onSeatTap(i, seat)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+interface SeatCellProps {
+  seat: RoomSeat;
+  seatIndex: number;
+  role: "owner" | "admin" | "user";
+  isMe: boolean;
+  isSpeaking: boolean;
+  onTap: () => void;
+}
+
+function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, onTap }: SeatCellProps) {
+  const isActive = !!seat.userId;
+  const isLocked = seat.isLocked;
+
+  const seatClass = [
+    "seat-bubble",
+    isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty",
+    isLocked ? "seat-locked" : "",
+  ].filter(Boolean).join(" ");
+
+  const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
+
+  return (
+    <div className="seat-cell" style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
+      <div className="seat-wrapper">
+        {isSpeaking && (
+          <>
+            <div className="speaking-ring speaking-ring-inner" />
+            <div className="speaking-ring speaking-ring-outer" />
+          </>
+        )}
+        <div className={seatClass}>
+          {isLocked ? (
+            <span style={{ fontSize: 16, color: "rgba(255,255,255,0.35)" }}>{"\u{1F512}"}</span>
+          ) : isActive ? (
+            seat.avatar?.startsWith("http")
+              ? <img src={seat.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+              : <span>{seat.avatar}</span>
+          ) : (
+            <span style={{ fontSize: 18, color: "rgba(255,255,255,0.25)", fontWeight: 300 }}>+</span>
+          )}
+        </div>
+        {role === "owner" && isActive && (
+          <div className="seat-badge seat-badge-owner">{"\u{1F451}"}</div>
+        )}
+        {role === "admin" && isActive && (
+          <div className="seat-badge seat-badge-admin">{"\u{1F6E1}\uFE0F"}</div>
+        )}
+        {seat.isCoHost && role !== "owner" && role !== "admin" && isActive && (
+          <div className="seat-badge seat-badge-cohost">{"\u{1F396}\uFE0F"}</div>
+        )}
+        {isActive && seat.isMuted && (
+          <div className="seat-muted-indicator">{"\u{1F507}"}</div>
+        )}
+        {seat.handRaised && (
+          <div className="seat-hand-raised">{"\u270B"}</div>
+        )}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, marginTop: 1 }}>
+        {isActive && seat.username && (
+          <span className="seat-name">{cleanName(seat.username)}</span>
+        )}
+        <span className="seat-number">{seatIndex + 1}</span>
+      </div>
+    </div>
+  );
+}

@@ -24,9 +24,17 @@ artifacts/galaxy-web/src/
                              notification bell + panel, chat unread badge
   index.css                — Global styles, Inter font, button animations (scale+ripple),
                              card hover/press states, skeleton shimmer, page transitions,
+                             voice room layout classes (room-container, seat-grid, chat, bottom bar),
                              animations (giftFly, giftReveal, giftBounce, logoGlow,
                              speaking-ring, handWave, float, confetti, mysticGlow,
                              crystalPulse, mysticFloat, sofaFloat, runeGlow, borderRotate)
+  components/room/
+    index.ts               — Barrel exports for room components
+    types.ts               — Shared types, cleanName(), hashCode() helpers
+    RoomHeader.tsx          — Room header: name, live badge, elapsed time, share/users/menu/close buttons
+    SeatGrid.tsx            — 4x3 seat grid with SeatCell (speaking rings, role badges, mute indicators)
+    ChatSection.tsx         — Scrollable chat with ChatBubble (text, emoji, system, gift, welcome types)
+    BottomBar.tsx           — Bottom controls: chat input, mic/speaker toggles, emoji/gift/reaction popups
   lib/
     firebase.ts            — Firebase SDK init (auth, db, storage, App Check with reCAPTCHA Enterprise)
     voiceService.ts        — Agora RTC: join/leave/mute, AEC/ANS/AGC, volume monitoring,
