@@ -434,21 +434,21 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
   return (
     <div className="no-screenshot" style={{
-      position: "fixed", inset: 0, zIndex: 300, maxWidth: 400, margin: "0 auto",
+      position: "fixed", inset: 0, zIndex: 300, maxWidth: 430, margin: "0 auto",
       display: "flex", flexDirection: "column", justifyContent: "space-between",
-      overflow: "hidden",
+      overflow: "hidden", padding: "0 0",
       background: "#050310", fontFamily: "'Poppins', 'Inter', sans-serif",
     }}>
       <div style={{
         position: "fixed", inset: 0, zIndex: 0, opacity: 1,
         backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)`,
         backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed",
-        filter: "saturate(1.6) brightness(1.2) contrast(1.05)",
+        objectFit: "cover",
       }} />
 
       <div style={{
         position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none",
-        background: "rgba(0,0,0,0.5)",
+        background: "rgba(0,0,0,0.4)",
       }} />
 
       <div className="galaxy-stars" />
@@ -637,8 +637,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       </div>
 
       <div style={{
-        padding: "8px 12px 24px", borderTop: "none",
-        background: "transparent", flexShrink: 0,
+        padding: "8px 12px 28px", borderTop: "none",
+        background: "linear-gradient(to top, rgba(5,3,16,0.85) 0%, transparent 100%)",
+        flexShrink: 0,
         position: "relative", zIndex: 10,
       }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -670,10 +671,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
             <button onClick={handleMicToggle} style={{
               width: 50, height: 50, borderRadius: 25, cursor: "pointer",
-              background: isMuted ? "transparent" : "transparent",
-              border: isMuted ? "2px solid rgba(255,100,130,0.4)" : "2px solid rgba(45,212,191,0.5)",
+              background: isMuted ? "transparent" : "rgba(45,212,191,0.1)",
+              border: isMuted ? "2px solid rgba(255,100,130,0.4)" : "2px solid #22d3ee",
               color: "#fff", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: isMuted ? "0 0 10px rgba(255,100,130,0.3)" : "0 0 14px rgba(45,212,191,0.4), 0 0 28px rgba(138,43,226,0.2)",
+              boxShadow: isMuted ? "0 0 10px rgba(255,100,130,0.3)" : "0 0 20px #22d3ee, 0 0 40px rgba(34,211,238,0.3), inset 0 0 8px rgba(34,211,238,0.2)",
               animation: !isMuted ? "mysticGlow 2s infinite" : "none",
               transition: "all 0.25s",
             }}>{isMuted ? "\u{1F507}" : "\u{1F3A4}"}</button>
@@ -1732,7 +1733,10 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
         <div style={{
           display: "inline-block",
           padding: "3px 10px", borderRadius: 20,
-          background: isWelcome ? "rgba(138,43,226,0.2)" : "rgba(0,0,0,0.25)",
+          background: isWelcome ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: isWelcome ? "1px solid rgba(138,43,226,0.3)" : "1px solid rgba(255,255,255,0.08)",
           fontSize: 10, lineHeight: 1.4, fontFamily: "'Poppins', 'Inter', sans-serif",
           color: isWelcome ? "#fff" : msg.type === "leave" ? "rgba(255,100,130,0.7)" : "rgba(45,212,191,0.8)",
           fontWeight: isWelcome ? 600 : 400, fontStyle: "italic",
@@ -1741,7 +1745,10 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 6,
           padding: "4px 10px", borderRadius: 20,
-          background: "rgba(0,0,0,0.3)",
+          background: "rgba(255,255,255,0.08)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          border: "1px solid rgba(255,255,255,0.06)",
           maxWidth: "85%",
         }}>
           {msg.avatar?.startsWith?.("http") ? (
@@ -1792,11 +1799,11 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
   const bubbleBase: React.CSSProperties = {
     width: 52, height: 52, borderRadius: 26, fontSize: 22,
     display: "flex", alignItems: "center", justifyContent: "center",
-    background: "rgba(0,0,0,0.4)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    border: "1px solid rgba(255,255,255,0.2)",
-    boxShadow: "inset 0 4px 8px rgba(255,255,255,0.05)",
+    background: isActive ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.05)",
+    backdropFilter: isActive ? "blur(12px)" : "blur(4px)",
+    WebkitBackdropFilter: isActive ? "blur(12px)" : "blur(4px)",
+    border: isActive ? "none" : "1px solid rgba(255,255,255,0.15)",
+    boxShadow: "none",
     transition: "all 0.3s ease",
     overflow: "hidden",
     opacity: isLocked ? 0.5 : 1,
@@ -1804,12 +1811,12 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
 
   const speakingExtra: React.CSSProperties = isSpeaking ? {
     border: "2px solid #2DD4BF",
-    boxShadow: "0 0 15px rgba(45,212,191,0.5), 0 0 30px rgba(45,212,191,0.2), inset 0 0 5px #2dd4bf",
+    boxShadow: "0 0 20px rgba(45,212,191,0.6), 0 0 40px rgba(45,212,191,0.25), inset 0 0 6px rgba(45,212,191,0.3)",
   } : {};
 
   const activeExtra: React.CSSProperties = isActive && !isSpeaking ? {
-    border: "1.5px solid rgba(255,255,255,0.8)",
-    boxShadow: "0 0 15px rgba(255,255,255,0.4), 0 0 6px rgba(138,43,226,0.3)",
+    border: "2px solid #22d3ee",
+    boxShadow: "0 0 20px #22d3ee",
   } : {};
 
   return (
