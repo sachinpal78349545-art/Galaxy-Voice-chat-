@@ -436,39 +436,31 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
     <div className="no-screenshot" style={{
       position: "fixed", inset: 0, zIndex: 300, maxWidth: 430, margin: "0 auto",
       display: "flex", flexDirection: "column", justifyContent: "space-between",
-      overflow: "hidden", padding: "0 0",
+      height: "100vh", overflow: "hidden",
       background: "#050310", fontFamily: "'Poppins', 'Inter', sans-serif",
     }}>
+      {/* BG: fixed library image — DO NOT CHANGE */}
       <div style={{
-        position: "fixed", inset: 0, zIndex: 0, opacity: 1,
+        position: "absolute", inset: 0, zIndex: -10,
         backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)`,
         backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed",
-        objectFit: "cover",
       }} />
+      {/* BG overlay — DO NOT CHANGE */}
+      <div style={{ position: "absolute", inset: 0, zIndex: -9, background: "rgba(0,0,0,0.5)" }} />
 
+      <div className="galaxy-stars" style={{ zIndex: -8 }} />
+      <div className="galaxy-twinkle" style={{ zIndex: -8 }} />
+
+      {/* Nebula glow layers — DO NOT CHANGE */}
       <div style={{
-        position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none",
-        background: "rgba(0,0,0,0.4)",
-      }} />
-
-      <div className="galaxy-stars" />
-      <div className="galaxy-twinkle" />
-
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 3, pointerEvents: "none",
-        background: "radial-gradient(ellipse at 25% 15%, rgba(160,50,255,0.35) 0%, transparent 50%), radial-gradient(ellipse at 80% 75%, rgba(80,230,220,0.2) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(138,43,226,0.15) 0%, transparent 60%)",
+        position: "absolute", inset: 0, zIndex: -7, pointerEvents: "none",
+        background: "radial-gradient(ellipse at 25% 15%, rgba(160,50,255,0.3) 0%, transparent 50%), radial-gradient(ellipse at 80% 75%, rgba(80,230,220,0.15) 0%, transparent 45%)",
         animation: "nebulaGlow 7s ease-in-out infinite",
       }} />
-
       <div style={{
-        position: "fixed", inset: 0, zIndex: 3, pointerEvents: "none",
-        background: "radial-gradient(circle at 70% 30%, rgba(45,212,191,0.12) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(160,50,255,0.1) 0%, transparent 35%)",
+        position: "absolute", inset: 0, zIndex: -6, pointerEvents: "none",
+        background: "radial-gradient(circle at 70% 30%, rgba(45,212,191,0.1) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(160,50,255,0.08) 0%, transparent 35%)",
         animation: "nebulaDrift 12s ease-in-out infinite",
-      }} />
-
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 4, pointerEvents: "none",
-        background: "linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.4))",
       }} />
 
       {floats.map(f => (
@@ -508,10 +500,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       )}
 
+      {/* === HEADER — DO NOT CHANGE === */}
       <div style={{
         position: "relative", zIndex: 10,
-        paddingTop: 40, padding: "40px 12px 6px", flexShrink: 0,
-        background: "transparent",
+        padding: "44px 12px 6px", flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <div onClick={() => { setControlPanel(true); setCpEditName(room.name); setCpAnnouncement(room.announcement || ""); setCpTab("info"); }}
@@ -584,11 +576,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       )}
 
-      <div style={{ padding: "6px 10px 4px", marginTop: 16, marginBottom: 16, flexShrink: 0, position: "relative", zIndex: 10 }}>
+      {/* === 12-SEAT GRID (centered) — DO NOT CHANGE === */}
+      <div style={{ padding: "4px 10px", flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4,
-          background: "transparent", borderRadius: 0, padding: "4px 0",
-          border: "none", justifyItems: "center",
+          display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6,
+          padding: "6px 0", justifyItems: "center",
         }}>
           {Array.from({ length: 12 }, (_, i) => {
             const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: true, isSpeaking: false };
@@ -615,10 +607,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 10px", position: "relative", zIndex: 10, maxHeight: "30vh" }}>
+      {/* === CHAT AREA (max 25vh, scrollable) — DO NOT CHANGE === */}
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 10px", position: "relative", zIndex: 10, maxHeight: "25vh", minHeight: 0 }}>
         <div style={{
           flex: 1, overflowY: "auto",
-          background: "transparent", borderRadius: 0, padding: "6px 4px",
+          padding: "4px 4px",
         }}>
           {messages.map(msg => (
             <ChatBubble key={msg.id} msg={msg} isMe={msg.userId === user.uid} />
@@ -636,9 +629,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         }}>{"\u{1F6CB}\uFE0F"}</button>
       </div>
 
+      {/* === BOTTOM BAR (pinned, pb-8 safe area) — DO NOT CHANGE === */}
       <div style={{
-        padding: "8px 12px 28px", borderTop: "none",
-        background: "linear-gradient(to top, rgba(5,3,16,0.85) 0%, transparent 100%)",
+        padding: "8px 12px 32px", borderTop: "none",
+        background: "linear-gradient(to top, rgba(5,3,16,0.9) 0%, rgba(5,3,16,0.6) 60%, transparent 100%)",
         flexShrink: 0,
         position: "relative", zIndex: 10,
       }}>
@@ -1729,14 +1723,15 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
       marginBottom: 3,
       animation: isWelcome ? "welcomeMsg 0.5s ease" : "slide-up 0.15s ease",
     }}>
+      {/* Chat glass pills — DO NOT CHANGE */}
       {isSystem ? (
         <div style={{
           display: "inline-block",
-          padding: "3px 10px", borderRadius: 20,
+          padding: "3px 12px", borderRadius: 20,
           background: isWelcome ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          border: isWelcome ? "1px solid rgba(138,43,226,0.3)" : "1px solid rgba(255,255,255,0.08)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          border: isWelcome ? "1px solid rgba(138,43,226,0.25)" : "1px solid rgba(255,255,255,0.06)",
           fontSize: 10, lineHeight: 1.4, fontFamily: "'Poppins', 'Inter', sans-serif",
           color: isWelcome ? "#fff" : msg.type === "leave" ? "rgba(255,100,130,0.7)" : "rgba(45,212,191,0.8)",
           fontWeight: isWelcome ? 600 : 400, fontStyle: "italic",
@@ -1744,10 +1739,10 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
       ) : (
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "4px 10px", borderRadius: 20,
+          padding: "4px 12px", borderRadius: 20,
           background: "rgba(255,255,255,0.08)",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
           border: "1px solid rgba(255,255,255,0.06)",
           maxWidth: "85%",
         }}>
@@ -1796,27 +1791,28 @@ function SeatCell({ seat, seatIndex, role, isMe, hasControl, isSpeaking, onTap }
   const isLocked = seat.isLocked;
   const seatNum = seatIndex + 1;
 
+  /* Seat glow styles — DO NOT CHANGE */
   const bubbleBase: React.CSSProperties = {
-    width: 52, height: 52, borderRadius: 26, fontSize: 22,
+    width: 54, height: 54, borderRadius: 27, fontSize: 22,
     display: "flex", alignItems: "center", justifyContent: "center",
-    background: isActive ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.05)",
+    background: isActive ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.05)",
     backdropFilter: isActive ? "blur(12px)" : "blur(4px)",
     WebkitBackdropFilter: isActive ? "blur(12px)" : "blur(4px)",
-    border: isActive ? "none" : "1px solid rgba(255,255,255,0.15)",
-    boxShadow: "none",
+    border: isActive ? "none" : "1px solid rgba(255,255,255,0.2)",
+    boxShadow: isActive ? "none" : "0 0 6px rgba(255,255,255,0.08)",
     transition: "all 0.3s ease",
     overflow: "hidden",
-    opacity: isLocked ? 0.5 : 1,
+    opacity: isLocked ? 0.4 : 1,
   };
 
   const speakingExtra: React.CSSProperties = isSpeaking ? {
     border: "2px solid #2DD4BF",
-    boxShadow: "0 0 20px rgba(45,212,191,0.6), 0 0 40px rgba(45,212,191,0.25), inset 0 0 6px rgba(45,212,191,0.3)",
+    boxShadow: "0 0 15px rgba(34,211,238,0.8), 0 0 30px rgba(45,212,191,0.3), inset 0 0 6px rgba(45,212,191,0.25)",
   } : {};
 
   const activeExtra: React.CSSProperties = isActive && !isSpeaking ? {
     border: "2px solid #22d3ee",
-    boxShadow: "0 0 20px #22d3ee",
+    boxShadow: "0 0 15px rgba(34,211,238,0.8)",
   } : {};
 
   return (
