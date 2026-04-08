@@ -56,7 +56,8 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: S
 
   const seatClass = [
     "seat-bubble",
-    isSpeaking ? "seat-speaking" : isOwner ? "seat-owner" : isActive ? "seat-active" : "seat-empty",
+    isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty",
+    isOwner && isActive ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
   ].filter(Boolean).join(" ");
 
