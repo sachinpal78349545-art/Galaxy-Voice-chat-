@@ -692,7 +692,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                     const blob = new Blob([await file.arrayBuffer()], { type: file.type });
                     const result = await uploadWithAppCheck(blob, `rooms/${roomId}/avatar_${Date.now()}.jpg`);
                     const url = result.url;
-                    await updateRoomSettings(roomId, { roomAvatar: url } as any);
+                    await updateRoomSettings(roomId, { roomAvatar: url });
                     showToast("Room avatar updated!", "success");
                   } catch (err) {
                     console.error("Upload error:", err);
@@ -729,7 +729,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "4px 0" }}>
                   {ROOM_AVATARS.map(av => (
-                    <button key={av} onClick={() => hasControl && updateRoomSettings(roomId, { coverEmoji: av } as any).then(() => showToast("Updated!", "success")).catch(console.error)}
+                    <button key={av} onClick={() => hasControl && updateRoomSettings(roomId, { coverEmoji: av }).then(() => showToast("Updated!", "success")).catch(console.error)}
                       style={{
                         width: 40, height: 40, borderRadius: 14, fontSize: 22, cursor: hasControl ? "pointer" : "default",
                         background: (room.coverEmoji || "\u{1F3A4}") === av ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.04)",
@@ -778,7 +778,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                         style={{ flex: 1, borderRadius: 14, padding: "10px 14px", fontSize: 12 }} />
                       <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "8px 14px" }}
                         onClick={() => {
-                          updateRoomSettings(roomId, { announcement: cpAnnouncement.trim() } as any)
+                          updateRoomSettings(roomId, { announcement: cpAnnouncement.trim() })
                             .then(() => showToast("Announcement updated!", "success")).catch(console.error);
                         }}>Save</button>
                     </div>
@@ -791,7 +791,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                   <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 8, display: "block" }}>Room Enter Permission</label>
                   <div style={{ display: "flex", gap: 6 }}>
                     {(["everyone", "invite_only"] as const).map(ep => (
-                      <button key={ep} onClick={() => hasControl && updateRoomSettings(roomId, { enterPermission: ep } as any).then(() => showToast("Updated!", "success")).catch(console.error)}
+                      <button key={ep} onClick={() => hasControl && updateRoomSettings(roomId, { enterPermission: ep }).then(() => showToast("Updated!", "success")).catch(console.error)}
                         style={{
                           flex: 1, padding: "10px 8px", borderRadius: 12, fontSize: 12, fontWeight: 600, fontFamily: "inherit",
                           border: (room.enterPermission || "everyone") === ep ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
@@ -810,7 +810,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                     <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700, marginBottom: 4 }}>{"\u{1F3A4}"} Mic Seats</p>
                     {hasControl ? (
                       <select value={room.maxMics || room.seats.length}
-                        onChange={e => updateRoomSettings(roomId, { maxMics: parseInt(e.target.value) } as any).then(() => showToast("Updated!", "success")).catch(console.error)}
+                        onChange={e => updateRoomSettings(roomId, { maxMics: parseInt(e.target.value) }).then(() => showToast("Updated!", "success")).catch(console.error)}
                         style={{
                           width: "100%", padding: "6px 8px", borderRadius: 8, fontSize: 14, fontWeight: 800,
                           background: "rgba(255,255,255,0.05)", border: "1px solid rgba(108,92,231,0.2)",
@@ -826,7 +826,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                     <p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)", fontWeight: 700, marginBottom: 4 }}>Mode</p>
                     {hasControl ? (
                       <select value={room.mode || "voice"}
-                        onChange={e => updateRoomSettings(roomId, { mode: e.target.value as "voice" | "chat" } as any).then(() => showToast("Updated!", "success")).catch(console.error)}
+                        onChange={e => updateRoomSettings(roomId, { mode: e.target.value as "voice" | "chat" }).then(() => showToast("Updated!", "success")).catch(console.error)}
                         style={{
                           width: "100%", padding: "6px 8px", borderRadius: 8, fontSize: 14, fontWeight: 800,
                           background: "rgba(255,255,255,0.05)", border: "1px solid rgba(108,92,231,0.2)",
@@ -1175,6 +1175,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
               <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }}
                 onClick={() => {
                   setShowProfileCard(null);
+                  handleGift({ emoji: "\u{1F381}", name: "Gift Box", cost: 10 }, 1);
                 }}>
                 {"\u{1F381}"} Gift
               </button>

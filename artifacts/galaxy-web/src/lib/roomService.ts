@@ -315,7 +315,7 @@ export async function kickUserFromRoom(roomId: string, uid: string): Promise<voi
   await runTransaction(ref(db, `rooms/${roomId}/listeners`), (c: number | null) => Math.max(0, (c ?? 0) - 1));
 }
 
-export async function updateRoomSettings(roomId: string, settings: Partial<Pick<Room, "name" | "roomAvatar" | "isPrivate" | "micPermission" | "theme" | "announcement" | "enterPermission" | "maxMics" | "mode" | "country">>): Promise<void> {
+export async function updateRoomSettings(roomId: string, settings: Partial<Pick<Room, "name" | "roomAvatar" | "coverEmoji" | "isPrivate" | "micPermission" | "theme" | "announcement" | "enterPermission" | "maxMics" | "mode" | "country">>): Promise<void> {
   await update(ref(db, `rooms/${roomId}`), settings);
 }
 

@@ -73,13 +73,13 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: S
         )}
         <div className={seatClass}>
           {isLocked ? (
-            <span style={{ fontSize: 16, color: "rgba(255,255,255,0.35)" }}>{"\u{1F512}"}</span>
+            <span className="seat-locked-icon">{"\u{1F512}"}</span>
           ) : isActive ? (
             seat.avatar?.startsWith("http")
-              ? <img src={seat.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+              ? <img src={seat.avatar} alt="" className="seat-avatar-img" />
               : <span>{seat.avatar}</span>
           ) : (
-            <span style={{ fontSize: 18, color: "rgba(255,255,255,0.25)", fontWeight: 300 }}>+</span>
+            <span className="seat-empty-plus">+</span>
           )}
         </div>
         {role === "owner" && isActive && (
@@ -98,7 +98,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: S
           <div className="seat-hand-raised">{"\u270B"}</div>
         )}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, marginTop: 1 }}>
+      <div className="seat-info">
         {isActive && seat.username && (
           <span className="seat-name">{cleanName(seat.username)}</span>
         )}
