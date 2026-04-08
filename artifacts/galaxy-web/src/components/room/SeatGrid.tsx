@@ -18,7 +18,8 @@ export default function SeatGrid({ room, userUid, hasControl, speakingUids, voic
     <div className="room-seat-area">
       <div className="room-seat-grid">
         {Array.from({ length: 12 }, (_, i) => {
-          const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: true, isSpeaking: false };
+          const lockedByDefault = [3, 7, 10, 11].includes(i);
+          const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: lockedByDefault, isSpeaking: false };
           const isSpeaking = seat.userId
             ? (voiceJoined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking)
             : false;

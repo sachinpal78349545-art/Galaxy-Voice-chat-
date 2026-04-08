@@ -29,8 +29,9 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
       {isSystem ? (
         <div className={`chat-pill-system ${isWelcome ? "chat-pill-welcome" : ""}`} style={{
           fontSize: 10, lineHeight: 1.4, fontFamily: "'Poppins', 'Inter', sans-serif",
-          color: isWelcome ? "#fff" : msg.type === "leave" ? "rgba(255,100,130,0.7)" : "rgba(45,212,191,0.8)",
+          color: isWelcome ? "#c4b5fd" : msg.type === "leave" ? "rgba(255,100,130,0.8)" : "rgba(255,255,255,0.8)",
           fontWeight: isWelcome ? 600 : 400, fontStyle: "italic",
+          textShadow: isWelcome ? "0 1px 6px rgba(139,92,246,0.5)" : "0 1px 3px rgba(0,0,0,0.5)",
         }}>{msg.text}</div>
       ) : (
         <div className="chat-pill">

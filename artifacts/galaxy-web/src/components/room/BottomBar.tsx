@@ -98,11 +98,11 @@ export default function BottomBar({
           <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
             <button onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }} className="room-btn-circle room-btn-gift">
               <span style={{ fontSize: 16 }}>{"\u{1F381}"}</span>
-              <span style={{ fontSize: 7, marginTop: -2 }}>Gift</span>
+              <span style={{ fontSize: 7, marginTop: -2, color: "rgba(255,255,255,0.8)" }}>Gift</span>
             </button>
             <button onClick={() => { const next = !showReactions; closeAllPopups(); if (next) setShowReactions(true); }} className="room-btn-circle room-btn-gems">
               <span style={{ fontSize: 16 }}>{"\u{1F48E}"}</span>
-              <span style={{ fontSize: 7, marginTop: -2 }}>Gems</span>
+              <span style={{ fontSize: 7, marginTop: -2, color: "rgba(255,255,255,0.8)" }}>Gems</span>
             </button>
           </div>
         </div>
