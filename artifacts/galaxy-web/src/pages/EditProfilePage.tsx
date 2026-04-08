@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { uploadWithAppCheck } from "../lib/firebase";
+import { directUpload } from "../lib/firebase";
 import { UserProfile, updateUser, AVATAR_LIST } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 import imageCompression from "browser-image-compression";
@@ -63,9 +63,12 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
       setUploadProgress(40);
       setUploadStep("Uploading...");
 
+      const rawBlob = new Blob([await blob.arrayBuffer()], { type: "image/jpeg" });
+      console.log(`[DP Upload] Raw Blob created: ${(rawBlob.size / 1024).toFixed(1)}KB, type=${rawBlob.type}`);
+
       const path = `avatars/${user.uid}_${Date.now()}.jpg`;
-      console.log("DEBUG: Starting Direct Upload");
-      const { url } = await uploadWithAppCheck(blob, path, "image/jpeg");
+      console.log("SUCCESS: Starting direct Blob upload without App Check.");
+      const { url } = await directUpload(rawBlob, path, "image/jpeg");
 
       setUploadProgress(100);
       setUploadStep("Done!");

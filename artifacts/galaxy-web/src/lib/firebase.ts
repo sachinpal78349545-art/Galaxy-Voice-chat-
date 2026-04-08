@@ -18,9 +18,9 @@ export const auth = getAuth(app);
 export const db = getDatabase(app);
 export const storage = getStorage(app);
 
-console.log("[Firebase] Init OK — bucket:", firebaseConfig.storageBucket);
-console.log("[Firebase] Auth domain:", firebaseConfig.authDomain);
-console.log("[Firebase] Current user:", auth.currentUser?.uid ?? "none (not signed in yet)");
+console.log("[Firebase] Init OK");
+console.log("[Firebase] Bucket:", firebaseConfig.storageBucket);
+console.log("[Firebase] Project:", firebaseConfig.projectId);
 
 export interface UploadResult {
   url: string;
@@ -34,38 +34,29 @@ export async function directUpload(
 ): Promise<UploadResult> {
   const sizeKB = ((fileOrBlob.size || 0) / 1024).toFixed(1);
   const user = auth.currentUser;
+  const ct = contentType || (fileOrBlob instanceof File ? fileOrBlob.type : "application/octet-stream");
 
-  console.log("=== DEBUG: Starting Direct Upload ===");
-  console.log("[Upload] Path:", path);
-  console.log("[Upload] Size:", sizeKB, "KB");
-  console.log("[Upload] Content-Type:", contentType || (fileOrBlob instanceof File ? fileOrBlob.type : "application/octet-stream"));
-  console.log("[Upload] Bucket:", firebaseConfig.storageBucket);
-  console.log("[Upload] User UID:", user?.uid ?? "ANONYMOUS");
-  console.log("[Upload] User email:", user?.email ?? "none");
+  console.log("SUCCESS: Starting direct Blob upload without App Check.");
+  console.log("[Upload] path:", path, "| size:", sizeKB, "KB | type:", ct);
+  console.log("[Upload] user:", user?.uid ?? "ANONYMOUS (no auth)");
 
   const sRef = storageRef(storage, path);
-  console.log("[Upload] Storage ref fullPath:", sRef.fullPath);
-  console.log("[Upload] Storage ref bucket:", sRef.bucket);
-
-  const metadata = contentType ? { contentType } : undefined;
+  console.log("[Upload] ref.bucket:", sRef.bucket, "| ref.fullPath:", sRef.fullPath);
 
   try {
-    const snapshot = await uploadBytes(sRef, fileOrBlob, metadata);
-    console.log("[Upload] uploadBytes SUCCESS");
-    console.log("[Upload] Bytes transferred:", snapshot.metadata.size);
-    console.log("[Upload] Full path:", snapshot.metadata.fullPath);
+    const snapshot = await uploadBytes(sRef, fileOrBlob, { contentType: ct });
+    console.log("[Upload] uploadBytes SUCCESS — bytes:", snapshot.metadata.size);
 
     const url = await getDownloadURL(sRef);
-    console.log("[Upload] Download URL obtained:", url.substring(0, 100));
+    console.log("[Upload] Download URL:", url.substring(0, 100));
     return { url };
   } catch (err: any) {
-    console.error("=== UPLOAD FAILED — FULL ERROR ===");
-    console.error("[Upload] Error name:", err?.name);
-    console.error("[Upload] Error code:", err?.code);
-    console.error("[Upload] Error message:", err?.message);
-    console.error("[Upload] Error serverResponse:", err?.serverResponse);
-    console.error("[Upload] Error customData:", JSON.stringify(err?.customData));
-    console.error("[Upload] Full error object:", err);
+    console.error("=== UPLOAD FAILED ===");
+    console.error("[Upload] code:", err?.code);
+    console.error("[Upload] message:", err?.message);
+    console.error("[Upload] serverResponse:", err?.serverResponse);
+    console.error("[Upload] status:", err?.status);
+    console.error("[Upload] full:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
     throw err;
   }
 }
