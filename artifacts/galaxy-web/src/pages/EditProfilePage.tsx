@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
-import { directUpload } from "../lib/firebase";
+import { storage, auth } from "../lib/firebase";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { UserProfile, updateUser, AVATAR_LIST } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 import imageCompression from "browser-image-compression";
@@ -41,44 +42,58 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
     setUploadStep("Compressing...");
 
     try {
-      const origKB = (file.size / 1024).toFixed(1);
-      console.log(`[DP Upload] Original: ${file.name}, ${origKB}KB, ${file.type}`);
+      console.log(`[DP] Original file: ${file.name}, ${(file.size/1024).toFixed(1)}KB, ${file.type}`);
 
-      let blob: Blob = file;
+      let compressed: Blob = file;
       try {
-        const compressed = await imageCompression(file, {
+        compressed = await imageCompression(file, {
           maxSizeMB: 0.1,
           maxWidthOrHeight: 800,
           useWebWorker: true,
           fileType: "image/jpeg",
           initialQuality: 0.6,
-          alwaysKeepResolution: false,
         });
-        blob = compressed;
-        console.log(`[DP Upload] Compressed: ${(compressed.size / 1024).toFixed(1)}KB (was ${origKB}KB)`);
-      } catch (compErr) {
-        console.warn("[DP Upload] Compression failed, using original:", compErr);
+        console.log(`[DP] Compressed: ${(compressed.size/1024).toFixed(1)}KB`);
+      } catch (ce) {
+        console.warn("[DP] Compression failed, using original:", ce);
       }
 
-      setUploadProgress(40);
+      setUploadProgress(30);
       setUploadStep("Uploading...");
 
-      const rawBlob = new Blob([await blob.arrayBuffer()], { type: "image/jpeg" });
-      console.log(`[DP Upload] Raw Blob created: ${(rawBlob.size / 1024).toFixed(1)}KB, type=${rawBlob.type}`);
-
+      const blob = new Blob([compressed], { type: file.type });
       const path = `avatars/${user.uid}_${Date.now()}.jpg`;
+      const sRef = storageRef(storage, path);
+
       console.log("SUCCESS: Starting direct Blob upload without App Check.");
-      const { url } = await directUpload(rawBlob, path, "image/jpeg");
+      console.log("[DP] Blob size:", blob.size, "bytes");
+      console.log("[DP] Storage ref bucket:", sRef.bucket);
+      console.log("[DP] Storage ref path:", sRef.fullPath);
+      console.log("[DP] Auth user:", auth.currentUser?.uid ?? "NONE");
+
+      const snapshot = await uploadBytes(sRef, blob, { contentType: "image/jpeg" });
+      console.log("[DP] uploadBytes SUCCESS, bytes:", snapshot.metadata.size);
+
+      setUploadProgress(80);
+      const url = await getDownloadURL(sRef);
+      console.log("[DP] Download URL:", url);
 
       setUploadProgress(100);
       setUploadStep("Done!");
       setForm(f => ({ ...f, avatar: url }));
       showToast("Photo uploaded!", "success");
-    } catch (err) {
+    } catch (err: any) {
       setUploadProgress(0);
       setUploadStep("");
-      console.error("[DP Upload] FAILED:", err);
-      showToast(`Upload failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
+      console.error("=== DP UPLOAD ERROR ===");
+      console.error("[DP] error.code:", err?.code);
+      console.error("[DP] error.message:", err?.message);
+      console.error("[DP] error.serverResponse:", err?.serverResponse);
+      console.error("[DP] error.name:", err?.name);
+      console.error("[DP] error.customData:", err?.customData);
+      console.error("[DP] Full error:", err);
+      try { console.error("[DP] Stringified:", JSON.stringify(err, Object.getOwnPropertyNames(err))); } catch {}
+      showToast(`Upload failed: ${err?.code || err?.message || "Unknown"}`, "error");
     } finally {
       setUploading(false);
       setTimeout(() => { setUploadProgress(0); setUploadStep(""); }, 1500);
