@@ -435,11 +435,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
   return (
     <div className="no-screenshot" style={{
       position: "fixed", inset: 0, zIndex: 300, maxWidth: 400, margin: "0 auto",
-      display: "flex", flexDirection: "column", overflow: "hidden",
+      display: "flex", flexDirection: "column", justifyContent: "space-between",
+      overflow: "hidden",
       background: "#050310", fontFamily: "'Poppins', 'Inter', sans-serif",
     }}>
       <div style={{
-        position: "absolute", inset: 0, zIndex: 0,
+        position: "fixed", inset: 0, zIndex: 0,
         backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)`,
         backgroundSize: "cover", backgroundPosition: "center",
         filter: "saturate(1.6) brightness(1.2) contrast(1.05)",
@@ -449,19 +450,19 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       <div className="galaxy-twinkle" />
 
       <div style={{
-        position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none",
+        position: "fixed", inset: 0, zIndex: 3, pointerEvents: "none",
         background: "radial-gradient(ellipse at 25% 15%, rgba(160,50,255,0.35) 0%, transparent 50%), radial-gradient(ellipse at 80% 75%, rgba(80,230,220,0.2) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(138,43,226,0.15) 0%, transparent 60%)",
         animation: "nebulaGlow 7s ease-in-out infinite",
       }} />
 
       <div style={{
-        position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none",
+        position: "fixed", inset: 0, zIndex: 3, pointerEvents: "none",
         background: "radial-gradient(circle at 70% 30%, rgba(45,212,191,0.12) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(160,50,255,0.1) 0%, transparent 35%)",
         animation: "nebulaDrift 12s ease-in-out infinite",
       }} />
 
       <div style={{
-        position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
+        position: "fixed", inset: 0, zIndex: 4, pointerEvents: "none",
         background: "linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.5))",
       }} />
 
@@ -504,7 +505,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       <div style={{
         position: "relative", zIndex: 10,
-        padding: "42px 12px 6px", flexShrink: 0,
+        paddingTop: 40, padding: "40px 12px 6px", flexShrink: 0,
         background: "transparent",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -578,7 +579,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       )}
 
-      <div style={{ padding: "6px 10px 4px", flexShrink: 0, position: "relative", zIndex: 10 }}>
+      <div style={{ padding: "6px 10px 4px", marginTop: 16, marginBottom: 16, flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4,
           background: "transparent", borderRadius: 0, padding: "4px 0",
@@ -609,7 +610,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 10px", position: "relative", zIndex: 10 }}>
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "0 10px", position: "relative", zIndex: 10, maxHeight: "30vh" }}>
         <div style={{
           flex: 1, overflowY: "auto",
           background: "transparent", borderRadius: 0, padding: "6px 4px",
@@ -631,7 +632,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       </div>
 
       <div style={{
-        padding: "8px 12px 22px", borderTop: "none",
+        padding: "8px 12px 24px", borderTop: "none",
         background: "transparent", flexShrink: 0,
         position: "relative", zIndex: 10,
       }}>
