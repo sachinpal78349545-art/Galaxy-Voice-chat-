@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getDatabase } from "firebase/database";
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyACJvjNecVmc-ooULC99pjlu6slWiQz_3o",
@@ -18,16 +18,7 @@ export const auth = getAuth(app);
 export const db = getDatabase(app);
 export const storage = getStorage(app);
 
-// ----- App Check DISABLED for testing -----
-// To re-enable, uncomment the block below and import:
-//   import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "firebase/app-check";
-//
-// (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = "ec8ffa53-77e7-4771-bc83-342174ea5237";
-// const appCheckInstance = initializeAppCheck(app, {
-//   provider: new ReCaptchaV3Provider("6LeBPqssAAAAACKXUtcHmVeZMK2IrqhS4dwkWRY"),
-//   isTokenAutoRefreshEnabled: true,
-// });
-console.log("[Firebase] App Check BYPASSED — direct uploads enabled");
+console.log("[Firebase] Initialized — no App Check, direct uploads only");
 
 export interface UploadResult {
   url: string;
@@ -37,40 +28,19 @@ export async function uploadWithAppCheck(
   fileOrBlob: File | Blob,
   path: string,
   contentType?: string,
-  onProgress?: (pct: number) => void,
+  _onProgress?: (pct: number) => void,
 ): Promise<UploadResult> {
-  console.log("[Upload] App Check bypassed. Starting direct upload...");
-  console.log(`[Upload] Path: ${path}, Size: ${((fileOrBlob.size || 0) / 1024).toFixed(1)}KB`);
+  const sizeKB = ((fileOrBlob.size || 0) / 1024).toFixed(1);
+  console.log(`DEBUG: Starting Direct Upload — path=${path}, size=${sizeKB}KB`);
 
   const sRef = storageRef(storage, path);
-  const mimeType = contentType
-    || (fileOrBlob instanceof File ? fileOrBlob.type : null)
-    || "application/octet-stream";
+  const metadata = contentType ? { contentType } : undefined;
 
-  return new Promise<UploadResult>((resolve, reject) => {
-    const task = uploadBytesResumable(sRef, fileOrBlob, { contentType: mimeType });
+  await uploadBytes(sRef, fileOrBlob, metadata);
+  console.log("[Upload] uploadBytes complete, getting download URL...");
 
-    task.on("state_changed",
-      (snap) => {
-        const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-        console.log(`[Upload] Progress: ${pct}% (${snap.bytesTransferred}/${snap.totalBytes})`);
-        if (onProgress) onProgress(pct);
-      },
-      (err) => {
-        console.error("[Upload] uploadBytesResumable FAILED:", err);
-        reject(err);
-      },
-      async () => {
-        try {
-          console.log("[Upload] Upload complete, getting download URL...");
-          const url = await getDownloadURL(task.snapshot.ref);
-          console.log("[Upload] Success! URL obtained.");
-          resolve({ url });
-        } catch (e) {
-          console.error("[Upload] getDownloadURL failed:", e);
-          reject(e);
-        }
-      }
-    );
-  });
+  const url = await getDownloadURL(sRef);
+  console.log("[Upload] Done! URL:", url.substring(0, 80) + "...");
+
+  return { url };
 }

@@ -37,15 +37,14 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(10);
     setUploadStep("Compressing...");
 
     try {
       const origKB = (file.size / 1024).toFixed(1);
       console.log(`[DP Upload] Original: ${file.name}, ${origKB}KB, ${file.type}`);
-      setUploadProgress(10);
 
-      let blob: Blob;
+      let blob: Blob = file;
       try {
         const compressed = await imageCompression(file, {
           maxSizeMB: 0.1,
@@ -56,41 +55,30 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
           alwaysKeepResolution: false,
         });
         blob = compressed;
-        const compKB = (compressed.size / 1024).toFixed(1);
-        console.log(`[DP Upload] Final Compressed Size: ${compKB}KB (was ${origKB}KB)`);
-        setUploadStep(`Compressed to ${compKB}KB`);
+        console.log(`[DP Upload] Compressed: ${(compressed.size / 1024).toFixed(1)}KB (was ${origKB}KB)`);
       } catch (compErr) {
-        console.warn("[DP Upload] Compression fallback to original:", compErr);
-        blob = file;
-        setUploadStep("Uploading original...");
+        console.warn("[DP Upload] Compression failed, using original:", compErr);
       }
+
       setUploadProgress(40);
-
-      setUploadStep("Verifying...");
-      setUploadProgress(45);
-
       setUploadStep("Uploading...");
-      const path = `avatars/${user.uid}_${Date.now()}.jpg`;
-      console.log(`[DP Upload] Uploading ${(blob.size / 1024).toFixed(1)}KB via REST API...`);
 
-      const { url } = await uploadWithAppCheck(blob, path, "image/jpeg", (pct) => {
-        setUploadProgress(45 + Math.round(pct * 0.5));
-        setUploadStep(`Uploading... ${pct}%`);
-      });
+      const path = `avatars/${user.uid}_${Date.now()}.jpg`;
+      console.log("DEBUG: Starting Direct Upload");
+      const { url } = await uploadWithAppCheck(blob, path, "image/jpeg");
 
       setUploadProgress(100);
       setUploadStep("Done!");
       setForm(f => ({ ...f, avatar: url }));
-      showToast("Photo uploaded!", "success", "\u{1F4F7}");
+      showToast("Photo uploaded!", "success");
     } catch (err) {
       setUploadProgress(0);
       setUploadStep("");
-      console.error("[DP Upload] Failed:", err);
-      const msg = err instanceof Error ? err.message : "Upload failed";
-      showToast(`Upload failed: ${msg}`, "error");
+      console.error("[DP Upload] FAILED:", err);
+      showToast(`Upload failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     } finally {
       setUploading(false);
-      setTimeout(() => { setUploadProgress(0); setUploadStep(""); }, 1000);
+      setTimeout(() => { setUploadProgress(0); setUploadStep(""); }, 1500);
       if (e.target) e.target.value = "";
     }
   };
