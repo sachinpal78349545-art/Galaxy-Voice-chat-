@@ -384,30 +384,30 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       <div className="room-bg" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)` }} />
       <div className="room-bg-overlay" />
 
-      <div className="galaxy-stars" style={{ zIndex: -8 }} />
-      <div className="galaxy-twinkle" style={{ zIndex: -8 }} />
+      <div className="galaxy-stars" />
+      <div className="galaxy-twinkle" />
 
       <div style={{
-        position: "absolute", inset: 0, zIndex: -7, pointerEvents: "none",
+        position: "fixed", inset: 0, zIndex: -7, pointerEvents: "none",
         background: "radial-gradient(ellipse at 25% 15%, rgba(160,50,255,0.3) 0%, transparent 50%), radial-gradient(ellipse at 80% 75%, rgba(80,230,220,0.15) 0%, transparent 45%)",
         animation: "nebulaGlow 7s ease-in-out infinite",
       }} />
       <div style={{
-        position: "absolute", inset: 0, zIndex: -6, pointerEvents: "none",
+        position: "fixed", inset: 0, zIndex: -6, pointerEvents: "none",
         background: "radial-gradient(circle at 70% 30%, rgba(45,212,191,0.1) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(160,50,255,0.08) 0%, transparent 35%)",
         animation: "nebulaDrift 12s ease-in-out infinite",
       }} />
 
       {floats.map(f => (
         <div key={f.id} style={{
-          position: "absolute", bottom: "42%", right: `${f.x}%`, fontSize: f.big ? 52 : 38, zIndex: 500,
+          position: "fixed", bottom: "42%", right: `${f.x}%`, fontSize: f.big ? 52 : 38, zIndex: 500,
           pointerEvents: "none", animation: f.big ? "giftFly 3.2s ease-out forwards" : "emojiFloat 2.8s ease-out forwards",
         }}>{f.item}</div>
       ))}
 
       {giftAnim && (
         <div style={{
-          position: "absolute", top: "22%", left: "50%", transform: "translateX(-50%)",
+          position: "fixed", top: "22%", left: "50%", transform: "translateX(-50%)",
           zIndex: 600, textAlign: "center", pointerEvents: "none", animation: "giftReveal 3s ease forwards",
         }}>
           <div style={{ fontSize: 80, animation: "giftBounce 0.6s ease infinite" }}>{giftAnim.emoji}</div>
@@ -419,11 +419,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       {welcomeAnim && (
         <div style={{
-          position: "absolute", top: "15%", left: "50%", transform: "translateX(-50%)",
+          position: "fixed", top: "15%", left: "50%", transform: "translateX(-50%)",
           zIndex: 700, textAlign: "center", pointerEvents: "none",
           animation: "welcomeEntry 3.5s ease forwards",
         }}>
-          <div style={{ fontSize: 40, marginBottom: 8, animation: "float 1s ease-in-out infinite", filter: "drop-shadow(0 0 12px rgba(138,43,226,0.8))" }}>{"\u{1F52E}"}</div>
+          <div style={{ fontSize: 40, marginBottom: 8, filter: "drop-shadow(0 0 12px rgba(138,43,226,0.8))" }}>{"\u{1F52E}"}</div>
           <div style={{
             background: "rgba(255,255,255,0.05)",
             border: "1px solid rgba(255,255,255,0.15)", borderRadius: 28, padding: "14px 28px",
