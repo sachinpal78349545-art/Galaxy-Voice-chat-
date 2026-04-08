@@ -25,9 +25,7 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
   const displayName = cleanName(msg.username);
 
   return (
-    <div className="chat-msg" style={{
-      animation: isWelcome ? "welcomeMsg 0.5s ease" : "slide-up 0.15s ease",
-    }}>
+    <div className="chat-msg" style={isWelcome ? { animation: "welcomeMsg 0.5s ease" } : undefined}>
       {isSystem ? (
         <div className={`chat-pill-system ${isWelcome ? "chat-pill-welcome" : ""}`} style={{
           fontSize: 10, lineHeight: 1.4, fontFamily: "'Poppins', 'Inter', sans-serif",

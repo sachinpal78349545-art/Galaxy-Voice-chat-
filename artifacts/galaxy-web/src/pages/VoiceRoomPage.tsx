@@ -386,6 +386,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
 
       <div className="galaxy-stars" />
       <div className="galaxy-twinkle" />
+      <div className="room-bg-glow" />
 
       <div style={{
         position: "fixed", inset: 0, zIndex: -7, pointerEvents: "none",

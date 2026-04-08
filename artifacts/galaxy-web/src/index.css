@@ -823,6 +823,101 @@ textarea.input-field { resize: none; line-height: 1.5; }
   animation: popIn 0.15s ease; z-index: 20;
 }
 
+/* ============================================
+   PREMIUM GLOW EFFECTS
+   ============================================ */
+
+.room-bg-glow {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: linear-gradient(135deg,
+    rgba(88,101,242,0.18),
+    rgba(255,0,150,0.12),
+    rgba(0,255,255,0.12));
+  background-size: 300% 300%;
+  animation: bgGlow 10s ease infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes bgGlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.seat-bubble {
+  box-shadow: 0 0 10px rgba(0,255,255,0.15);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.seat-active {
+  box-shadow: 0 0 14px rgba(0,255,255,0.35), 0 0 28px rgba(0,255,255,0.12);
+}
+
+.seat-speaking {
+  box-shadow: 0 0 20px rgba(0,255,255,0.7), 0 0 40px rgba(0,255,255,0.25), inset 0 0 8px rgba(45,212,191,0.15);
+  animation: seatSpeakGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes seatSpeakGlow {
+  0%,100% { box-shadow: 0 0 20px rgba(0,255,255,0.7), 0 0 40px rgba(0,255,255,0.25), inset 0 0 8px rgba(45,212,191,0.15); }
+  50%     { box-shadow: 0 0 30px rgba(0,255,255,0.9), 0 0 55px rgba(0,255,255,0.35), inset 0 0 12px rgba(45,212,191,0.25); }
+}
+
+.seat-owner {
+  box-shadow: 0 0 15px rgba(255,215,0,0.55), 0 0 35px rgba(255,165,0,0.25), inset 0 0 10px rgba(255,215,0,0.08);
+  animation: ownerGoldGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes ownerGoldGlow {
+  0%,100% { box-shadow: 0 0 15px rgba(255,215,0,0.55), 0 0 35px rgba(255,165,0,0.25), inset 0 0 10px rgba(255,215,0,0.08); }
+  50%     { box-shadow: 0 0 25px rgba(255,215,0,0.75), 0 0 50px rgba(255,165,0,0.35), inset 0 0 14px rgba(255,215,0,0.12); }
+}
+
+.chat-msg {
+  animation: chatFadeIn 0.3s ease forwards;
+}
+
+@keyframes chatFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.room-btn-circle {
+  transition: box-shadow 0.3s ease, opacity 0.2s ease;
+}
+
+.room-btn-circle:active {
+  opacity: 0.8;
+  box-shadow: 0 0 15px rgba(0,255,255,0.5);
+}
+
+.room-btn-share:active {
+  box-shadow: 0 0 15px rgba(138,43,226,0.5);
+}
+
+.room-btn-gift:active {
+  box-shadow: 0 0 15px rgba(236,72,153,0.5);
+}
+
+.room-btn-gems:active {
+  box-shadow: 0 0 15px rgba(139,92,246,0.5);
+}
+
+.room-bottom-send-btn {
+  animation: sendPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes sendPulse {
+  0%   { box-shadow: 0 0 12px rgba(45,212,191,0.3); }
+  50%  { box-shadow: 0 0 22px rgba(45,212,191,0.65), 0 0 40px rgba(138,43,226,0.2); }
+  100% { box-shadow: 0 0 12px rgba(45,212,191,0.3); }
+}
+
+.room-bottom-chat-input:focus {
+  border-color: rgba(0,255,255,0.35);
+  box-shadow: 0 0 8px rgba(0,255,255,0.15);
+}
+
 @media (max-width: 430px) {
   .app-container { max-width: 100%; }
   .room-container { max-width: 100%; }
