@@ -375,12 +375,12 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
               <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.name}</h2>
               {user.vip && <span className="badge badge-vip">{"\u{1F451}"} VIP</span>}
               {isAdmin ? (
-                <span className="badge" style={{ fontSize: 9, padding: "2px 8px", background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)", fontWeight: 900, textShadow: "0 0 6px rgba(255,215,0,0.5)" }}>
-                  {"\u{1F451}"} Super Admin
+                <span className="super-admin-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>
+                  {"\u{1F451}"} SUPER ADMIN
                 </span>
               ) : user.globalRole === "official" ? (
-                <span className="badge" style={{ fontSize: 9, padding: "2px 8px", background: "rgba(255,215,0,0.15)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.3)", fontWeight: 800 }}>
-                  {"\u{1F6E1}\uFE0F"} Official
+                <span className="official-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>
+                  {"\u{1F6E1}\uFE0F"} OFFICIAL
                 </span>
               ) : null}
             </div>
@@ -400,7 +400,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                   <span className="founder-badge">{"\u{1F451}"} Founder</span>
                 </>
               ) : (user.globalRole === "official") ? (
-                <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 22, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }} />
+                <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 22, filter: "drop-shadow(0 0 6px rgba(0,206,201,0.5)) drop-shadow(0 0 12px rgba(9,132,227,0.3))" }} />
               ) : (
                 <span className="badge badge-accent" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u2B50"} Lv.{user.level}</span>
               )}
@@ -930,10 +930,10 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             <div style={{ textAlign: "center", marginTop: 4 }}>
               <p style={{ fontSize: 18, fontWeight: 900 }}>{viewingProfile.name}</p>
               {isSuperAdmin(viewingProfile) && (
-                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 8, background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)", fontWeight: 900 }}>{"\u{1F451}"} Super Admin</span>
+                <span className="super-admin-chat-tag" style={{ fontSize: 9, padding: "2px 10px", borderRadius: 8 }}>{"\u{1F451}"} SUPER ADMIN</span>
               )}
               {viewingProfile.globalRole === "official" && !isSuperAdmin(viewingProfile) && (
-                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 8, background: "rgba(255,215,0,0.12)", color: "#FFD700", fontWeight: 700 }}>{"\u{1F6E1}\uFE0F"} Official</span>
+                <span className="official-chat-tag" style={{ fontSize: 9, padding: "2px 10px", borderRadius: 8 }}>{"\u{1F6E1}\uFE0F"} OFFICIAL</span>
               )}
               <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginTop: 4 }}>Level {viewingProfile.level} {"\u00B7"} {viewingProfile.xp} XP</p>
               {viewingProfile.bio && <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 6, lineHeight: 1.5 }}>{viewingProfile.bio}</p>}

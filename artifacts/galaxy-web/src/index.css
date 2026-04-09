@@ -621,6 +621,20 @@ textarea.input-field { resize: none; line-height: 1.5; }
   animation: speaking-ring 1.3s ease-in-out infinite 0.2s;
 }
 
+.speaking-ring-gold .speaking-ring-inner {
+  border-color: rgba(255,215,0,0.7);
+}
+.speaking-ring-gold .speaking-ring-outer {
+  border-color: rgba(255,215,0,0.3);
+}
+
+.speaking-ring-blue .speaking-ring-inner {
+  border-color: rgba(0,206,201,0.7);
+}
+.speaking-ring-blue .speaking-ring-outer {
+  border-color: rgba(9,132,227,0.3);
+}
+
 .seat-badge {
   position: absolute; left: 50%; transform: translateX(-50%);
 }
@@ -645,15 +659,15 @@ textarea.input-field { resize: none; line-height: 1.5; }
 }
 
 .seat-official {
-  border: 2.5px solid #FFD700 !important;
-  box-shadow: 0 0 12px rgba(255,215,0,0.5), 0 0 24px rgba(255,215,0,0.2), inset 0 0 8px rgba(255,215,0,0.1) !important;
+  border: 2.5px solid #00CEC9 !important;
+  box-shadow: 0 0 12px rgba(0,206,201,0.5), 0 0 24px rgba(9,132,227,0.2), inset 0 0 8px rgba(0,206,201,0.1) !important;
 }
 
 .official-phoenix-frame {
   position: absolute; inset: -6px;
   width: calc(100% + 12px); height: calc(100% + 12px);
   pointer-events: none; z-index: 1;
-  filter: drop-shadow(0 0 6px rgba(255,215,0,0.6));
+  filter: drop-shadow(0 0 6px rgba(0,206,201,0.6)) drop-shadow(0 0 10px rgba(9,132,227,0.3));
   animation: officialPulse 2s ease-in-out infinite;
 }
 
@@ -661,17 +675,17 @@ textarea.input-field { resize: none; line-height: 1.5; }
   position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
   width: 50px; height: 14px;
   pointer-events: none; z-index: 2;
-  filter: drop-shadow(0 0 4px rgba(255,215,0,0.5));
+  filter: drop-shadow(0 0 4px rgba(0,206,201,0.5)) drop-shadow(0 0 8px rgba(9,132,227,0.3));
 }
 
 @keyframes officialPulse {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(255,215,0,0.6)); }
-  50% { filter: drop-shadow(0 0 12px rgba(255,215,0,0.8)); }
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(0,206,201,0.6)); }
+  50% { filter: drop-shadow(0 0 12px rgba(0,206,201,0.8)) drop-shadow(0 0 18px rgba(9,132,227,0.4)); }
 }
 
 .seat-name-official {
-  color: #FFD700 !important;
-  text-shadow: 0 0 6px rgba(255,215,0,0.4);
+  color: #00CEC9 !important;
+  text-shadow: 0 0 6px rgba(0,206,201,0.4), 0 0 12px rgba(9,132,227,0.2);
 }
 
 .seat-name-super-admin {
@@ -714,7 +728,7 @@ textarea.input-field { resize: none; line-height: 1.5; }
 }
 
 .super-admin-tag {
-  filter: drop-shadow(0 0 8px rgba(255,215,0,0.5)) drop-shadow(0 0 16px rgba(191,0,255,0.3));
+  filter: drop-shadow(0 0 10px rgba(255,215,0,0.6)) drop-shadow(0 0 20px rgba(108,92,231,0.4));
   animation: superAdminTagGlow 3s ease-in-out infinite;
 }
 
@@ -732,8 +746,8 @@ textarea.input-field { resize: none; line-height: 1.5; }
 }
 
 @keyframes superAdminTagGlow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(255,215,0,0.5)) drop-shadow(0 0 16px rgba(191,0,255,0.3)); }
-  50% { filter: drop-shadow(0 0 14px rgba(255,215,0,0.7)) drop-shadow(0 0 24px rgba(191,0,255,0.5)); }
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(255,215,0,0.6)) drop-shadow(0 0 20px rgba(108,92,231,0.4)); }
+  50% { filter: drop-shadow(0 0 18px rgba(255,215,0,0.8)) drop-shadow(0 0 30px rgba(108,92,231,0.6)); }
 }
 
 @keyframes particleFloat {
@@ -967,6 +981,26 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .seat-speaking {
   box-shadow: 0 0 20px rgba(0,255,255,0.8), 0 0 45px rgba(0,255,255,0.3);
   animation: seatSpeakGlow 1.5s ease-in-out infinite;
+}
+
+.seat-super-admin.seat-speaking {
+  box-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 45px rgba(108,92,231,0.3) !important;
+  animation: seatSpeakGlowGold 1.5s ease-in-out infinite !important;
+}
+
+.seat-official.seat-speaking {
+  box-shadow: 0 0 20px rgba(0,206,201,0.8), 0 0 45px rgba(9,132,227,0.3) !important;
+  animation: seatSpeakGlowBlue 1.5s ease-in-out infinite !important;
+}
+
+@keyframes seatSpeakGlowGold {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 45px rgba(108,92,231,0.3); }
+  50% { box-shadow: 0 0 30px rgba(255,215,0,1), 0 0 60px rgba(108,92,231,0.5); }
+}
+
+@keyframes seatSpeakGlowBlue {
+  0%, 100% { box-shadow: 0 0 20px rgba(0,206,201,0.8), 0 0 45px rgba(9,132,227,0.3); }
+  50% { box-shadow: 0 0 30px rgba(0,206,201,1), 0 0 60px rgba(9,132,227,0.5); }
 }
 
 @keyframes seatSpeakGlow {
@@ -1294,20 +1328,41 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .super-admin-chat-tag {
   font-size: 8px;
   font-weight: 900;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 6px;
-  background: linear-gradient(135deg, rgba(191,0,255,0.25), rgba(108,92,231,0.2));
-  color: #bf00ff;
-  border: 1px solid rgba(191,0,255,0.4);
-  text-shadow: 0 0 6px rgba(191,0,255,0.5);
+  background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(108,92,231,0.35));
+  color: #FFD700;
+  border: 1px solid rgba(255,215,0,0.5);
+  text-shadow: 0 0 8px rgba(255,215,0,0.6), 0 0 16px rgba(108,92,231,0.3);
+  box-shadow: 0 0 8px rgba(255,215,0,0.25), 0 0 16px rgba(108,92,231,0.15);
   letter-spacing: 0.5px;
   animation: superAdminTagPulse 2s ease-in-out infinite;
   white-space: nowrap;
 }
 
+.official-chat-tag {
+  font-size: 8px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(0,206,201,0.3), rgba(9,132,227,0.3));
+  color: #00CEC9;
+  border: 1px solid rgba(0,206,201,0.5);
+  text-shadow: 0 0 6px rgba(0,206,201,0.5), 0 0 12px rgba(9,132,227,0.3);
+  box-shadow: 0 0 6px rgba(0,206,201,0.2), 0 0 12px rgba(9,132,227,0.1);
+  letter-spacing: 0.5px;
+  animation: officialTagPulse 2.5s ease-in-out infinite;
+  white-space: nowrap;
+}
+
 @keyframes superAdminTagPulse {
-  0%, 100% { box-shadow: 0 0 4px rgba(191,0,255,0.2); }
-  50% { box-shadow: 0 0 10px rgba(191,0,255,0.4), 0 0 20px rgba(191,0,255,0.15); }
+  0%, 100% { box-shadow: 0 0 8px rgba(255,215,0,0.25), 0 0 16px rgba(108,92,231,0.15); }
+  50% { box-shadow: 0 0 14px rgba(255,215,0,0.45), 0 0 28px rgba(108,92,231,0.25), 0 0 40px rgba(255,215,0,0.1); }
+}
+
+@keyframes officialTagPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(0,206,201,0.2), 0 0 12px rgba(9,132,227,0.1); }
+  50% { box-shadow: 0 0 10px rgba(0,206,201,0.35), 0 0 22px rgba(9,132,227,0.2); }
 }
 
 @keyframes voiceBarPulse {

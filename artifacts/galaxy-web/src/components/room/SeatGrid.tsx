@@ -58,7 +58,13 @@ interface SeatCellProps {
   onTap: () => void;
 }
 
-function AudioWaveRing() {
+function AudioWaveRing({ color = "cyan" }: { color?: "cyan" | "gold" | "blue" }) {
+  const colors = {
+    cyan:  { ring: "rgba(0,255,255,0.6)", bar: "rgba(0,255,255,0.7)" },
+    gold:  { ring: "rgba(255,215,0,0.6)", bar: "rgba(255,215,0,0.7)" },
+    blue:  { ring: "rgba(0,206,201,0.6)", bar: "rgba(9,132,227,0.7)" },
+  };
+  const c = colors[color];
   return (
     <svg className="audio-wave-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
       {[0, 1, 2].map(i => (
@@ -67,7 +73,7 @@ function AudioWaveRing() {
           cx="40" cy="40"
           r={30 + i * 5}
           fill="none"
-          stroke="rgba(0,255,255,0.6)"
+          stroke={c.ring}
           strokeWidth={2 - i * 0.5}
           className={`audio-wave-ring audio-wave-ring-${i}`}
         />
@@ -82,7 +88,7 @@ function AudioWaveRing() {
             key={`bar-${i}`}
             x1={x} y1={y}
             x2={40 + Math.cos(angle) * (r + 8)} y2={40 + Math.sin(angle) * (r + 8)}
-            stroke="rgba(0,255,255,0.7)"
+            stroke={c.bar}
             strokeWidth="1.5"
             strokeLinecap="round"
             className={`audio-bar audio-bar-${i % 4}`}
@@ -118,12 +124,12 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
         {isOfficial && !isSuperAdmin && isActive && (
           <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" className="official-phoenix-frame" />
         )}
-        {isSpeaking && <AudioWaveRing />}
+        {isSpeaking && <AudioWaveRing color={isSuperAdmin ? "gold" : isOfficial ? "blue" : "cyan"} />}
         {isSpeaking && (
-          <>
+          <div className={isSuperAdmin ? "speaking-ring-gold" : isOfficial ? "speaking-ring-blue" : ""}>
             <div className="speaking-ring speaking-ring-inner" />
             <div className="speaking-ring speaking-ring-outer" />
-          </>
+          </div>
         )}
         <div className={seatClass}>
           {isLocked ? (

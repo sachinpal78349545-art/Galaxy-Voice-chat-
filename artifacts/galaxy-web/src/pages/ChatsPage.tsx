@@ -489,10 +489,10 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
                 <span style={{ fontSize: 12, color: "#1DA1F2", flexShrink: 0 }}>{"\u2714"}</span>
               )}
               {otherIsSuperAdmin && (
-                <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 6, background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)", fontWeight: 900, whiteSpace: "nowrap" }}>{"\u{1F451}"} S.Admin</span>
+                <span className="super-admin-chat-tag">{"\u{1F451}"} S.ADMIN</span>
               )}
               {otherProfile?.globalRole === "official" && !otherIsSuperAdmin && (
-                <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 6, background: "rgba(255,215,0,0.12)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.25)", fontWeight: 700, whiteSpace: "nowrap" }}>{"\u{1F6E1}\uFE0F"} Official</span>
+                <span className="official-chat-tag">{"\u{1F6E1}\uFE0F"} OFFICIAL</span>
               )}
             </div>
             <p style={{ fontSize: 10, color: statusColor }}>{statusText}</p>
@@ -595,12 +595,12 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
                       ? "linear-gradient(135deg,#2d1b69,#1a0a3e)"
                       : isSelf ? "linear-gradient(135deg,#6C5CE7,#A29BFE)" : "rgba(255,255,255,0.07)",
                     border: senderIsSuperAdmin && !isSelf
-                      ? "1.5px solid rgba(191,0,255,0.5)"
+                      ? "1.5px solid rgba(255,215,0,0.5)"
                       : senderIsSuperAdmin && isSelf
-                      ? "1.5px solid rgba(191,0,255,0.4)"
+                      ? "1.5px solid rgba(255,215,0,0.4)"
                       : isSelf ? "none" : "1px solid rgba(255,255,255,0.08)",
                     boxShadow: senderIsSuperAdmin
-                      ? "0 0 12px rgba(191,0,255,0.25), 0 0 24px rgba(191,0,255,0.1), 0 4px 14px rgba(108,92,231,0.2)"
+                      ? "0 0 12px rgba(255,215,0,0.2), 0 0 24px rgba(108,92,231,0.15), 0 4px 14px rgba(108,92,231,0.2)"
                       : isSelf ? "0 4px 14px rgba(108,92,231,0.3)" : "none",
                     fontSize: 14, color: "#fff", overflow: "hidden", position: "relative", cursor: "pointer",
                   }}
@@ -952,7 +952,7 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
                     background: convOtherIsSuperAdmin ? "rgba(255,215,0,0.12)" : "rgba(108,92,231,0.14)",
                     border: convOtherIsSuperAdmin ? "2px solid rgba(255,215,0,0.3)" : "2px solid rgba(108,92,231,0.25)",
                     display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
-                    boxShadow: convOtherIsSuperAdmin ? "0 0 10px rgba(191,0,255,0.2)" : "none",
+                    boxShadow: convOtherIsSuperAdmin ? "0 0 10px rgba(255,215,0,0.2), 0 0 18px rgba(108,92,231,0.15)" : "none",
                   }}>
                     {conv.participantAvatars[idx]?.startsWith?.("http")
                       ? <img src={conv.participantAvatars[idx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 24 }} />
