@@ -11,9 +11,10 @@ interface SeatGridProps {
   hashCode: (s: string) => number;
   onSeatTap: (seatIndex: number, seat: RoomSeat) => void;
   isOwnerSeat?: (seat: RoomSeat) => boolean;
+  officialUids?: Set<string>;
 }
 
-export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat }: SeatGridProps) {
+export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids }: SeatGridProps) {
   return (
     <div className="room-seat-area">
       <div className="room-seat-grid">
@@ -32,6 +33,7 @@ export default function SeatGrid({ room, userUid, hasControl, speakingUids, voic
               isMe={seat.userId === userUid}
               isSpeaking={isSpeaking}
               isOwner={isOwnerSeat ? isOwnerSeat(seat) : false}
+              isOfficial={seat.userId ? (officialUids?.has(seat.userId) || false) : false}
               onTap={() => onSeatTap(i, seat)}
             />
           );
@@ -48,6 +50,7 @@ interface SeatCellProps {
   isMe: boolean;
   isSpeaking: boolean;
   isOwner: boolean;
+  isOfficial: boolean;
   onTap: () => void;
 }
 
@@ -86,7 +89,7 @@ function AudioWaveRing() {
   );
 }
 
-function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: SeatCellProps) {
+function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial, onTap }: SeatCellProps) {
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
 
@@ -95,6 +98,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: S
     isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty",
     isOwner && isActive ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
+    isOfficial && isActive ? "seat-official" : "",
   ].filter(Boolean).join(" ");
 
   const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
@@ -102,6 +106,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: S
   return (
     <div className="seat-cell" style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
       <div className="seat-wrapper">
+        {isOfficial && isActive && <div className="official-frame-ring" />}
         {isSpeaking && <AudioWaveRing />}
         {isSpeaking && (
           <>
@@ -120,13 +125,16 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: S
             <span className="seat-empty-plus">+</span>
           )}
         </div>
-        {role === "owner" && isActive && (
+        {isOfficial && isActive && (
+          <div className="seat-badge seat-badge-official">{"\u{1F6E1}\uFE0F"}</div>
+        )}
+        {role === "owner" && isActive && !isOfficial && (
           <div className="seat-badge seat-badge-owner">{"\u{1F451}"}</div>
         )}
-        {role === "admin" && isActive && (
+        {role === "admin" && isActive && !isOfficial && (
           <div className="seat-badge seat-badge-admin">{"\u{1F6E1}\uFE0F"}</div>
         )}
-        {seat.isCoHost && role !== "owner" && role !== "admin" && isActive && (
+        {seat.isCoHost && role !== "owner" && role !== "admin" && isActive && !isOfficial && (
           <div className="seat-badge seat-badge-cohost">{"\u{1F396}\uFE0F"}</div>
         )}
         {isActive && seat.isMuted && (
@@ -138,7 +146,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: S
       </div>
       <div className="seat-info">
         {isActive && seat.username && (
-          <span className="seat-name">{cleanName(seat.username)}</span>
+          <span className={`seat-name${isOfficial ? " seat-name-official" : ""}`}>{cleanName(seat.username)}</span>
         )}
         <span className="seat-number">{seatIndex + 1}</span>
       </div>

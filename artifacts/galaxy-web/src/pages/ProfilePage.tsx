@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers } from "../lib/userService";
+import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin } from "../lib/userService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { useToast } from "../lib/toastContext";
 
@@ -51,6 +51,10 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   const [showFeedback, setShowFeedback] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showHelpArticle, setShowHelpArticle] = useState<string | null>(null);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [adminPromoteId, setAdminPromoteId] = useState("");
+  const [adminLookupResult, setAdminLookupResult] = useState<UserProfile | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
   const [feedbackType, setFeedbackType] = useState<"feedback" | "bug" | "suggestion">("feedback");
   const [feedbackSubject, setFeedbackSubject] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -75,6 +79,12 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   const unlockedCount = achievements.filter(a => a.unlocked).length;
   const dailyTasks = getDailyTaskProgress(user);
   const transactions: Transaction[] = user.transactions ? Object.values(user.transactions).sort((a, b) => b.timestamp - a.timestamp) : [];
+
+  const isAdmin = isSuperAdmin(user);
+
+  useEffect(() => {
+    if (isAdmin) ensureSuperAdmin(user.uid).catch(console.error);
+  }, [isAdmin, user.uid]);
 
   useEffect(() => {
     const unsub = subscribeFriendRequests(user.uid, setFriendRequests);
@@ -202,6 +212,45 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
     setFeedbackSending(false);
   };
 
+  const handleAdminLookup = async () => {
+    if (!adminPromoteId.trim()) return;
+    setAdminLoading(true);
+    try {
+      const found = await getUserByUserId(adminPromoteId.trim());
+      setAdminLookupResult(found);
+      if (!found) showToast("User not found", "warning");
+    } catch {
+      showToast("Lookup failed", "error");
+    }
+    setAdminLoading(false);
+  };
+
+  const handlePromoteOfficial = async () => {
+    if (!adminLookupResult) return;
+    setAdminLoading(true);
+    try {
+      await setOfficialRole(adminLookupResult.uid);
+      showToast(`${adminLookupResult.name} promoted to Official!`, "success");
+      setAdminLookupResult({ ...adminLookupResult, globalRole: "official", frame: "assets/frames/official_frame.png" });
+    } catch {
+      showToast("Failed to promote", "error");
+    }
+    setAdminLoading(false);
+  };
+
+  const handleDemoteOfficial = async () => {
+    if (!adminLookupResult) return;
+    setAdminLoading(true);
+    try {
+      await removeOfficialRole(adminLookupResult.uid);
+      showToast(`${adminLookupResult.name} demoted to User`, "info");
+      setAdminLookupResult({ ...adminLookupResult, globalRole: "user", frame: undefined });
+    } catch {
+      showToast("Failed to demote", "error");
+    }
+    setAdminLoading(false);
+  };
+
   const handleMenu = (action: string) => {
     if (action === "edit") onEditProfile();
     if (action === "wallet") setShowWallet(true);
@@ -216,6 +265,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
     if (action === "search") setShowSearch(true);
     if (action === "feedback") setShowFeedback(true);
     if (action === "help") setShowHelp(true);
+    if (action === "admin") { setShowAdminPanel(true); setAdminPromoteId(""); setAdminLookupResult(null); }
   };
 
   return (
@@ -230,8 +280,10 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
               width: 100, height: 100, borderRadius: 50, fontSize: 50,
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-              border: "3px solid rgba(108,92,231,0.5)",
-              boxShadow: "0 0 32px rgba(108,92,231,0.4), 0 8px 32px rgba(0,0,0,0.3)",
+              border: (user.globalRole === "official" || isAdmin) ? "3px solid #FFD700" : "3px solid rgba(108,92,231,0.5)",
+              boxShadow: (user.globalRole === "official" || isAdmin)
+                ? "0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
+                : "0 0 32px rgba(108,92,231,0.4), 0 8px 32px rgba(0,0,0,0.3)",
               cursor: "pointer", overflow: "hidden",
             }} onClick={onEditProfile}>
               {user.avatar.startsWith("http") ? (
@@ -253,6 +305,11 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
               <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.name}</h2>
               {user.vip && <span className="badge badge-vip">{"\u{1F451}"} VIP</span>}
+              {(user.globalRole === "official" || isAdmin) && (
+                <span className="badge" style={{ fontSize: 9, padding: "2px 8px", background: "rgba(255,215,0,0.15)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.3)", fontWeight: 800 }}>
+                  {"\u{1F6E1}\uFE0F"} {isAdmin ? "Super Admin" : "Official"}
+                </span>
+              )}
             </div>
             <p style={{ fontSize: 13, color: "rgba(162,155,254,0.5)", marginBottom: 4, fontFamily: "monospace", letterSpacing: 1 }}>
               ID: {user.userId || "N/A"}
@@ -348,6 +405,21 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
             </React.Fragment>
           ))}
         </div>
+
+        {isAdmin && (
+          <button
+            className="btn btn-full"
+            style={{
+              padding: "14px 0", fontSize: 15, fontWeight: 800,
+              background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05))",
+              border: "1.5px solid rgba(255,215,0,0.4)",
+              color: "#FFD700",
+            }}
+            onClick={() => handleMenu("admin")}
+          >
+            {"\u{1F6E1}\uFE0F"} Admin Panel
+          </button>
+        )}
 
         <button className="btn btn-danger btn-full" style={{ padding: "14px 0", fontSize: 15 }} onClick={handleLogout}>
           {"\u{1F6AA}"} Log Out
@@ -759,6 +831,106 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
                 </div>
               </div>
             )}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showAdminPanel && (
+        <BottomSheet onClose={() => setShowAdminPanel(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#FFD700" }}>{"\u{1F6E1}\uFE0F"} Admin Panel</h2>
+            <button onClick={() => setShowAdminPanel(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <div className="card" style={{ padding: 16, marginBottom: 14, border: "1px solid rgba(255,215,0,0.2)" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: "#FFD700" }}>{"\u{1F451}"} Official Promoter</h3>
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 10 }}>
+                Enter a User ID to promote or demote as Official
+              </p>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <input
+                  type="text"
+                  value={adminPromoteId}
+                  onChange={e => { setAdminPromoteId(e.target.value); setAdminLookupResult(null); }}
+                  placeholder="Enter User ID..."
+                  style={{
+                    flex: 1, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(255,215,0,0.2)",
+                    background: "rgba(255,255,255,0.04)", color: "#fff", fontSize: 13, fontFamily: "monospace",
+                    outline: "none",
+                  }}
+                />
+                <button className="btn btn-sm" style={{ background: "rgba(255,215,0,0.15)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.3)", fontWeight: 700, padding: "8px 16px" }}
+                  onClick={handleAdminLookup} disabled={adminLoading}>
+                  {adminLoading ? "..." : "\u{1F50D}"}
+                </button>
+              </div>
+              {adminLookupResult && (
+                <div style={{
+                  padding: 14, borderRadius: 14,
+                  background: "rgba(255,215,0,0.05)", border: "1px solid rgba(255,215,0,0.15)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 22, fontSize: 22,
+                      background: "rgba(108,92,231,0.12)",
+                      border: adminLookupResult.globalRole === "official" ? "2px solid #FFD700" : "2px solid rgba(108,92,231,0.3)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {adminLookupResult.avatar?.startsWith("http")
+                        ? <img src={adminLookupResult.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                        : adminLookupResult.avatar}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adminLookupResult.name}</p>
+                      <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontFamily: "monospace" }}>ID: {adminLookupResult.userId}</p>
+                      <p style={{ fontSize: 10, color: adminLookupResult.globalRole === "official" ? "#FFD700" : "rgba(162,155,254,0.4)", fontWeight: 700, marginTop: 2 }}>
+                        {adminLookupResult.globalRole === "official" ? "\u{1F6E1}\uFE0F Official" : "\u{1F464} Regular User"}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {adminLookupResult.globalRole !== "official" ? (
+                      <button className="btn btn-full btn-sm" style={{
+                        background: "linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,215,0,0.1))",
+                        border: "1px solid rgba(255,215,0,0.4)", color: "#FFD700", fontWeight: 800, padding: "10px 0",
+                      }} onClick={handlePromoteOfficial} disabled={adminLoading}>
+                        {adminLoading ? "Processing..." : "\u{1F451} Promote to Official"}
+                      </button>
+                    ) : (
+                      <button className="btn btn-full btn-sm btn-danger" style={{ padding: "10px 0", fontWeight: 800 }}
+                        onClick={handleDemoteOfficial} disabled={adminLoading}>
+                        {adminLoading ? "Processing..." : "\u274C Remove Official"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="card" style={{ padding: 16, border: "1px solid rgba(255,215,0,0.2)" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 8, color: "#FFD700" }}>{"\u{1F5BC}\uFE0F"} Frame Assigner</h3>
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.6 }}>
+                Officials automatically receive a golden frame on their avatar.
+                The frame <span style={{ color: "rgba(255,215,0,0.7)", fontFamily: "monospace" }}>official_frame.png</span> is assigned when promoted.
+              </p>
+              <div style={{
+                marginTop: 12, padding: 12, borderRadius: 12,
+                background: "rgba(255,215,0,0.04)", border: "1px solid rgba(255,215,0,0.1)",
+                display: "flex", alignItems: "center", gap: 10,
+              }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 20,
+                  border: "2.5px solid #FFD700",
+                  boxShadow: "0 0 12px rgba(255,215,0,0.4), 0 0 24px rgba(255,215,0,0.15)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 18, background: "rgba(108,92,231,0.12)",
+                }}>{"\u{1F464}"}</div>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "#FFD700" }}>Golden Frame Preview</p>
+                  <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Active on all Official avatars</p>
+                </div>
+              </div>
+            </div>
           </div>
         </BottomSheet>
       )}

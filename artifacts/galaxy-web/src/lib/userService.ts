@@ -46,6 +46,8 @@ export interface DailyTask {
   field: string;
 }
 
+export const SUPER_ADMIN_USER_ID = "306623582";
+
 export interface UserProfile {
   uid: string;
   userId: string;
@@ -65,6 +67,9 @@ export interface UserProfile {
   online: boolean;
   lastSeen: number;
   createdAt: number;
+  isSuperAdmin?: boolean;
+  globalRole?: "official" | "user";
+  frame?: string;
   dailyReward?: {
     lastClaimed: number;
     streak: number;
@@ -584,4 +589,40 @@ export function canChatSync(profileA: UserProfile, profileB: UserProfile): boole
   const aFollowing = profileA.followingList || [];
   const bFollowing = profileB.followingList || [];
   return aFollowing.includes(profileB.uid) && bFollowing.includes(profileA.uid);
+}
+
+export function isSuperAdmin(user: UserProfile): boolean {
+  return user.userId === SUPER_ADMIN_USER_ID || user.isSuperAdmin === true;
+}
+
+export function isOfficialOrAdmin(user: UserProfile): boolean {
+  return isSuperAdmin(user) || user.globalRole === "official";
+}
+
+export async function setOfficialRole(targetUid: string): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), {
+    globalRole: "official",
+    frame: "assets/frames/official_frame.png",
+  });
+}
+
+export async function removeOfficialRole(targetUid: string): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), {
+    globalRole: "user",
+    frame: null,
+  });
+}
+
+export async function ensureSuperAdmin(uid: string): Promise<void> {
+  await update(ref(db, `users/${uid}`), { isSuperAdmin: true });
+}
+
+export async function getUserByUserId(userId: string): Promise<UserProfile | null> {
+  const snap = await get(ref(db, "users"));
+  if (!snap.exists()) return null;
+  const val = snap.val();
+  for (const uid of Object.keys(val)) {
+    if (val[uid].userId === userId) return { ...val[uid], uid } as UserProfile;
+  }
+  return null;
 }

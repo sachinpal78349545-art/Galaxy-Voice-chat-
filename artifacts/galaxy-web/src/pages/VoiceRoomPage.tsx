@@ -9,7 +9,7 @@ import {
   kickUserFromRoom, updateRoomSettings, endRoom, deleteRoom,
   followRoom, unfollowRoom, setupPresence,
 } from "../lib/roomService";
-import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser } from "../lib/userService";
+import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser, isOfficialOrAdmin, ensureSuperAdmin, isSuperAdmin, SUPER_ADMIN_USER_ID } from "../lib/userService";
 import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } from "../lib/giftService";
 import { sendNotification } from "../lib/notificationService";
 import { voiceService } from "../lib/voiceService";
@@ -69,7 +69,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       setRoom(r);
       if (r && !joinedRef.current) {
         joinedRef.current = true;
-        joinRoom(roomId, user.uid, user.name, user.avatar, enteredPassword).then(res => {
+        const officialFlag = isOfficialOrAdmin(user);
+        if (isSuperAdmin(user)) ensureSuperAdmin(user.uid).catch(console.error);
+        joinRoom(roomId, user.uid, user.name, user.avatar, enteredPassword, officialFlag).then(res => {
           if (!res.joined) {
             showToast(res.reason || "Cannot join room", "error");
             onLeave();
@@ -77,7 +79,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           }
           presenceCleanupRef.current = setupPresence(roomId, user.uid);
           incrementStat(user.uid, "roomsJoined").catch(console.error);
-          sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F389}", text: `Welcome ${cleanName(user.name)} to the room \u{1F389}`, type: "welcome" }).catch(console.error);
+          if (officialFlag) {
+            sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6E1}\uFE0F", text: `Official Support ${cleanName(user.name)} has entered the room`, type: "system" }).catch(console.error);
+          } else {
+            sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F389}", text: `Welcome ${cleanName(user.name)} to the room \u{1F389}`, type: "welcome" }).catch(console.error);
+          }
           setWelcomeAnim(cleanName(user.name));
           setTimeout(() => setWelcomeAnim(null), 3500);
         }).catch(err => {
@@ -143,7 +149,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const isOwner = room?.hostId === user.uid;
-  const hasControl = room ? isOwnerOrAdmin(room, user.uid) : false;
+  const userIsOfficial = isOfficialOrAdmin(user);
+  const hasControl = room ? (isOwnerOrAdmin(room, user.uid) || userIsOfficial) : false;
   const myRole = room ? getUserRole(room, user.uid) : "user";
   const liveCount = room ? Object.keys(room.roomUsers || {}).length || room.listeners : 0;
 
@@ -462,6 +469,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         voiceJoined={voiceService.joined}
         hashCode={hashCode}
         isOwnerSeat={(seat) => seat.userId === room.hostId}
+        officialUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isOfficial).map((ru: any) => ru.uid))}
         onSeatTap={(i, seat) => {
           if (seat.userId === user.uid) return;
           if (seat.userId) {
@@ -663,7 +671,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                       <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ru.name}</span>
                       {ru.uid === user.uid && <span style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>(you)</span>}
                     </div>
-                    <RoleBadge role={ru.role} />
+                    {(ru as any).isOfficial
+                      ? <span className="badge" style={{ fontSize: 8, padding: "1px 6px", background: "rgba(255,215,0,0.15)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.3)" }}>{"\u{1F6E1}\uFE0F"} Official</span>
+                      : <RoleBadge role={ru.role} />
+                    }
                   </div>
                   {ru.seatIndex !== null && ru.seatIndex !== undefined && (
                     <span style={{ fontSize: 9, color: "rgba(162,155,254,0.3)" }}>Seat {ru.seatIndex + 1}</span>
@@ -685,7 +696,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                       onClick={() => handleUserAction("mute", selectedUserUid)}>{"\u{1F507}"} Mute</button>
                     <button className="btn btn-danger btn-sm" style={{ fontSize: 10 }}
                       onClick={() => handleUserAction("kick", selectedUserUid)}>{"\u{1F6AB}"} Kick</button>
-                    {isOwner && (
+                    {(isOwner || userIsOfficial) && (
                       <button className="btn btn-danger btn-sm" style={{ fontSize: 10 }}
                         onClick={() => handleUserAction("ban", selectedUserUid)}>{"\u26D4"} Ban</button>
                     )}
@@ -1070,7 +1081,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                             )}
                             <button className="btn btn-danger btn-sm" style={{ fontSize: 9, padding: "4px 8px" }}
                               onClick={() => handleUserAction("kick", ru.uid)}>{"\u{1F6AB}"}</button>
-                            {isOwner && (
+                            {(isOwner || userIsOfficial) && (
                               <button className="btn btn-danger btn-sm" style={{ fontSize: 9, padding: "4px 8px" }}
                                 onClick={() => handleUserAction("ban", ru.uid)}>{"\u26D4"}</button>
                             )}

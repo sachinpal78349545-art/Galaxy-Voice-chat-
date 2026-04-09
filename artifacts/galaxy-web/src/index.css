@@ -639,6 +639,34 @@ textarea.input-field { resize: none; line-height: 1.5; }
   top: -9px; font-size: 10px;
 }
 
+.seat-badge-official {
+  top: -10px; font-size: 12px;
+  filter: drop-shadow(0 0 8px rgba(255,215,0,0.9));
+}
+
+.seat-official {
+  border: 2.5px solid #FFD700 !important;
+  box-shadow: 0 0 12px rgba(255,215,0,0.5), 0 0 24px rgba(255,215,0,0.2), inset 0 0 8px rgba(255,215,0,0.1) !important;
+}
+
+.official-frame-ring {
+  position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid rgba(255,215,0,0.6);
+  box-shadow: 0 0 10px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.15);
+  animation: officialPulse 2s ease-in-out infinite;
+  pointer-events: none; z-index: 1;
+}
+
+@keyframes officialPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.15); }
+  50% { box-shadow: 0 0 16px rgba(255,215,0,0.6), 0 0 32px rgba(255,215,0,0.25); }
+}
+
+.seat-name-official {
+  color: #FFD700 !important;
+  text-shadow: 0 0 6px rgba(255,215,0,0.4);
+}
+
 .seat-info {
   display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 1px;
 }
