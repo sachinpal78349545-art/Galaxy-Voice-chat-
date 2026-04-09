@@ -7,7 +7,7 @@ import {
   leaveSeat, joinSeat, setCoHost, isOwnerOrAdmin, getUserRole,
   joinRoom, leaveRoom, setAdmin, removeAdmin, banUser, unbanUser,
   kickUserFromRoom, updateRoomSettings, endRoom, deleteRoom,
-  followRoom, unfollowRoom,
+  followRoom, unfollowRoom, setupPresence,
 } from "../lib/roomService";
 import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser } from "../lib/userService";
 import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } from "../lib/giftService";
@@ -54,6 +54,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
   const { showToast } = useToast();
   const joinedRef = useRef(false);
   const voiceInitRef = useRef(false);
+  const presenceCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub1 = subscribeRoom(roomId, r => {
@@ -71,6 +72,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
             onLeave();
             return;
           }
+          presenceCleanupRef.current = setupPresence(roomId, user.uid);
           incrementStat(user.uid, "roomsJoined").catch(console.error);
           sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F389}", text: `Welcome ${cleanName(user.name)} to the room \u{1F389}`, type: "welcome" }).catch(console.error);
           setWelcomeAnim(cleanName(user.name));
@@ -83,7 +85,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       }
     });
     const unsub2 = subscribeRoomMessages(roomId, setMessages);
-    return () => { unsub1(); unsub2(); };
+    return () => { unsub1(); unsub2(); presenceCleanupRef.current?.(); };
   }, [roomId]);
 
   useEffect(() => {
@@ -461,6 +463,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           if (seat.userId === user.uid) return;
           if (seat.userId) {
             setShowProfileCard({ uid: seat.userId, name: seat.username || "User", avatar: seat.avatar || "\u{1F464}", seatIdx: i });
+          } else if (seat.isLocked && hasControl) {
+            toggleLockSeat(roomId, i, false).then(() => {
+              showToast(`Seat ${i + 1} unlocked`, "success");
+            }).catch(console.error);
           } else if (!seat.isLocked) {
             setShowSeatSheet(i);
           }
@@ -511,7 +517,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                 else showToast("Seat not available", "warning");
                 setShowSeatSheet(null);
               }}>
-                {"\u{1F3A4}"} Take This Seat
+                {room.seats.some(s => s.userId === user.uid) ? "\u{1F504} Switch to This Seat" : "\u{1F3A4} Take This Seat"}
               </button>
               {hasControl && (
                 <button className="btn btn-ghost btn-full" onClick={() => {

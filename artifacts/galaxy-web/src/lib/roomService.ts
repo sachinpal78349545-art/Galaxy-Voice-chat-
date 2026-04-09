@@ -1,4 +1,4 @@
-import { ref, set, get, update, remove, push, onValue, off, runTransaction } from "firebase/database";
+import { ref, set, get, update, remove, push, onValue, off, runTransaction, onDisconnect } from "firebase/database";
 import { db } from "./firebase";
 
 export interface RoomSeat {
@@ -195,8 +195,16 @@ export async function joinSeat(roomId: string, seatIndex: number, userId: string
     const maxMics = room.maxMics || 12;
     if (seatIndex >= maxMics) return false;
     const seats: RoomSeat[] = room.seats || [];
-    const occupied = seats.filter((s: RoomSeat, i: number) => i < maxMics && s.userId).length;
-    if (occupied >= maxMics) return false;
+    for (let i = 0; i < seats.length; i++) {
+      if (seats[i]?.userId === userId && i !== seatIndex) {
+        await update(ref(db, `rooms/${roomId}/seats/${i}`), {
+          userId: null, username: null, avatar: null, isMuted: false, isSpeaking: false, handRaised: false, isCoHost: false,
+        });
+      }
+    }
+    const targetSeat = seats[seatIndex];
+    if (targetSeat?.userId && targetSeat.userId !== userId) return false;
+    if (targetSeat?.isLocked) return false;
   }
   await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
     userId, username, avatar, isMuted: false, isLocked: false, isSpeaking: false, handRaised: false,
@@ -221,14 +229,19 @@ export async function toggleMuteSeat(roomId: string, seatIndex: number, muted: b
 }
 
 export async function toggleLockSeat(roomId: string, seatIndex: number, locked: boolean): Promise<void> {
-  const seatSnap = await get(ref(db, `rooms/${roomId}/seats/${seatIndex}`));
-  const hadUser = seatSnap.exists() && seatSnap.val().userId;
-  const uid = hadUser ? seatSnap.val().userId : null;
-  await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
-    isLocked: locked, userId: null, username: null, avatar: null, isCoHost: false,
-  });
-  if (uid) {
-    await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), { seatIndex: null }).catch(() => {});
+  if (locked) {
+    const seatSnap = await get(ref(db, `rooms/${roomId}/seats/${seatIndex}`));
+    const uid = seatSnap.exists() ? seatSnap.val().userId : null;
+    await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
+      isLocked: true, userId: null, username: null, avatar: null, isCoHost: false,
+    });
+    if (uid) {
+      await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), { seatIndex: null }).catch(() => {});
+    }
+  } else {
+    await update(ref(db, `rooms/${roomId}/seats/${seatIndex}`), {
+      isLocked: false,
+    });
   }
 }
 
@@ -363,6 +376,38 @@ export async function followRoom(roomId: string, uid: string, name: string, avat
 
 export async function unfollowRoom(roomId: string, uid: string): Promise<void> {
   await remove(ref(db, `rooms/${roomId}/roomFollowers/${uid}`));
+}
+
+export function setupPresence(roomId: string, uid: string): () => void {
+  const userRef = ref(db, `rooms/${roomId}/roomUsers/${uid}`);
+  const listenersRef = ref(db, `rooms/${roomId}/listeners`);
+
+  onDisconnect(userRef).remove();
+  onDisconnect(listenersRef).set(null);
+
+  const seatsCleanup: (() => void)[] = [];
+  const seatsRef = ref(db, `rooms/${roomId}/seats`);
+  const handler = onValue(seatsRef, snap => {
+    if (!snap.exists()) return;
+    const seats = snap.val();
+    seatsCleanup.forEach(fn => fn());
+    seatsCleanup.length = 0;
+    for (let i = 0; i < 12; i++) {
+      if (seats[i]?.userId === uid) {
+        const seatRef = ref(db, `rooms/${roomId}/seats/${i}`);
+        onDisconnect(seatRef).update({
+          userId: null, username: null, avatar: null, isMuted: false, isSpeaking: false, handRaised: false, isCoHost: false,
+        });
+        seatsCleanup.push(() => onDisconnect(seatRef).cancel());
+      }
+    }
+  });
+
+  return () => {
+    off(seatsRef, "value", handler);
+    seatsCleanup.forEach(fn => fn());
+    onDisconnect(userRef).cancel();
+  };
 }
 
 export async function endRoom(roomId: string): Promise<void> {
