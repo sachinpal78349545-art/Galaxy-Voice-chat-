@@ -122,7 +122,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
           <div className="super-admin-seat-frame" />
         )}
         {isOfficial && !isSuperAdmin && isActive && (
-          <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" className="official-phoenix-frame" />
+          <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" className="official-phoenix-frame" />
         )}
         {isSpeaking && <AudioWaveRing color={isSuperAdmin ? "gold" : isOfficial ? "blue" : "cyan"} />}
         {isSpeaking && (
@@ -143,10 +143,10 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
           )}
         </div>
         {isSuperAdmin && isActive && (
-          <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_badge.svg`} alt="Super Admin" className="super-admin-seat-badge" />
+          <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_badge.svg`} alt="Super Admin" className="super-admin-seat-badge" />
         )}
         {isOfficial && !isSuperAdmin && isActive && (
-          <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.svg`} alt="Official" className="official-badge-label" />
+          <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.png`} alt="Official" className="official-badge-label" />
         )}
         {role === "owner" && isActive && !isSpecial && (
           <div className="seat-badge seat-badge-owner">{"\u{1F451}"}</div>

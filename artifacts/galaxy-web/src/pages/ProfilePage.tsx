@@ -394,7 +394,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
               {isAdmin ? (
                 <>
                   <div className="super-admin-tag-wrapper">
-                    <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.png`} alt="Super Admin" className="super-admin-tag" style={{ height: 28 }} />
+                    <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_v2.png`} alt="Super Admin" className="super-admin-tag" style={{ height: 28 }} />
                     <div className="super-admin-particles" />
                   </div>
                   <span className="founder-badge">{"\u{1F451}"} Founder</span>
@@ -921,10 +921,10 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                   : viewingProfile.avatar}
               </div>
               {isSuperAdmin(viewingProfile) && (
-                <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.png`} alt="Super Admin" style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", height: 20 }} />
+                <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_v2.png`} alt="Super Admin" style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", height: 20 }} />
               )}
               {viewingProfile.globalRole === "official" && !isSuperAdmin(viewingProfile) && (
-                <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.svg`} alt="Official" style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", height: 18 }} />
+                <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.png`} alt="Official" style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", height: 18 }} />
               )}
             </div>
             <div style={{ textAlign: "center", marginTop: 4 }}>
@@ -1265,7 +1265,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           </div>
           <div style={{ flex: 1, overflowY: "auto" }}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 28, filter: "drop-shadow(0 0 8px rgba(255,215,0,0.5))" }} />
+              <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 28, filter: "drop-shadow(0 0 8px rgba(0,206,201,0.5)) drop-shadow(0 0 14px rgba(9,132,227,0.3))" }} />
               <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginTop: 8 }}>As an Official, you represent the app</p>
             </div>
             {[

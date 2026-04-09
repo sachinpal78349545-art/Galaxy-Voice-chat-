@@ -471,10 +471,10 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
                 : active.participantAvatars[otherIdx]}
             </div>
             {otherIsSuperAdmin && (
-              <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" style={{ position: "absolute", top: -4, left: -4, width: 46, height: 46, pointerEvents: "none" }} />
+              <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" style={{ position: "absolute", top: -4, left: -4, width: 46, height: 46, pointerEvents: "none" }} />
             )}
             {otherProfile?.globalRole === "official" && !otherIsSuperAdmin && (
-              <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" style={{ position: "absolute", top: -4, left: -4, width: 46, height: 46, pointerEvents: "none", filter: "hue-rotate(40deg)" }} />
+              <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" style={{ position: "absolute", top: -4, left: -4, width: 46, height: 46, pointerEvents: "none", filter: "hue-rotate(40deg)" }} />
             )}
             <div style={{
               position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5,
@@ -562,7 +562,7 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
                           ? <img src={active.participantAvatars[otherIdx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 9 }} />
                           : active.participantAvatars[otherIdx]}
                       </div>
-                      <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" style={{ position: "absolute", top: -2, left: -2, width: 22, height: 22, pointerEvents: "none" }} />
+                      <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" style={{ position: "absolute", top: -2, left: -2, width: 22, height: 22, pointerEvents: "none" }} />
                     </div>
                     <span className="super-admin-chat-tag">SUPER ADMIN</span>
                     <span style={{ fontSize: 11, color: "#1DA1F2" }}>{"\u2714"}</span>
@@ -959,7 +959,7 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
                       : conv.participantAvatars[idx]}
                   </div>
                   {convOtherIsSuperAdmin && (
-                    <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" style={{ position: "absolute", top: -3, left: -3, width: 54, height: 54, pointerEvents: "none" }} />
+                    <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" style={{ position: "absolute", top: -3, left: -3, width: 54, height: 54, pointerEvents: "none" }} />
                   )}
                   <div style={{ position: "absolute", bottom: 2, right: 1, width: 10, height: 10, borderRadius: 5, background: "#00e676", border: "1.5px solid #0F0F1A" }} />
                 </div>
