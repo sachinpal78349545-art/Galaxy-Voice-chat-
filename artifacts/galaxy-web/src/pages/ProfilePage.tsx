@@ -778,16 +778,16 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             ) : (
               friendProfiles.map(fp => (
                 <div key={fp.uid} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div style={{
+                  <div onClick={() => { setShowFriendsList(false); setViewingProfile(fp); }} style={{
                     width: 40, height: 40, borderRadius: 20, fontSize: 20,
                     background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.25)",
-                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, cursor: "pointer",
                   }}>
                     {fp.avatar?.startsWith("http")
                       ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} />
                       : fp.avatar}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div onClick={() => { setShowFriendsList(false); setViewingProfile(fp); }} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
                     <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fp.name}</p>
                     <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>{fp.online ? "Online" : "Offline"}</p>
                   </div>

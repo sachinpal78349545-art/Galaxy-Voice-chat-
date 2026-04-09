@@ -588,7 +588,9 @@ export async function canChat(userAUid: string, userBUid: string): Promise<boole
 export function canChatSync(profileA: UserProfile, profileB: UserProfile): boolean {
   const aFollowing = profileA.followingList || [];
   const bFollowing = profileB.followingList || [];
-  return aFollowing.includes(profileB.uid) && bFollowing.includes(profileA.uid);
+  const mutualFollow = aFollowing.includes(profileB.uid) && bFollowing.includes(profileA.uid);
+  const areFriends = (profileA.friendsList || []).includes(profileB.uid);
+  return mutualFollow || areFriends;
 }
 
 export function isSuperAdmin(user: UserProfile): boolean {

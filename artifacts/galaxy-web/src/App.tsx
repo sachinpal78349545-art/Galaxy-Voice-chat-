@@ -16,15 +16,16 @@ import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import NotificationPage from "./pages/NotificationPage";
 import SearchPage from "./pages/SearchPage";
+import ExplorePage from "./pages/ExplorePage";
 import "./index.css";
 
-type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications" | "search";
+type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications" | "search" | "explore";
 
 const NAV = [
   { id: "home", icon: "\u{1F3E0}", label: "Home" },
+  { id: "explore", icon: "\u{1F30C}", label: "Explore" },
   { id: "rooms", icon: "\u{1F3A4}", label: "Rooms" },
   { id: "chats", icon: "\u{1F4AC}", label: "Chats" },
-  { id: "moment", icon: "\u{1F4F8}", label: "Moment" },
   { id: "mine", icon: "\u{1F464}", label: "Mine" },
 ] as const;
 
@@ -187,9 +188,10 @@ function AppContent() {
 
         <div key={pageKey} className="page-enter" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} />}
+          {page === "explore" && <ExplorePage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onNavigate={(p) => changePage(p as NavPage)} />}
           {page === "rooms" && <RoomsPage user={profile} onJoinRoom={joinRoom} />}
           {page === "chats" && <ChatsPage user={profile} initialChatUid={chatTargetUid} />}
-          {page === "moment" && <MomentPage user={profile} />}
+          {page === "moment" && <MomentPage user={profile} onBack={() => changePage("explore")} />}
           {page === "notifications" && <NotificationPage user={profile} notifications={notifications} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onFollowBack={() => {}} />}
           {page === "search" && <SearchPage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onBack={() => changePage("home")} />}
           {page === "mine" && (

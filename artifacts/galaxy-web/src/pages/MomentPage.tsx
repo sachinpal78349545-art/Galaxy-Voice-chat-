@@ -11,14 +11,15 @@ interface Moment {
   userAvatar: string;
   text: string;
   imageUrl?: string;
+  videoUrl?: string;
   likes: Record<string, boolean>;
   comments: number;
   createdAt: number;
 }
 
-interface Props { user: UserProfile; }
+interface Props { user: UserProfile; onBack?: () => void; }
 
-export default function MomentPage({ user }: Props) {
+export default function MomentPage({ user, onBack }: Props) {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -54,11 +55,14 @@ export default function MomentPage({ user }: Props) {
     setPosting(true);
     try {
       let imageUrl: string | undefined;
+      let videoUrl: string | undefined;
       if (postImage) {
-        const ext = postImage.name.split(".").pop() || "jpg";
+        const isVideo = postImage.type.startsWith("video/");
+        const ext = postImage.name.split(".").pop() || (isVideo ? "mp4" : "jpg");
         const path = `moments/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const result = await uploadWithAppCheck(postImage, path);
-        imageUrl = result.url;
+        if (isVideo) videoUrl = result.url;
+        else imageUrl = result.url;
       }
       const momentRef = push(ref(db, "moments"));
       const momentData: any = {
@@ -67,10 +71,11 @@ export default function MomentPage({ user }: Props) {
         userAvatar: user.avatar,
         text: postText.trim(),
         likes: {},
-        comments: 0,
+        commentCount: 0,
         createdAt: Date.now(),
       };
       if (imageUrl) momentData.imageUrl = imageUrl;
+      if (videoUrl) momentData.videoUrl = videoUrl;
       await set(momentRef, momentData);
       setPostText("");
       setPostImage(null);
@@ -105,11 +110,17 @@ export default function MomentPage({ user }: Props) {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast("Image must be under 5MB", "warning"); return; }
+    const isVideo = file.type.startsWith("video/");
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) { showToast(isVideo ? "Video must be under 50MB" : "Image must be under 5MB", "warning"); return; }
     setPostImage(file);
-    const reader = new FileReader();
-    reader.onload = () => setPostImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
+    if (isVideo) {
+      setPostImagePreview(URL.createObjectURL(file));
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => setPostImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
   const getTimeAgo = (ts: number) => {
@@ -121,14 +132,23 @@ export default function MomentPage({ user }: Props) {
   };
 
   const filtered = tab === "mine" ? moments.filter(m => m.uid === user.uid) : moments;
-  const imageMoments = filtered.filter(m => m.imageUrl);
-  const textMoments = filtered.filter(m => !m.imageUrl);
+  const mediaMoments = filtered.filter(m => m.imageUrl || m.videoUrl);
+  const textMoments = filtered.filter(m => !m.imageUrl && !m.videoUrl);
 
   return (
     <div className="page-scroll">
-      <div style={{ padding: "54px 16px 8px" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 900, background: "linear-gradient(135deg,#A29BFE,#6C5CE7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Moments</h1>
-        <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginTop: 2 }}>See what's happening in the community</p>
+      <div style={{ padding: "54px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
+        {onBack && (
+          <button onClick={onBack} style={{
+            background: "rgba(108,92,231,0.15)", border: "none", borderRadius: 10,
+            width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#A29BFE",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>{"\u2190"}</button>
+        )}
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 900, background: "linear-gradient(135deg,#A29BFE,#6C5CE7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Moments</h1>
+          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginTop: 2 }}>See what's happening in the community</p>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 0, padding: "0 16px 12px" }}>
@@ -148,7 +168,7 @@ export default function MomentPage({ user }: Props) {
             <div key={i} className="skeleton" style={{ aspectRatio: "1", borderRadius: 4 }} />
           ))}
         </div>
-      ) : imageMoments.length === 0 && textMoments.length === 0 ? (
+      ) : mediaMoments.length === 0 && textMoments.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(162,155,254,0.4)" }}>
           <p style={{ fontSize: 32, marginBottom: 8 }}>{"\u{1F4F8}"}</p>
           <p style={{ fontSize: 14, fontWeight: 600 }}>No moments yet</p>
@@ -156,15 +176,22 @@ export default function MomentPage({ user }: Props) {
         </div>
       ) : (
         <>
-          {imageMoments.length > 0 && (
+          {mediaMoments.length > 0 && (
             <div style={{ padding: "0 2px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
-              {imageMoments.map(m => {
+              {mediaMoments.map(m => {
                 const likeCount = Object.keys(m.likes).length;
                 return (
                   <div key={m.id} onClick={() => setViewingMoment(m)} style={{
                     position: "relative", aspectRatio: "1", cursor: "pointer", overflow: "hidden",
                   }}>
-                    <img src={m.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    {m.videoUrl ? (
+                      <>
+                        <video src={m.videoUrl} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 28, height: 28, borderRadius: 14, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", pointerEvents: "none" }}>{"\u25B6"}</div>
+                      </>
+                    ) : (
+                      <img src={m.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    )}
                     <div style={{
                       position: "absolute", bottom: 0, left: 0, right: 0,
                       background: "linear-gradient(transparent, rgba(0,0,0,0.7))",
@@ -262,7 +289,11 @@ export default function MomentPage({ user }: Props) {
 
             {postImagePreview ? (
               <div style={{ position: "relative", marginBottom: 12 }}>
-                <img src={postImagePreview} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 14 }} />
+                {postImage?.type.startsWith("video/") ? (
+                  <video src={postImagePreview} style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 14 }} controls />
+                ) : (
+                  <img src={postImagePreview} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 14 }} />
+                )}
                 <button onClick={() => { setPostImage(null); setPostImagePreview(null); }} style={{
                   position: "absolute", top: 6, right: 6, width: 28, height: 28, borderRadius: 14,
                   background: "rgba(0,0,0,0.7)", border: "none", color: "#fff", cursor: "pointer", fontSize: 14,
@@ -273,10 +304,10 @@ export default function MomentPage({ user }: Props) {
                 width: "100%", padding: "24px 0", borderRadius: 14, border: "2px dashed rgba(108,92,231,0.3)",
                 background: "rgba(108,92,231,0.06)", cursor: "pointer", color: "rgba(162,155,254,0.5)",
                 fontSize: 14, fontFamily: "inherit", marginBottom: 12,
-              }}>{"\u{1F4F7}"} Add Photo</button>
+              }}>{"\u{1F4F7}"} Add Photo / Video</button>
             )}
 
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSelect} />
+            <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={handleImageSelect} />
 
             <button
               className="btn btn-primary btn-full"
@@ -320,7 +351,10 @@ export default function MomentPage({ user }: Props) {
               }}>{"\u2715"}</button>
             </div>
 
-            {viewingMoment.imageUrl && (
+            {viewingMoment.videoUrl && (
+              <video src={viewingMoment.videoUrl} controls autoPlay playsInline style={{ width: "100%", maxHeight: "60vh", objectFit: "contain", display: "block" }} />
+            )}
+            {viewingMoment.imageUrl && !viewingMoment.videoUrl && (
               <img src={viewingMoment.imageUrl} alt="" style={{ width: "100%", maxHeight: "60vh", objectFit: "contain" }} />
             )}
 

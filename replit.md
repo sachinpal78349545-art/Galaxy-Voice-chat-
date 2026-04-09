@@ -5,7 +5,7 @@ Galaxy Voice Chat is a dual-platform project comprising `Galaxy Mobile` (React N
 
 **Key Capabilities:**
 - Real-time voice chat powered by Agora RTC.
-- Comprehensive social features including user profiles, following, friend requests, and a "Moments" feed.
+- Comprehensive social features including user profiles, following, friend requests, "Moments" grid feed, and "Explore" vertical feed with video auto-play.
 - Advanced chat functionalities with typing indicators, image/voice messages, and reactions.
 - Dynamic gift system with leaderboards and animated presentations.
 - Robust user management with multi-auth options, a unique 9-digit user ID system, and administrative controls.
@@ -34,7 +34,7 @@ I prefer iterative development with a focus on delivering working features incre
     - Unique 9-digit `userId` generated and reserved atomically via Firebase transactions.
     - Online presence tracking using Firebase `onDisconnect`.
     - Comprehensive user profiles including coins, level, achievements, transactions, blocked users, friends, friend requests, and privacy settings.
-    - Mutual follow system to gate chat access.
+    - Mutual follow OR friendship system to gate chat access (friends can chat without gift).
     - Super Admin system with specific user IDs.
 - **Room Management**:
     - 12-seat grid (4x3) with host and co-host roles.
