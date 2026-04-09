@@ -40,6 +40,7 @@ function AppContent() {
   const [pageKey, setPageKey] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
+  const [chatActive, setChatActive] = useState(false);
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
   const notifSubCleanup = useRef<(() => void) | null>(null);
@@ -95,7 +96,7 @@ function AppContent() {
   const unreadNotifCount = notifications.filter(n => !n.read).length;
 
   const changePage = (p: NavPage) => {
-    if (p !== "chats") setChatTargetUid(null);
+    if (p !== "chats") { setChatTargetUid(null); setChatActive(false); }
     setPage(p);
     setPageKey(k => k + 1);
   };
@@ -160,7 +161,7 @@ function AppContent() {
     <div className="app-wrapper">
       <div className="stars" />
       <div className="app-container">
-        {(page === "home" || page === "rooms" || page === "chats") && (
+        {(page === "home" || page === "rooms" || (page === "chats" && !chatActive)) && (
           <div style={{
             position: "fixed", top: 0, left: 0, right: 0, maxWidth: 400, margin: "0 auto",
             zIndex: 100,
@@ -190,7 +191,7 @@ function AppContent() {
           {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} />}
           {page === "explore" && <ExplorePage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onNavigate={(p) => changePage(p as NavPage)} />}
           {page === "rooms" && <RoomsPage user={profile} onJoinRoom={joinRoom} />}
-          {page === "chats" && <ChatsPage user={profile} initialChatUid={chatTargetUid} />}
+          {page === "chats" && <ChatsPage user={profile} initialChatUid={chatTargetUid} onChatActive={setChatActive} />}
           {page === "moment" && <MomentPage user={profile} onBack={() => changePage("explore")} />}
           {page === "notifications" && <NotificationPage user={profile} notifications={notifications} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onFollowBack={() => {}} />}
           {page === "search" && <SearchPage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onBack={() => changePage("home")} />}
@@ -204,7 +205,7 @@ function AppContent() {
             />
           )}
         </div>
-        <nav className="bottom-nav">
+        <nav className="bottom-nav" style={{ display: chatActive ? "none" : undefined }}>
           {NAV.map(item => (
             <button
               key={item.id}

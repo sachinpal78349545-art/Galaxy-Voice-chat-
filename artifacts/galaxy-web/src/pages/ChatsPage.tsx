@@ -4,7 +4,7 @@ import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, s
 import { sendNotification, subscribeNotifications, Notification as AppNotification, markNotificationRead, markAllNotificationsRead } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
 
-interface Props { user: UserProfile; initialChatUid?: string | null; }
+interface Props { user: UserProfile; initialChatUid?: string | null; onChatActive?: (active: boolean) => void; }
 
 const EMOJI_GRID = [
   "\u{1F600}","\u{1F602}","\u{1F60D}","\u{1F618}","\u{1F970}","\u{1F60E}","\u{1F913}","\u{1F60F}",
@@ -38,7 +38,7 @@ const NOTIF_CATEGORIES = [
   { key: "gift", label: "Gifts & Rewards", icon: "\u{1F381}", types: ["gift"] },
 ];
 
-export default function ChatsPage({ user, initialChatUid }: Props) {
+export default function ChatsPage({ user, initialChatUid, onChatActive }: Props) {
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<Conversation | null>(null);
@@ -100,6 +100,10 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
       if (typingTimeout.current) clearTimeout(typingTimeout.current);
     };
   }, [active?.id]);
+
+  useEffect(() => {
+    onChatActive?.(!!active);
+  }, [active, onChatActive]);
 
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
@@ -441,16 +445,18 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
     const statusText = otherTyping ? "typing..." : otherOnline ? "\u25CF Online" : otherLastSeen ? `Last seen ${formatLastSeen(otherLastSeen)}` : "\u25CB Offline";
     const statusColor = otherTyping ? "#A29BFE" : otherOnline ? "#00e676" : "rgba(162,155,254,0.4)";
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div style={{ position: "fixed", inset: 0, zIndex: 1100, display: "flex", flexDirection: "column", background: "#0F0F1A", maxWidth: 430, margin: "0 auto" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 10,
-          padding: "52px 12px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
-          background: "rgba(8,4,24,0.9)", backdropFilter: "blur(12px)",
+          padding: "12px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
+          background: "rgba(8,4,24,0.95)", backdropFilter: "blur(12px)",
+          paddingTop: "env(safe-area-inset-top, 12px)",
         }}>
           <button onClick={() => { setActive(null); setShowEmojiPicker(false); setShowQuickPhrases(false); setShowChatGifts(false); setReplyingTo(null); }} style={{
             width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontSize: 16, color: "#fff",
-          }}>{"\u2039"}</button>
+            border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontSize: 18, color: "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>{"\u2190"}</button>
           <div style={{ position: "relative", flexShrink: 0 }}>
             <div style={{
               width: 38, height: 38, borderRadius: 19, fontSize: 18,
@@ -507,7 +513,7 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
           <button className="btn btn-ghost btn-sm" style={{ fontSize: 16, width: 34, height: 34, padding: 0, borderRadius: 10 }} onClick={handleBlock}>{"\u{1F6AB}"}</button>
         </div>
 
-        <div className="chat-bg-texture" style={{ flex: 1, overflowY: "auto", padding: "12px 14px 6px", position: "relative" }}>
+        <div className="chat-bg-texture" style={{ flex: 1, overflowY: "auto", padding: "12px 14px 80px", position: "relative" }}>
           {msgs.map(msg => {
             const isSelf = msg.senderId === user.uid;
             const senderIsSuperAdmin = isSelf ? selfIsSuperAdmin : otherIsSuperAdmin;
@@ -809,9 +815,11 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
         )}
 
         <div style={{
-          display: "flex", gap: 6, padding: "10px 12px 26px", alignItems: "center",
+          display: "flex", gap: 6, padding: "10px 12px", alignItems: "center",
+          paddingBottom: "max(env(safe-area-inset-bottom, 10px), 10px)",
           borderTop: "1px solid rgba(255,255,255,0.06)",
-          background: "rgba(8,4,24,0.85)", backdropFilter: "blur(14px)", flexShrink: 0,
+          background: "rgba(8,4,24,0.95)", backdropFilter: "blur(14px)", flexShrink: 0,
+          zIndex: 1200,
         }}>
           <button onClick={() => fileRef.current?.click()} style={{
             width: 36, height: 36, borderRadius: 18, cursor: "pointer",
