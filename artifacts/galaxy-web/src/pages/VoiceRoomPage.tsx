@@ -70,8 +70,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
       if (r && !joinedRef.current) {
         joinedRef.current = true;
         const officialFlag = isOfficialOrAdmin(user);
-        if (isSuperAdmin(user)) ensureSuperAdmin(user.uid).catch(console.error);
-        joinRoom(roomId, user.uid, user.name, user.avatar, enteredPassword, officialFlag).then(res => {
+        const superAdminFlag = isSuperAdmin(user);
+        if (superAdminFlag) ensureSuperAdmin(user.uid).catch(console.error);
+        joinRoom(roomId, user.uid, user.name, user.avatar, enteredPassword, officialFlag, superAdminFlag).then(res => {
           if (!res.joined) {
             showToast(res.reason || "Cannot join room", "error");
             onLeave();
@@ -470,6 +471,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         hashCode={hashCode}
         isOwnerSeat={(seat) => seat.userId === room.hostId}
         officialUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isOfficial).map((ru: any) => ru.uid))}
+        superAdminUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isSuperAdmin).map((ru: any) => ru.uid))}
         onSeatTap={(i, seat) => {
           if (seat.userId === user.uid) return;
           if (seat.userId) {
@@ -671,7 +673,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                       <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ru.name}</span>
                       {ru.uid === user.uid && <span style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>(you)</span>}
                     </div>
-                    {(ru as any).isOfficial
+                    {(ru as any).isSuperAdmin
+                      ? <span className="badge" style={{ fontSize: 8, padding: "1px 6px", background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)", fontWeight: 900, textShadow: "0 0 4px rgba(255,215,0,0.4)" }}>{"\u{1F451}"} Super Admin</span>
+                      : (ru as any).isOfficial
                       ? <span className="badge" style={{ fontSize: 8, padding: "1px 6px", background: "rgba(255,215,0,0.15)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.3)" }}>{"\u{1F6E1}\uFE0F"} Official</span>
                       : <RoleBadge role={ru.role} />
                     }

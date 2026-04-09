@@ -21,6 +21,7 @@ export interface RoomUser {
   joinedAt: number;
   seatIndex: number | null;
   isOfficial?: boolean;
+  isSuperAdmin?: boolean;
 }
 
 export interface RoomMessage {
@@ -160,7 +161,7 @@ export async function createRoom(
   return room;
 }
 
-export async function joinRoom(roomId: string, uid: string, name: string, avatar: string, password?: string, isOfficial?: boolean): Promise<{ joined: boolean; reason?: string; needsPassword?: boolean }> {
+export async function joinRoom(roomId: string, uid: string, name: string, avatar: string, password?: string, isOfficial?: boolean, isSuperAdmin?: boolean): Promise<{ joined: boolean; reason?: string; needsPassword?: boolean }> {
   const roomSnap = await get(ref(db, `rooms/${roomId}`));
   if (!roomSnap.exists()) return { joined: false, reason: "Room not found" };
   const room = roomSnap.val();
@@ -176,7 +177,7 @@ export async function joinRoom(roomId: string, uid: string, name: string, avatar
   }
   const existing = await get(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
   if (existing.exists()) return { joined: true };
-  const roomUser: RoomUser = { uid, name, avatar, role: "user", joinedAt: Date.now(), seatIndex: null, isOfficial: isOfficial || false };
+  const roomUser: RoomUser = { uid, name, avatar, role: "user", joinedAt: Date.now(), seatIndex: null, isOfficial: isOfficial || false, isSuperAdmin: isSuperAdmin || false };
   if (room.hostId === uid) roomUser.role = "owner";
   else if ((room.adminIds || []).includes(uid)) roomUser.role = "admin";
   await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), roomUser);

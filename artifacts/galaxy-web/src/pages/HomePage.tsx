@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ref, onValue, off } from "firebase/database";
 import { db } from "../lib/firebase";
-import { UserProfile } from "../lib/userService";
+import { UserProfile, isSuperAdmin } from "../lib/userService";
 import { Room, subscribeRooms } from "../lib/roomService";
 import { getGiftLeaderboard, LeaderboardEntry } from "../lib/giftService";
 
@@ -109,8 +109,8 @@ export default function HomePage({ user, onJoinRoom }: Props) {
             <span>{"\u{1F48E}"}</span>
             <span style={{ fontSize: 13, fontWeight: 700 }}>{user.coins.toLocaleString()}</span>
           </div>
-          <div style={{ background: "rgba(255,215,0,0.12)", border: "1px solid rgba(255,215,0,0.28)", borderRadius: 20, padding: "6px 10px" }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#FFD700" }}>Lv.{user.level}</span>
+          <div style={{ background: isSuperAdmin(user) ? "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))" : "rgba(255,215,0,0.12)", border: `1px solid ${isSuperAdmin(user) ? "rgba(255,215,0,0.4)" : "rgba(255,215,0,0.28)"}`, borderRadius: 20, padding: "6px 10px" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#FFD700", textShadow: isSuperAdmin(user) ? "0 0 6px rgba(255,215,0,0.4)" : "none" }}>{isSuperAdmin(user) ? "\u{1F451} S.Admin" : `Lv.${user.level}`}</span>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

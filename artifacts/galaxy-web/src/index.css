@@ -674,6 +674,73 @@ textarea.input-field { resize: none; line-height: 1.5; }
   text-shadow: 0 0 6px rgba(255,215,0,0.4);
 }
 
+.seat-name-super-admin {
+  color: #FFD700 !important;
+  text-shadow: 0 0 8px rgba(255,215,0,0.6), 0 0 16px rgba(191,0,255,0.3);
+  font-weight: 900 !important;
+}
+
+.seat-super-admin {
+  border: 2.5px solid #FFD700 !important;
+  box-shadow: 0 0 14px rgba(255,215,0,0.6), 0 0 28px rgba(191,0,255,0.3), inset 0 0 8px rgba(255,215,0,0.15) !important;
+}
+
+.super-admin-seat-frame {
+  position: absolute; inset: -6px;
+  width: calc(100% + 12px); height: calc(100% + 12px);
+  border-radius: 50%;
+  border: 2px solid rgba(255,215,0,0.7);
+  box-shadow: 0 0 12px rgba(255,215,0,0.5), 0 0 24px rgba(191,0,255,0.25), inset 0 0 8px rgba(255,215,0,0.1);
+  pointer-events: none; z-index: 1;
+  animation: superAdminPulse 2s ease-in-out infinite;
+}
+
+.super-admin-seat-badge {
+  position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
+  width: 52px; height: 16px;
+  pointer-events: none; z-index: 2;
+  filter: drop-shadow(0 0 6px rgba(255,215,0,0.6)) drop-shadow(0 0 10px rgba(191,0,255,0.3));
+}
+
+@keyframes superAdminPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,215,0,0.5), 0 0 24px rgba(191,0,255,0.25), inset 0 0 8px rgba(255,215,0,0.1); }
+  50% { box-shadow: 0 0 18px rgba(255,215,0,0.7), 0 0 36px rgba(191,0,255,0.4), inset 0 0 12px rgba(255,215,0,0.2); }
+}
+
+.super-admin-tag-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.super-admin-tag {
+  filter: drop-shadow(0 0 8px rgba(255,215,0,0.5)) drop-shadow(0 0 16px rgba(191,0,255,0.3));
+  animation: superAdminTagGlow 3s ease-in-out infinite;
+}
+
+.super-admin-particles {
+  position: absolute; inset: -4px;
+  pointer-events: none;
+  background:
+    radial-gradient(1px 1px at 10% 30%, rgba(0,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 90% 70%, rgba(191,0,255,0.8), transparent),
+    radial-gradient(1px 1px at 30% 80%, rgba(255,215,0,0.8), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(0,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 50% 10%, rgba(191,0,255,0.6), transparent),
+    radial-gradient(1px 1px at 20% 60%, rgba(255,215,0,0.6), transparent);
+  animation: particleFloat 4s ease-in-out infinite;
+}
+
+@keyframes superAdminTagGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255,215,0,0.5)) drop-shadow(0 0 16px rgba(191,0,255,0.3)); }
+  50% { filter: drop-shadow(0 0 14px rgba(255,215,0,0.7)) drop-shadow(0 0 24px rgba(191,0,255,0.5)); }
+}
+
+@keyframes particleFloat {
+  0%, 100% { opacity: 0.6; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
 .seat-info {
   display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 1px;
 }

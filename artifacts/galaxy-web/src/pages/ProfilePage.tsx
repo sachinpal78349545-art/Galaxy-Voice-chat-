@@ -289,8 +289,10 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
               width: 100, height: 100, borderRadius: 50, fontSize: 50,
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-              border: (user.globalRole === "official" || isAdmin) ? "3px solid #FFD700" : "3px solid rgba(108,92,231,0.5)",
-              boxShadow: (user.globalRole === "official" || isAdmin)
+              border: isAdmin ? "3px solid #FFD700" : user.globalRole === "official" ? "3px solid #FFD700" : "3px solid rgba(108,92,231,0.5)",
+              boxShadow: isAdmin
+                ? "0 0 20px rgba(255,215,0,0.5), 0 0 40px rgba(191,0,255,0.25), 0 0 60px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
+                : user.globalRole === "official"
                 ? "0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
                 : "0 0 32px rgba(108,92,231,0.4), 0 8px 32px rgba(0,0,0,0.3)",
               cursor: "pointer", overflow: "hidden",
@@ -314,11 +316,15 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
               <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.name}</h2>
               {user.vip && <span className="badge badge-vip">{"\u{1F451}"} VIP</span>}
-              {(user.globalRole === "official" || isAdmin) && (
-                <span className="badge" style={{ fontSize: 9, padding: "2px 8px", background: "rgba(255,215,0,0.15)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.3)", fontWeight: 800 }}>
-                  {"\u{1F6E1}\uFE0F"} {isAdmin ? "Super Admin" : "Official"}
+              {isAdmin ? (
+                <span className="badge" style={{ fontSize: 9, padding: "2px 8px", background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)", fontWeight: 900, textShadow: "0 0 6px rgba(255,215,0,0.5)" }}>
+                  {"\u{1F451}"} Super Admin
                 </span>
-              )}
+              ) : user.globalRole === "official" ? (
+                <span className="badge" style={{ fontSize: 9, padding: "2px 8px", background: "rgba(255,215,0,0.15)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.3)", fontWeight: 800 }}>
+                  {"\u{1F6E1}\uFE0F"} Official
+                </span>
+              ) : null}
             </div>
             <p style={{ fontSize: 13, color: "rgba(162,155,254,0.5)", marginBottom: 4, fontFamily: "monospace", letterSpacing: 1 }}>
               ID: {user.userId || "N/A"}
@@ -327,7 +333,12 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
               UID: {user.uid.slice(0, 14).toUpperCase()}
             </p>
             <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
-              {(user.globalRole === "official" || isAdmin) ? (
+              {isAdmin ? (
+                <div className="super-admin-tag-wrapper">
+                  <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.svg`} alt="Super Admin" className="super-admin-tag" style={{ height: 28 }} />
+                  <div className="super-admin-particles" />
+                </div>
+              ) : (user.globalRole === "official") ? (
                 <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 22, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }} />
               ) : (
                 <span className="badge badge-accent" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u2B50"} Lv.{user.level}</span>
