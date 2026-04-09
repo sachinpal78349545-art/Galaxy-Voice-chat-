@@ -8,10 +8,13 @@
     "orientation": "portrait",
     "icon": "./public/logo.png",
     "splash": {
+      "image": "./public/logo.png",
+      "resizeMode": "contain",
       "backgroundColor": "#1A0F2E"
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./public/logo.png",
         "backgroundColor": "#1A0F2E"
       },
       "package": "com.galaxy.voice",
