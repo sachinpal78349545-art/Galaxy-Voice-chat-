@@ -51,6 +51,41 @@ interface SeatCellProps {
   onTap: () => void;
 }
 
+function AudioWaveRing() {
+  return (
+    <svg className="audio-wave-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      {[0, 1, 2].map(i => (
+        <circle
+          key={i}
+          cx="40" cy="40"
+          r={30 + i * 5}
+          fill="none"
+          stroke="rgba(0,255,255,0.6)"
+          strokeWidth={2 - i * 0.5}
+          className={`audio-wave-ring audio-wave-ring-${i}`}
+        />
+      ))}
+      {Array.from({ length: 12 }, (_, i) => {
+        const angle = (i * 30) * (Math.PI / 180);
+        const r = 28;
+        const x = 40 + Math.cos(angle) * r;
+        const y = 40 + Math.sin(angle) * r;
+        return (
+          <line
+            key={`bar-${i}`}
+            x1={x} y1={y}
+            x2={40 + Math.cos(angle) * (r + 8)} y2={40 + Math.sin(angle) * (r + 8)}
+            stroke="rgba(0,255,255,0.7)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            className={`audio-bar audio-bar-${i % 4}`}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: SeatCellProps) {
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
@@ -67,6 +102,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, onTap }: S
   return (
     <div className="seat-cell" style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
       <div className="seat-wrapper">
+        {isSpeaking && <AudioWaveRing />}
         {isSpeaking && (
           <>
             <div className="speaking-ring speaking-ring-inner" />

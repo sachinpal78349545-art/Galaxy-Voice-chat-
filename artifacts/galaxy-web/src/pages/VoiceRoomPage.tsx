@@ -14,7 +14,7 @@ import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } f
 import { sendNotification } from "../lib/notificationService";
 import { voiceService } from "../lib/voiceService";
 import { useToast } from "../lib/toastContext";
-import { RoomHeader, SeatGrid, ChatSection, BottomBar, cleanName, hashCode } from "../components/room";
+import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, cleanName, hashCode } from "../components/room";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; }
 
@@ -45,6 +45,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
   const [memberSearch, setMemberSearch] = useState("");
   const [showReportModal, setShowReportModal] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
+  const [showDiceGame, setShowDiceGame] = useState(false);
   const [isSpeakerOff, setIsSpeakerOff] = useState(false);
   const [inviteSeatIdx, setInviteSeatIdx] = useState<number | null>(null);
   const [cpDpUploading, setCpDpUploading] = useState(false);
@@ -491,7 +492,17 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         onRaiseHand={handleRaiseHand}
         onShare={shareRoom}
         showToast={showToast}
+        onOpenGame={() => setShowDiceGame(true)}
       />
+
+      {showDiceGame && (
+        <DiceGame
+          roomId={roomId}
+          userId={user.uid}
+          username={user.name}
+          onClose={() => setShowDiceGame(false)}
+        />
+      )}
 
       {showSeatSheet !== null && (
         <Overlay onClose={() => setShowSeatSheet(null)}>

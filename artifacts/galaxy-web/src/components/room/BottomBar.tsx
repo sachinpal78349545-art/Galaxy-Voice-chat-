@@ -42,13 +42,14 @@ interface BottomBarProps {
   onRaiseHand: () => void;
   onShare: () => void;
   showToast: (msg: string, type?: string, icon?: string) => void;
+  onOpenGame?: () => void;
 }
 
 export default function BottomBar({
   room, user, inputText, setInputText,
   isMuted, isSpeakerOff,
   onSendChat, onSendEmoji, onHandleGift, onHandleReaction,
-  onMicToggle, onSpeakerToggle, onRaiseHand, onShare, showToast,
+  onMicToggle, onSpeakerToggle, onRaiseHand, onShare, showToast, onOpenGame,
 }: BottomBarProps) {
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGift, setShowGift] = useState(false);
@@ -103,6 +104,10 @@ export default function BottomBar({
             <button onClick={() => { const next = !showReactions; closeAllPopups(); if (next) setShowReactions(true); }} className="room-btn-circle room-btn-gems">
               <span style={{ fontSize: 16 }}>{"\u{1F48E}"}</span>
               <span style={{ fontSize: 7, marginTop: -2, color: "rgba(255,255,255,0.8)" }}>Gems</span>
+            </button>
+            <button onClick={() => { closeAllPopups(); onOpenGame?.(); }} className="room-btn-circle room-btn-gems">
+              <span style={{ fontSize: 16 }}>{"\u{1F3B2}"}</span>
+              <span style={{ fontSize: 7, marginTop: -2, color: "rgba(255,255,255,0.8)" }}>Game</span>
             </button>
           </div>
         </div>
