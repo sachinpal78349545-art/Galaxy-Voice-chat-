@@ -9,16 +9,17 @@ import {
   kickUserFromRoom, updateRoomSettings, endRoom, deleteRoom,
   followRoom, unfollowRoom, setupPresence,
 } from "../lib/roomService";
-import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser, isOfficialOrAdmin, ensureSuperAdmin, isSuperAdmin, SUPER_ADMIN_USER_ID } from "../lib/userService";
+import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser, isOfficialOrAdmin, ensureSuperAdmin, isSuperAdmin, SUPER_ADMIN_USER_ID, getUser } from "../lib/userService";
 import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } from "../lib/giftService";
 import { sendNotification } from "../lib/notificationService";
+import { getOrCreateConversation } from "../lib/chatService";
 import { voiceService } from "../lib/voiceService";
 import { useToast } from "../lib/toastContext";
 import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, ClassicLudo, CarromGame, TruthDareWheel, cleanName, hashCode } from "../components/room";
 
-interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; }
+interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; onMessage?: (uid: string) => void; }
 
-export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }: Props) {
+export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, onMessage }: Props) {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [isMuted, setIsMuted] = useState(false);
@@ -1219,9 +1220,18 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
                 {(user.followingList || []).includes(showProfileCard.uid) ? "\u2705 Following" : "\u2795 Follow"}
               </button>
               <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }}
-                onClick={() => {
-                  showToast("Opening chat...", "info");
+                onClick={async () => {
+                  const pc = showProfileCard!;
                   setShowProfileCard(null);
+                  try {
+                    const otherProfile = await getUser(pc.uid);
+                    await getOrCreateConversation(
+                      user.uid, user.name, user.avatar,
+                      pc.uid, otherProfile?.name || pc.name, otherProfile?.avatar || pc.avatar
+                    );
+                    if (onMessage) onMessage(pc.uid);
+                    else showToast("Opening chat...", "info");
+                  } catch { showToast("Could not open chat", "error"); }
                 }}>
                 {"\u{1F4AC}"} Chat
               </button>

@@ -3,6 +3,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin } from "../lib/userService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
+import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
   onUpdate: (u: UserProfile) => void;
   onLogout: () => void;
   onEditProfile: () => void;
+  onMessage?: (uid: string) => void;
 }
 
 const MENU_ITEMS = [
@@ -37,7 +39,7 @@ const RECHARGE_PACKAGES = [
 
 const REPORT_REASONS = ["Harassment", "Spam", "Inappropriate Content", "Fake Profile", "Scam", "Other"];
 
-export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }: Props) {
+export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, onMessage }: Props) {
   const [showWallet, setShowWallet] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -718,11 +720,26 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
             ) : (
               friendProfiles.map(fp => (
                 <div key={fp.uid} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  <span style={{ fontSize: 24 }}>{fp.avatar}</span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 700 }}>{fp.name}</p>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 20, fontSize: 20,
+                    background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.25)",
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0,
+                  }}>
+                    {fp.avatar?.startsWith("http")
+                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} />
+                      : fp.avatar}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fp.name}</p>
                     <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>{fp.online ? "Online" : "Offline"}</p>
                   </div>
+                  <button className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: "4px 10px", borderRadius: 10 }} onClick={async () => {
+                    try {
+                      await getOrCreateConversation(user.uid, user.name, user.avatar, fp.uid, fp.name, fp.avatar);
+                      setShowFriendsList(false);
+                      if (onMessage) onMessage(fp.uid);
+                    } catch { showToast("Could not open chat", "error"); }
+                  }}>{"\u{1F4AC}"}</button>
                   <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: "4px 10px" }} onClick={() => handleRemoveFriend(fp.uid)}>Remove</button>
                 </div>
               ))

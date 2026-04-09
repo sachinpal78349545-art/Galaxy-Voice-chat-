@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked, canChatSync } from "../lib/userService";
+import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked, canChatSync, isSuperAdmin, SUPER_ADMIN_USER_ID } from "../lib/userService";
 import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, sendVoiceMessage, addReaction, setTyping, subscribeTyping, markRead, clearChat } from "../lib/chatService";
 import { sendNotification } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
@@ -15,6 +15,8 @@ const EMOJI_GRID = [
 
 const REACTION_EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u{1F602}", "\u{1F44D}", "\u{1F62E}", "\u{1F622}"];
 
+const QUICK_PHRASES = ["Welcome!", "Hi there!", "Follow me", "GG!", "Nice to meet you", "Thanks!", "See you later", "Let's talk!"];
+
 export default function ChatsPage({ user, initialChatUid }: Props) {
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,7 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordDuration, setRecordDuration] = useState(0);
   const [reactionMsgId, setReactionMsgId] = useState<string | null>(null);
+  const [showQuickPhrases, setShowQuickPhrases] = useState(false);
   const msgEnd = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -229,6 +232,9 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
 
   if (active) {
     const otherIdx = active.participants[0] === user.uid ? 1 : 0;
+    const otherId = active.participants[otherIdx];
+    const otherIsSuperAdmin = otherProfile ? isSuperAdmin(otherProfile) : false;
+    const selfIsSuperAdmin = isSuperAdmin(user);
     const statusText = otherTyping ? "typing..." : otherOnline ? "\u25CF Online" : "\u25CB Offline";
     const statusColor = otherTyping ? "#A29BFE" : otherOnline ? "#00e676" : "rgba(162,155,254,0.4)";
     return (
@@ -237,17 +243,32 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
           display: "flex", alignItems: "center", gap: 10,
           padding: "52px 12px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
         }}>
-          <button onClick={() => { setActive(null); setShowEmojiPicker(false); }} style={{
+          <button onClick={() => { setActive(null); setShowEmojiPicker(false); setShowQuickPhrases(false); }} style={{
             width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)",
             border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontSize: 16, color: "#fff",
           }}>{"\u2039"}</button>
           <div style={{
             width: 38, height: 38, borderRadius: 19, fontSize: 18,
-            background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.3)",
+            background: otherIsSuperAdmin ? "rgba(255,215,0,0.12)" : "rgba(108,92,231,0.15)",
+            border: otherIsSuperAdmin ? "2px solid rgba(255,215,0,0.4)" : "2px solid rgba(108,92,231,0.3)",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-          }}>{active.participantAvatars[otherIdx]}</div>
+            overflow: "hidden",
+            boxShadow: otherIsSuperAdmin ? "0 0 10px rgba(255,215,0,0.3)" : "none",
+          }}>
+            {active.participantAvatars[otherIdx]?.startsWith?.("http")
+              ? <img src={active.participantAvatars[otherIdx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 19 }} />
+              : active.participantAvatars[otherIdx]}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontWeight: 800, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active.participantNames[otherIdx]}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <p style={{ fontWeight: 800, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active.participantNames[otherIdx]}</p>
+              {otherIsSuperAdmin && (
+                <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 6, background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)", fontWeight: 900, whiteSpace: "nowrap" }}>{"\u{1F451}"} S.Admin</span>
+              )}
+              {otherProfile?.globalRole === "official" && !otherIsSuperAdmin && (
+                <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 6, background: "rgba(255,215,0,0.12)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.25)", fontWeight: 700, whiteSpace: "nowrap" }}>{"\u{1F6E1}\uFE0F"} Official</span>
+              )}
+            </div>
             <p style={{ fontSize: 10, color: statusColor }}>{statusText}</p>
           </div>
           <button
@@ -269,16 +290,28 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
         <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px 6px" }}>
           {msgs.map(msg => {
             const isSelf = msg.senderId === user.uid;
+            const senderIsSuperAdmin = isSelf ? selfIsSuperAdmin : otherIsSuperAdmin;
             const reactions = msg.reactions ? Object.values(msg.reactions) : [];
             return (
               <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isSelf ? "flex-end" : "flex-start", marginBottom: 10, animation: "slide-up 0.2s ease" }}>
+                {senderIsSuperAdmin && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2, padding: "0 4px" }}>
+                    <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 800 }}>{"\u{1F451}"} Super Admin</span>
+                  </div>
+                )}
                 <div
                   style={{
                     maxWidth: "74%", padding: msg.type === "image" ? 4 : "10px 14px", lineHeight: 1.45,
                     borderRadius: isSelf ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                    background: isSelf ? "linear-gradient(135deg,#6C5CE7,#A29BFE)" : "rgba(255,255,255,0.07)",
-                    border: isSelf ? "none" : "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: isSelf ? "0 4px 14px rgba(108,92,231,0.3)" : "none",
+                    background: isSelf && selfIsSuperAdmin
+                      ? "linear-gradient(135deg,#2d1b69,#1a0a3e)"
+                      : isSelf ? "linear-gradient(135deg,#6C5CE7,#A29BFE)" : "rgba(255,255,255,0.07)",
+                    border: senderIsSuperAdmin
+                      ? "1px solid rgba(255,215,0,0.3)"
+                      : isSelf ? "none" : "1px solid rgba(255,255,255,0.08)",
+                    boxShadow: senderIsSuperAdmin
+                      ? "0 4px 14px rgba(255,215,0,0.15), 0 0 8px rgba(191,0,255,0.1)"
+                      : isSelf ? "0 4px 14px rgba(108,92,231,0.3)" : "none",
                     fontSize: 14, color: "#fff", overflow: "hidden", position: "relative", cursor: "pointer",
                   }}
                   onDoubleClick={() => setReactionMsgId(reactionMsgId === msg.id ? null : msg.id)}
@@ -380,12 +413,37 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
           </div>
         )}
 
+        {!chatLocked && showQuickPhrases && (
+          <div style={{
+            padding: "8px 12px", borderTop: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(8,4,24,0.95)", display: "flex", flexWrap: "wrap", gap: 6,
+            animation: "slide-up 0.2s ease",
+          }}>
+            {QUICK_PHRASES.map(phrase => (
+              <button key={phrase} onClick={async () => {
+                try {
+                  await sendMessage(active.id, user.uid, phrase);
+                  setShowQuickPhrases(false);
+                  incrementStat(user.uid, "messagesSent").catch(() => {});
+                  const oid = active.participants.find(p => p !== user.uid);
+                  if (oid) sendNotification(oid, { type: "message", title: "New Message", body: `${user.name}: ${phrase}`, icon: "\u{1F4AC}", fromUid: user.uid, fromName: user.name }).catch(() => {});
+                } catch { showToast("Failed to send", "error"); }
+              }} style={{
+                background: "rgba(108,92,231,0.15)", border: "1px solid rgba(108,92,231,0.3)",
+                borderRadius: 16, padding: "6px 12px", cursor: "pointer", fontSize: 12,
+                color: "#A29BFE", fontWeight: 600, whiteSpace: "nowrap",
+              }}>{phrase}</button>
+            ))}
+          </div>
+        )}
+
         {!chatLocked && <div style={{
           display: "flex", gap: 6, padding: "10px 12px 26px", alignItems: "center",
           borderTop: "1px solid rgba(255,255,255,0.06)",
           background: "rgba(8,4,24,0.85)", backdropFilter: "blur(14px)", flexShrink: 0,
         }}>
           <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: "0 2px" }}>{"\u{1F60A}"}</button>
+          <button onClick={() => { setShowQuickPhrases(!showQuickPhrases); setShowEmojiPicker(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "0 2px", color: showQuickPhrases ? "#6C5CE7" : "#A29BFE", fontWeight: 800 }}>{"\u26A1"}</button>
           <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: "0 2px" }}>{"\u{1F4F7}"}</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSend} />
 
@@ -454,8 +512,12 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
                   <div style={{
                     width: 48, height: 48, borderRadius: 24, fontSize: 22,
                     background: "rgba(108,92,231,0.14)", border: "2px solid rgba(108,92,231,0.25)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>{conv.participantAvatars[idx]}</div>
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                  }}>
+                    {conv.participantAvatars[idx]?.startsWith?.("http")
+                      ? <img src={conv.participantAvatars[idx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 24 }} />
+                      : conv.participantAvatars[idx]}
+                  </div>
                   <div style={{ position: "absolute", bottom: 2, right: 1, width: 10, height: 10, borderRadius: 5, background: "#00e676", border: "1.5px solid #0F0F1A" }} />
                 </div>
                 <div style={{ flex: 1, overflow: "hidden" }}>
@@ -469,9 +531,10 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
                 </div>
                 {unreadCount > 0 && (
                   <div style={{
-                    minWidth: 20, height: 20, borderRadius: 10, background: "#6C5CE7",
+                    minWidth: 20, height: 20, borderRadius: 10, background: "#ff6482",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 10, fontWeight: 700, padding: "0 5px",
+                    fontSize: 10, fontWeight: 700, padding: "0 5px", color: "#fff",
+                    boxShadow: "0 0 8px rgba(255,100,130,0.4)",
                   }}>{unreadCount}</div>
                 )}
               </div>

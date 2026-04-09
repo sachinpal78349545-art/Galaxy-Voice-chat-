@@ -138,7 +138,7 @@ function AppContent() {
     return (
       <div className="app-wrapper">
         <div className="stars" />
-        <VoiceRoomPage roomId={activeRoom.id} user={profile} onLeave={() => { setActiveRoom(null); changePage("rooms"); }} enteredPassword={(activeRoom as any)._enteredPassword} />
+        <VoiceRoomPage roomId={activeRoom.id} user={profile} onLeave={() => { setActiveRoom(null); changePage("rooms"); }} enteredPassword={(activeRoom as any)._enteredPassword} onMessage={(uid) => { setActiveRoom(null); setChatTargetUid(uid); changePage("chats"); }} />
       </div>
     );
   }
@@ -198,6 +198,7 @@ function AppContent() {
               onUpdate={setProfile}
               onLogout={() => { setFbUser(null); setProfile(null); }}
               onEditProfile={() => setShowEdit(true)}
+              onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }}
             />
           )}
         </div>
