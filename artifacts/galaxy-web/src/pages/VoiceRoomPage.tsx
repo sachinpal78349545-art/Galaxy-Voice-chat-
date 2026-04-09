@@ -32,6 +32,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
   const [lbEntries, setLbEntries] = useState<LeaderboardEntry[]>([]);
   const [speakingUids, setSpeakingUids] = useState<Set<number>>(new Set());
   const [giftAnim, setGiftAnim] = useState<{ emoji: string; sender: string; receiver: string } | null>(null);
+  const [giftParticles, setGiftParticles] = useState<{ id: number; emoji: string; x: number; y: number; px: string; py: string }[]>([]);
   const [showCloseMenu, setShowCloseMenu] = useState(false);
   const [showUsersPanel, setShowUsersPanel] = useState(false);
   const [showHostControls, setShowHostControls] = useState(false);
@@ -194,6 +195,16 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
     setTimeout(() => setGiftAnim(null), 3000);
     const floatCount = Math.min(combo * 3, 15);
     for (let i = 0; i < floatCount; i++) setTimeout(() => spawnFloat(gift.emoji, true), i * 200);
+    const particleEmojis = ["\u2764\uFE0F", "\u2B50", "\u2728", "\uD83D\uDC96", "\uD83C\uDF1F"];
+    const newParticles = Array.from({ length: 12 }, (_, i) => ({
+      id: Date.now() + i,
+      emoji: particleEmojis[i % particleEmojis.length],
+      x: 50, y: 30,
+      px: `${(Math.random() - 0.5) * 200}px`,
+      py: `${(Math.random() - 0.5) * 200}px`,
+    }));
+    setGiftParticles(prev => [...prev, ...newParticles]);
+    setTimeout(() => setGiftParticles(prev => prev.filter(p => !newParticles.find(n => n.id === p.id))), 1500);
     const comboText = combo > 1 ? ` x${combo}` : "";
     showToast(`Sent ${gift.emoji} ${gift.name}${comboText} to ${recipientName}`, "success");
     recordGift({ senderId: user.uid, senderName: user.name, senderAvatar: user.avatar, receiverId: recipientId, receiverName: recipientName, receiverAvatar: hostSeat?.avatar || "\u{1F3A4}", giftEmoji: gift.emoji, coins: totalCost, timestamp: Date.now() }).catch(console.error);
@@ -431,6 +442,13 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
           </div>
         </div>
       )}
+
+      {giftParticles.map(p => (
+        <div key={p.id} className="gift-particle" style={{
+          left: `${p.x}%`, top: `${p.y}%`, fontSize: 20,
+          "--px": p.px, "--py": p.py,
+        } as React.CSSProperties}>{p.emoji}</div>
+      ))}
 
       {welcomeAnim && (
         <div style={{

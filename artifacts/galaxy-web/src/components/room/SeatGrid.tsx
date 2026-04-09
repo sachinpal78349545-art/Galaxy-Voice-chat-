@@ -19,9 +19,9 @@ interface SeatGridProps {
 export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids, superAdminUids }: SeatGridProps) {
   return (
     <div className="room-seat-area">
-      <div className="room-seat-grid">
-        {Array.from({ length: 12 }, (_, i) => {
-          const lockedByDefault = [3, 7, 10, 11].includes(i);
+      <div className="room-seat-grid-8" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, padding: "6px 0", justifyItems: "center" }}>
+        {Array.from({ length: 8 }, (_, i) => {
+          const lockedByDefault = [7].includes(i);
           const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: lockedByDefault, isSpeaking: false };
           const isSpeaking = seat.userId
             ? (voiceJoined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking)

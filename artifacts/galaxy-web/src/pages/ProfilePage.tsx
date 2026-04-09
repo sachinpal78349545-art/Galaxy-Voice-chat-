@@ -392,10 +392,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             </p>
             <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
               {isAdmin ? (
-                <div className="super-admin-tag-wrapper">
-                  <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.png`} alt="Super Admin" className="super-admin-tag" style={{ height: 28 }} />
-                  <div className="super-admin-particles" />
-                </div>
+                <>
+                  <div className="super-admin-tag-wrapper">
+                    <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.png`} alt="Super Admin" className="super-admin-tag" style={{ height: 28 }} />
+                    <div className="super-admin-particles" />
+                  </div>
+                  <span className="founder-badge">{"\u{1F451}"} Founder</span>
+                </>
               ) : (user.globalRole === "official") ? (
                 <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 22, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }} />
               ) : (

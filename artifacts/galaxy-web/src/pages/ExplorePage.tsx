@@ -107,6 +107,7 @@ export default function ExplorePage({ user, onMessage, onNavigate }: Props) {
   const [sendingComment, setSendingComment] = useState(false);
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
+  const [reelsMode, setReelsMode] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const isAdmin = isSuperAdmin(user);
@@ -290,30 +291,87 @@ export default function ExplorePage({ user, onMessage, onNavigate }: Props) {
           <h1 style={{ fontSize: 22, fontWeight: 900, background: "linear-gradient(135deg,#A29BFE,#6C5CE7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Explore</h1>
           <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginTop: 2 }}>Discover photos & videos from the community</p>
         </div>
-        {onNavigate && (
-          <button onClick={() => onNavigate("moment")} style={{
-            background: "rgba(108,92,231,0.15)", border: "1px solid rgba(108,92,231,0.25)",
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <button onClick={() => setReelsMode(!reelsMode)} style={{
+            background: reelsMode ? "rgba(191,0,255,0.2)" : "rgba(108,92,231,0.15)",
+            border: reelsMode ? "1px solid rgba(191,0,255,0.4)" : "1px solid rgba(108,92,231,0.25)",
             borderRadius: 12, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700,
-            color: "#A29BFE", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5, marginTop: 4,
-          }}>{"\uD83D\uDCF8"} Moments</button>
-        )}
+            color: reelsMode ? "#bf00ff" : "#A29BFE", fontFamily: "inherit",
+            display: "flex", alignItems: "center", gap: 5,
+          }}>{"\uD83C\uDFAC"} Reels</button>
+          {onNavigate && (
+            <button onClick={() => onNavigate("moment")} style={{
+              background: "rgba(108,92,231,0.15)", border: "1px solid rgba(108,92,231,0.25)",
+              borderRadius: 12, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700,
+              color: "#A29BFE", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5,
+            }}>{"\uD83D\uDCF8"} Moments</button>
+          )}
+        </div>
       </div>
 
       {loading ? (
-        <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 16 }}>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 14 }}>
-                <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 18 }} />
-                <div style={{ flex: 1 }}>
-                  <div className="skeleton" style={{ width: "40%", height: 12, borderRadius: 6 }} />
-                  <div className="skeleton" style={{ width: "25%", height: 8, borderRadius: 4, marginTop: 4 }} />
-                </div>
-              </div>
-              <div className="skeleton" style={{ width: "100%", height: 240 }} />
-            </div>
-          ))}
+        <div className="galaxy-loader">
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Loading" />
+          <p>Loading feed...</p>
         </div>
+      ) : reelsMode ? (
+        (() => {
+          const videoPosts = posts.filter(p => p.videoUrl);
+          return videoPosts.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(162,155,254,0.4)" }}>
+              <p style={{ fontSize: 32, marginBottom: 8 }}>{"\uD83C\uDFAC"}</p>
+              <p style={{ fontSize: 14, fontWeight: 600 }}>No video reels yet</p>
+              <p style={{ fontSize: 12, marginTop: 4 }}>Upload a short video to start!</p>
+            </div>
+          ) : (
+            <div className="reels-container" style={{ height: "calc(100dvh - 160px)" }}>
+              {videoPosts.map(post => {
+                const likeCount = Object.keys(post.likes).length;
+                const isLiked = !!post.likes[user.uid];
+                return (
+                  <div key={post.id} className="reel-slide">
+                    <video src={post.videoUrl} autoPlay muted loop playsInline
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      onClick={e => {
+                        const v = e.currentTarget;
+                        if (v.paused) v.play(); else v.pause();
+                      }}
+                    />
+                    <div className="reel-overlay">
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {renderAvatar(post.userAvatar, 32)}
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{post.userName}</p>
+                          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>{getTimeAgo(post.createdAt)}</p>
+                        </div>
+                      </div>
+                      {post.text && <p style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", marginTop: 8, lineHeight: 1.4 }}>{post.text}</p>}
+                    </div>
+                    <div className="reel-actions">
+                      <button className="reel-action-btn" onClick={() => handleLike(post.id)}>
+                        <span style={{ fontSize: 28, color: isLiked ? "#ff6482" : "#fff" }}>{isLiked ? "\u2764\uFE0F" : "\uD83E\uDD0D"}</span>
+                        <span>{likeCount || ""}</span>
+                      </button>
+                      <button className="reel-action-btn" onClick={() => { setCommentingPost(post.id); setCommentText(""); }}>
+                        <span style={{ fontSize: 28 }}>{"\uD83D\uDCAC"}</span>
+                        <span>{post.commentCount || ""}</span>
+                      </button>
+                      <button className="reel-action-btn" onClick={() => handleShare(post)}>
+                        <span style={{ fontSize: 28 }}>{"\uD83D\uDD17"}</span>
+                        <span>Share</span>
+                      </button>
+                      {(isAdmin || post.uid === user.uid) && (
+                        <button className="reel-action-btn" onClick={() => handleDelete(post.id)}>
+                          <span style={{ fontSize: 24, color: "#ff6482" }}>{"\uD83D\uDDD1\uFE0F"}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()
       ) : posts.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(162,155,254,0.4)" }}>
           <p style={{ fontSize: 32, marginBottom: 8 }}>{"\uD83C\uDF0C"}</p>

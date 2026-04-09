@@ -141,6 +141,7 @@ export default function HomePage({ user, onJoinRoom }: Props) {
           {QUICK_CATEGORIES.map(cat => (
             <button
               key={cat.label}
+              className={`category-btn-neon${quickFilter === cat.topic ? " active" : ""}`}
               onClick={() => handleQuickJoin(cat.topic)}
               style={{
                 flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
@@ -150,7 +151,7 @@ export default function HomePage({ user, onJoinRoom }: Props) {
                 cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", minWidth: 52,
               }}
             >
-              <span style={{ fontSize: 24 }}>{cat.emoji}</span>
+              <span className="category-icon-neon" style={{ fontSize: 24 }}>{cat.emoji}</span>
               <span style={{ fontSize: 10, fontWeight: 700, color: quickFilter === cat.topic ? "#A29BFE" : "rgba(162,155,254,0.5)" }}>{cat.label}</span>
             </button>
           ))}
@@ -279,21 +280,10 @@ export default function HomePage({ user, onJoinRoom }: Props) {
 
       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="skeleton-card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", gap: 8 }}>
-                <div className="skeleton" style={{ width: 60, height: 16 }} />
-                <div className="skeleton" style={{ width: 40, height: 16 }} />
-              </div>
-              <div className="skeleton skeleton-text" style={{ width: "70%" }} />
-              <div className="skeleton skeleton-text" style={{ width: "40%" }} />
-              <div style={{ display: "flex", gap: 6 }}>
-                {Array.from({ length: 6 }).map((_, j) => (
-                  <div key={j} className="skeleton skeleton-circle" style={{ width: 32, height: 32 }} />
-                ))}
-              </div>
-            </div>
-          ))
+          <div className="galaxy-loader">
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Loading" />
+            <p>Discovering rooms...</p>
+          </div>
         ) : (
           <>
             {visible.map((room, i) => (
@@ -302,8 +292,8 @@ export default function HomePage({ user, onJoinRoom }: Props) {
               </div>
             ))}
             {visible.length < filtered.length && (
-              <div style={{ textAlign: "center", padding: 20 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 14, border: "2px solid rgba(108,92,231,0.3)", borderTopColor: "#6C5CE7", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />
+              <div className="galaxy-loader" style={{ padding: "20px 0" }}>
+                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Loading" style={{ width: 32, height: 32 }} />
               </div>
             )}
             {filtered.length === 0 && (
