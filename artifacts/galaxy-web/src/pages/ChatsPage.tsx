@@ -247,17 +247,25 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
             width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)",
             border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontSize: 16, color: "#fff",
           }}>{"\u2039"}</button>
-          <div style={{
-            width: 38, height: 38, borderRadius: 19, fontSize: 18,
-            background: otherIsSuperAdmin ? "rgba(255,215,0,0.12)" : "rgba(108,92,231,0.15)",
-            border: otherIsSuperAdmin ? "2px solid rgba(255,215,0,0.4)" : "2px solid rgba(108,92,231,0.3)",
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            overflow: "hidden",
-            boxShadow: otherIsSuperAdmin ? "0 0 10px rgba(255,215,0,0.3)" : "none",
-          }}>
-            {active.participantAvatars[otherIdx]?.startsWith?.("http")
-              ? <img src={active.participantAvatars[otherIdx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 19 }} />
-              : active.participantAvatars[otherIdx]}
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 19, fontSize: 18,
+              background: otherIsSuperAdmin ? "rgba(255,215,0,0.12)" : "rgba(108,92,231,0.15)",
+              border: otherIsSuperAdmin ? "2px solid rgba(255,215,0,0.4)" : "2px solid rgba(108,92,231,0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              overflow: "hidden",
+              boxShadow: otherIsSuperAdmin ? "0 0 10px rgba(255,215,0,0.3)" : "none",
+            }}>
+              {active.participantAvatars[otherIdx]?.startsWith?.("http")
+                ? <img src={active.participantAvatars[otherIdx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 19 }} />
+                : active.participantAvatars[otherIdx]}
+            </div>
+            {otherIsSuperAdmin && (
+              <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" style={{ position: "absolute", top: -4, left: -4, width: 46, height: 46, pointerEvents: "none" }} />
+            )}
+            {otherProfile?.globalRole === "official" && !otherIsSuperAdmin && (
+              <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" style={{ position: "absolute", top: -4, left: -4, width: 46, height: 46, pointerEvents: "none", filter: "hue-rotate(40deg)" }} />
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -294,7 +302,20 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
             const reactions = msg.reactions ? Object.values(msg.reactions) : [];
             return (
               <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isSelf ? "flex-end" : "flex-start", marginBottom: 10, animation: "slide-up 0.2s ease" }}>
-                {senderIsSuperAdmin && (
+                {senderIsSuperAdmin && !isSelf && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3, padding: "0 4px" }}>
+                    <div style={{ position: "relative", width: 18, height: 18, flexShrink: 0 }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 9, overflow: "hidden", background: "rgba(255,215,0,0.15)", border: "1px solid rgba(255,215,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>
+                        {active.participantAvatars[otherIdx]?.startsWith?.("http")
+                          ? <img src={active.participantAvatars[otherIdx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 9 }} />
+                          : active.participantAvatars[otherIdx]}
+                      </div>
+                      <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" style={{ position: "absolute", top: -2, left: -2, width: 22, height: 22, pointerEvents: "none" }} />
+                    </div>
+                    <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.png`} alt="Super Admin" style={{ height: 12 }} />
+                  </div>
+                )}
+                {senderIsSuperAdmin && isSelf && (
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2, padding: "0 4px" }}>
                     <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 800 }}>{"\u{1F451}"} Super Admin</span>
                   </div>

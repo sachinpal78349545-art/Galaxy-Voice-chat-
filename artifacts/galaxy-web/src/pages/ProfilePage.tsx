@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin } from "../lib/userService";
+import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser } from "../lib/userService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
@@ -66,6 +66,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendProfiles, setFriendProfiles] = useState<UserProfile[]>([]);
   const [blockedProfiles, setBlockedProfiles] = useState<UserProfile[]>([]);
+  const [showFollowersList, setShowFollowersList] = useState(false);
+  const [showFollowingList, setShowFollowingList] = useState(false);
+  const [followerProfiles, setFollowerProfiles] = useState<UserProfile[]>([]);
+  const [followingProfiles, setFollowingProfiles] = useState<UserProfile[]>([]);
+  const [followerLoading, setFollowerLoading] = useState(false);
+  const [followingLoading, setFollowingLoading] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState<UserProfile | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [reportTarget, setReportTarget] = useState("");
@@ -102,6 +109,34 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
       if (p) profiles.push(p);
     }
     setFriendProfiles(profiles);
+  };
+
+  const loadFollowers = async () => {
+    setFollowerLoading(true);
+    try {
+      const list = user.followersList || [];
+      const profiles: UserProfile[] = [];
+      for (const uid of list.slice(0, 50)) {
+        const p = await getUser(uid);
+        if (p) profiles.push(p);
+      }
+      setFollowerProfiles(profiles);
+    } catch { showToast("Failed to load followers", "error"); }
+    finally { setFollowerLoading(false); }
+  };
+
+  const loadFollowing = async () => {
+    setFollowingLoading(true);
+    try {
+      const list = user.followingList || [];
+      const profiles: UserProfile[] = [];
+      for (const uid of list.slice(0, 50)) {
+        const p = await getUser(uid);
+        if (p) profiles.push(p);
+      }
+      setFollowingProfiles(profiles);
+    } catch { showToast("Failed to load following", "error"); }
+    finally { setFollowingLoading(false); }
   };
 
   const loadBlocked = async () => {
@@ -145,9 +180,17 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   };
 
   const handleFriendResponse = async (reqId: string, accept: boolean) => {
+    const req = friendRequests.find(r => r.id === reqId);
     await respondFriendRequest(user.uid, reqId, accept);
     setFriendRequests(prev => prev.filter(r => r.id !== reqId));
-    showToast(accept ? "Friend added!" : "Request declined", accept ? "success" : "info");
+    if (accept && req) {
+      showToast(`${req.fromName} added as friend! You can now chat.`, "success");
+      try {
+        await getOrCreateConversation(user.uid, user.name, user.avatar, req.fromUid, req.fromName, req.fromAvatar || "");
+      } catch {}
+    } else {
+      showToast("Request declined", "info");
+    }
   };
 
   const handleFriendBlock = async (req: FriendRequest) => {
@@ -364,12 +407,12 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
 
           <div style={{ display: "flex", gap: 20, marginTop: 8, width: "100%", justifyContent: "center" }}>
             {[
-              { label: "Followers", val: (user.followers || 0).toLocaleString() },
-              { label: "Following", val: (user.following || 0).toLocaleString() },
-              { label: "Friends", val: (user.friends || 0).toLocaleString() },
-              { label: "Coins", val: user.coins.toLocaleString(), icon: "\u{1F48E}" },
+              { label: "Followers", val: (user.followers || 0).toLocaleString(), action: () => { setShowFollowersList(true); loadFollowers(); } },
+              { label: "Following", val: (user.following || 0).toLocaleString(), action: () => { setShowFollowingList(true); loadFollowing(); } },
+              { label: "Friends", val: (user.friends || 0).toLocaleString(), action: () => { setShowFriendsList(true); loadFriends(); } },
+              { label: "Coins", val: user.coins.toLocaleString(), icon: "\u{1F48E}", action: () => setShowWallet(true) },
             ].map(s => (
-              <div key={s.label} style={{ textAlign: "center", flex: 1 }}>
+              <div key={s.label} onClick={s.action} style={{ textAlign: "center", flex: 1, cursor: "pointer" }}>
                 <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1 }}>{"icon" in s && s.icon ? `${s.icon} ` : ""}{s.val}</p>
                 <p style={{ fontSize: 10, color: "rgba(162,155,254,0.45)", marginTop: 4 }}>{s.label}</p>
               </div>
@@ -744,6 +787,169 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                 </div>
               ))
             )}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showFollowersList && (
+        <BottomSheet onClose={() => setShowFollowersList(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F465}"} Followers ({user.followers || 0})</h2>
+            <button onClick={() => setShowFollowersList(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {followerLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="skeleton skeleton-circle" style={{ width: 40, height: 40, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}><div className="skeleton skeleton-text" style={{ width: "50%" }} /></div>
+                </div>
+              ))
+            ) : followerProfiles.length === 0 ? (
+              <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No followers yet</p>
+            ) : (
+              followerProfiles.map(fp => (
+                <div key={fp.uid} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div onClick={() => { setShowFollowersList(false); setViewingProfile(fp); }} style={{
+                    width: 40, height: 40, borderRadius: 20, fontSize: 20,
+                    background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.25)",
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, cursor: "pointer",
+                  }}>
+                    {fp.avatar?.startsWith("http")
+                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} />
+                      : fp.avatar}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => { setShowFollowersList(false); setViewingProfile(fp); }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fp.name}</p>
+                    <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>{fp.online ? "Online" : "Offline"}</p>
+                  </div>
+                  <button className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: "4px 10px", borderRadius: 10 }} onClick={async () => {
+                    try {
+                      await getOrCreateConversation(user.uid, user.name, user.avatar, fp.uid, fp.name, fp.avatar);
+                      setShowFollowersList(false);
+                      if (onMessage) onMessage(fp.uid);
+                    } catch { showToast("Could not open chat", "error"); }
+                  }}>{"\u{1F4AC}"} Chat</button>
+                </div>
+              ))
+            )}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showFollowingList && (
+        <BottomSheet onClose={() => setShowFollowingList(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F465}"} Following ({user.following || 0})</h2>
+            <button onClick={() => setShowFollowingList(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {followingLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="skeleton skeleton-circle" style={{ width: 40, height: 40, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}><div className="skeleton skeleton-text" style={{ width: "50%" }} /></div>
+                </div>
+              ))
+            ) : followingProfiles.length === 0 ? (
+              <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No one followed yet</p>
+            ) : (
+              followingProfiles.map(fp => (
+                <div key={fp.uid} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div onClick={() => { setShowFollowingList(false); setViewingProfile(fp); }} style={{
+                    width: 40, height: 40, borderRadius: 20, fontSize: 20,
+                    background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.25)",
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, cursor: "pointer",
+                  }}>
+                    {fp.avatar?.startsWith("http")
+                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} />
+                      : fp.avatar}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => { setShowFollowingList(false); setViewingProfile(fp); }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fp.name}</p>
+                    <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>{fp.online ? "Online" : "Offline"}</p>
+                  </div>
+                  <button className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: "4px 10px", borderRadius: 10 }} onClick={async () => {
+                    try {
+                      await getOrCreateConversation(user.uid, user.name, user.avatar, fp.uid, fp.name, fp.avatar);
+                      setShowFollowingList(false);
+                      if (onMessage) onMessage(fp.uid);
+                    } catch { showToast("Could not open chat", "error"); }
+                  }}>{"\u{1F4AC}"} Chat</button>
+                </div>
+              ))
+            )}
+          </div>
+        </BottomSheet>
+      )}
+
+      {viewingProfile && (
+        <BottomSheet onClose={() => setViewingProfile(null)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>Profile</h2>
+            <button onClick={() => setViewingProfile(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, paddingBottom: 16 }}>
+            <div style={{ position: "relative" }}>
+              <div style={{
+                width: 80, height: 80, borderRadius: 40, fontSize: 40,
+                background: isSuperAdmin(viewingProfile) ? "rgba(255,215,0,0.12)" : "rgba(108,92,231,0.15)",
+                border: isSuperAdmin(viewingProfile) ? "3px solid rgba(255,215,0,0.5)" : "3px solid rgba(108,92,231,0.3)",
+                display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                boxShadow: isSuperAdmin(viewingProfile) ? "0 0 20px rgba(255,215,0,0.3)" : "0 0 15px rgba(108,92,231,0.2)",
+              }}>
+                {viewingProfile.avatar?.startsWith("http")
+                  ? <img src={viewingProfile.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 40 }} />
+                  : viewingProfile.avatar}
+              </div>
+              {isSuperAdmin(viewingProfile) && (
+                <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.png`} alt="Super Admin" style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", height: 20 }} />
+              )}
+              {viewingProfile.globalRole === "official" && !isSuperAdmin(viewingProfile) && (
+                <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.svg`} alt="Official" style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", height: 18 }} />
+              )}
+            </div>
+            <div style={{ textAlign: "center", marginTop: 4 }}>
+              <p style={{ fontSize: 18, fontWeight: 900 }}>{viewingProfile.name}</p>
+              {isSuperAdmin(viewingProfile) && (
+                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 8, background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)", fontWeight: 900 }}>{"\u{1F451}"} Super Admin</span>
+              )}
+              {viewingProfile.globalRole === "official" && !isSuperAdmin(viewingProfile) && (
+                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 8, background: "rgba(255,215,0,0.12)", color: "#FFD700", fontWeight: 700 }}>{"\u{1F6E1}\uFE0F"} Official</span>
+              )}
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginTop: 4 }}>Level {viewingProfile.level} {"\u00B7"} {viewingProfile.xp} XP</p>
+              {viewingProfile.bio && <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 6, lineHeight: 1.5 }}>{viewingProfile.bio}</p>}
+            </div>
+            <div style={{ display: "flex", gap: 24, marginTop: 4 }}>
+              <div style={{ textAlign: "center" }}><p style={{ fontSize: 16, fontWeight: 900 }}>{viewingProfile.followers || 0}</p><p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>Followers</p></div>
+              <div style={{ textAlign: "center" }}><p style={{ fontSize: 16, fontWeight: 900 }}>{viewingProfile.following || 0}</p><p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>Following</p></div>
+              <div style={{ textAlign: "center" }}><p style={{ fontSize: 16, fontWeight: 900 }}>{viewingProfile.friends || 0}</p><p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>Friends</p></div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 8, width: "100%" }}>
+              <button className="btn btn-primary" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }} onClick={async () => {
+                try {
+                  await getOrCreateConversation(user.uid, user.name, user.avatar, viewingProfile!.uid, viewingProfile!.name, viewingProfile!.avatar);
+                  setViewingProfile(null);
+                  if (onMessage) onMessage(viewingProfile!.uid);
+                } catch { showToast("Could not open chat", "error"); }
+              }}>{"\u{1F4AC}"} Message</button>
+              <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }} onClick={async () => {
+                try {
+                  const isF = (user.followingList || []).includes(viewingProfile!.uid);
+                  if (isF) { showToast("Already following!", "info"); }
+                  else {
+                    const res = await followUser(user.uid, viewingProfile!.uid);
+                    showToast(res.isMutual ? "You're now friends!" : "Followed!", "success");
+                  }
+                } catch { showToast("Follow failed", "error"); }
+              }}>{(user.followingList || []).includes(viewingProfile.uid) ? "\u2705 Following" : "\u2795 Follow"}</button>
+              <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }} onClick={async () => {
+                try {
+                  await sendFriendRequest(user.uid, user.name, user.avatar, viewingProfile!.uid);
+                  showToast("Friend request sent!", "success");
+                } catch { showToast("Request failed", "error"); }
+              }}>{"\u{1F91D}"} Add Friend</button>
+            </div>
           </div>
         </BottomSheet>
       )}
