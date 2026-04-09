@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ref, push, set, onValue, off } from "firebase/database";
 import { db } from "../../lib/firebase";
 import { cleanName } from "./types";
+import { playDiceSound } from "./gameSounds";
 
 interface DiceRoll {
   id: string;
@@ -52,6 +53,7 @@ export default function DiceGame({ roomId, userId, username, onClose }: DiceGame
     if (rolling) return;
     setRolling(true);
     setLastResult(null);
+    playDiceSound();
 
     let rollCount = 0;
     const interval = setInterval(() => {

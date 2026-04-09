@@ -14,7 +14,7 @@ import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } f
 import { sendNotification } from "../lib/notificationService";
 import { voiceService } from "../lib/voiceService";
 import { useToast } from "../lib/toastContext";
-import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, cleanName, hashCode } from "../components/room";
+import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, MiniLudo, CarromGame, TruthDareWheel, cleanName, hashCode } from "../components/room";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; }
 
@@ -46,6 +46,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
   const [showReportModal, setShowReportModal] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [showDiceGame, setShowDiceGame] = useState(false);
+  const [showGameHub, setShowGameHub] = useState(false);
+  const [activeGame, setActiveGame] = useState<string | null>(null);
   const [isSpeakerOff, setIsSpeakerOff] = useState(false);
   const [inviteSeatIdx, setInviteSeatIdx] = useState<number | null>(null);
   const [cpDpUploading, setCpDpUploading] = useState(false);
@@ -492,16 +494,34 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
         onRaiseHand={handleRaiseHand}
         onShare={shareRoom}
         showToast={showToast}
-        onOpenGame={() => setShowDiceGame(true)}
+        onOpenGame={() => setShowGameHub(true)}
       />
 
-      {showDiceGame && (
-        <DiceGame
-          roomId={roomId}
-          userId={user.uid}
-          username={user.name}
-          onClose={() => setShowDiceGame(false)}
+      {showGameHub && (
+        <GameHub
+          hasControl={hasControl}
+          onSelectGame={(g) => { setShowGameHub(false); setActiveGame(g); }}
+          onClose={() => setShowGameHub(false)}
         />
+      )}
+
+      {activeGame === "dice" && (
+        <DiceGame roomId={roomId} userId={user.uid} username={user.name}
+          onClose={() => setActiveGame(null)} />
+      )}
+      {activeGame === "ludo" && (
+        <MiniLudo roomId={roomId} userId={user.uid} username={user.name}
+          hasControl={hasControl} onClose={() => setActiveGame(null)} />
+      )}
+      {activeGame === "carrom" && (
+        <CarromGame roomId={roomId} userId={user.uid} username={user.name}
+          hasControl={hasControl} onClose={() => setActiveGame(null)} />
+      )}
+      {activeGame === "tod" && (
+        <TruthDareWheel roomId={roomId} userId={user.uid} username={user.name}
+          hasControl={hasControl}
+          roomUsers={roomUsers.map(u => ({ uid: u.uid, name: u.name }))}
+          onClose={() => setActiveGame(null)} />
       )}
 
       {showSeatSheet !== null && (
