@@ -14,10 +14,11 @@ type RemoteUserCb = (uid: number, joined: boolean) => void;
 class VoiceService {
   private client: IAgoraRTCClient | null = null;
   private localTrack: IMicrophoneAudioTrack | null = null;
-  private _muted = false;
+  private _muted = true;
   private _speakerOff = false;
   private _ready = false;
   private _joined = false;
+  private _micEnabled = false;
   private speakerCb: SpeakerCb | null = null;
   private remoteCb: RemoteUserCb | null = null;
   private volumeInterval: ReturnType<typeof setInterval> | null = null;
@@ -69,27 +70,64 @@ class VoiceService {
     }
     try {
       await this.client.join(APP_ID, channel, token, uid);
+      this._joined = true;
+      this._muted = true;
+      this._micEnabled = false;
+      this.startVolumeMonitor();
+      console.log(`[Agora] Joined channel as listener: ${channel}`);
+    } catch (e) {
+      console.error("[Agora] join error:", e);
+    }
+  }
+
+  async enableMic(): Promise<boolean> {
+    if (!this._ready || !this.client || !this._joined) {
+      console.warn("[Agora] Cannot enable mic - not joined");
+      return false;
+    }
+    if (this._micEnabled && this.localTrack) {
+      await this.localTrack.setMuted(false);
+      this._muted = false;
+      return true;
+    }
+    try {
       this.localTrack = await AgoraRTC.createMicrophoneAudioTrack({
         AEC: true,
         ANS: true,
         AGC: true,
       });
       await this.client.publish([this.localTrack]);
-      this._joined = true;
-      this.startVolumeMonitor();
-      console.log(`[Agora] Joined channel: ${channel}`);
+      this._micEnabled = true;
+      this._muted = false;
+      console.log("[Agora] Mic enabled and published");
+      return true;
     } catch (e) {
-      console.error("[Agora] join error:", e);
+      console.error("[Agora] enableMic error:", e);
+      return false;
     }
   }
 
-  async leave(): Promise<void> {
-    this.stopVolumeMonitor();
+  async disableMic(): Promise<void> {
     if (this.localTrack) {
+      try {
+        if (this.client && this._joined) {
+          await this.client.unpublish([this.localTrack]);
+        }
+      } catch (e) {
+        console.warn("[Agora] unpublish error:", e);
+      }
       this.localTrack.stop();
       this.localTrack.close();
       this.localTrack = null;
     }
+    this._micEnabled = false;
+    this._muted = true;
+    console.log("[Agora] Mic disabled and unpublished");
+  }
+
+  async leave(): Promise<void> {
+    this.stopVolumeMonitor();
+    await this.disableMic();
     if (this.client && this._joined) {
       try {
         await this.client.leave();
@@ -98,7 +136,8 @@ class VoiceService {
       }
     }
     this._joined = false;
-    this._muted = false;
+    this._muted = true;
+    this._micEnabled = false;
   }
 
   async setMuted(muted: boolean): Promise<void> {
@@ -144,7 +183,7 @@ class VoiceService {
     this.stopVolumeMonitor();
     this.volumeInterval = setInterval(() => {
       if (!this.client || !this._joined) return;
-      if (this.localTrack && !this._muted) {
+      if (this.localTrack && !this._muted && this._micEnabled) {
         const vol = this.localTrack.getVolumeLevel();
         this.speakerCb?.(0, vol * 100);
       }
@@ -167,6 +206,7 @@ class VoiceService {
   get muted() { return this._muted; }
   get ready() { return this._ready; }
   get joined() { return this._joined; }
+  get micEnabled() { return this._micEnabled; }
 }
 
 export const voiceService = new VoiceService();

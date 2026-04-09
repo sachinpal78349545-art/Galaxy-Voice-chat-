@@ -915,6 +915,12 @@ textarea.input-field { resize: none; line-height: 1.5; }
   border: 2px solid rgba(0,255,255,0.25);
   box-shadow: 0 0 8px rgba(0,255,255,0.15);
 }
+.mic-btn-disabled {
+  background: rgba(255,255,255,0.03);
+  border: 2px solid rgba(255,255,255,0.1);
+  box-shadow: none;
+  opacity: 0.4;
+}
 
 .room-hand-fab {
   position: absolute; right: 10px; bottom: 175px; z-index: 20;

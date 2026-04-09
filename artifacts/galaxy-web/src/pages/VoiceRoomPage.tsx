@@ -22,7 +22,7 @@ interface Props { roomId: string; user: UserProfile; onLeave: () => void; entere
 export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, onMessage }: Props) {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [inputText, setInputText] = useState("");
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [floats, setFloats] = useState<{ id: number; item: string; x: number; big?: boolean }[]>([]);
@@ -120,6 +120,37 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
     })();
     return () => { voiceService.leave(); };
   }, [room?.id]);
+
+  const mySeatIndex = room ? room.seats.findIndex(s => s.userId === user.uid) : -1;
+  const isOnSeat = mySeatIndex >= 0;
+  const prevOnSeatRef = useRef(false);
+
+  useEffect(() => {
+    if (prevOnSeatRef.current && !isOnSeat && voiceService.micEnabled) {
+      voiceService.disableMic();
+      setIsMuted(true);
+      showToast("You left the seat, mic disabled", "info", "\u{1F3A4}");
+    }
+    prevOnSeatRef.current = isOnSeat;
+  }, [isOnSeat]);
+
+  const enableMicForSeat = async () => {
+    const ok = await voiceService.enableMic();
+    if (ok) {
+      setIsMuted(false);
+      if (room && mySeatIndex >= 0) {
+        toggleMuteSeat(roomId, mySeatIndex, false).catch(console.error);
+      }
+      showToast("Mic is ON", "success", "\u{1F3A4}");
+    } else {
+      showToast("Microphone permission denied", "error");
+    }
+  };
+
+  const disableMicForSeat = async () => {
+    await voiceService.disableMic();
+    setIsMuted(true);
+  };
 
   useEffect(() => {
     if (!room) return;
@@ -260,8 +291,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
           return;
         }
         const ok = await joinSeat(roomId, emptySeat, user.uid, user.name, user.avatar);
-        if (ok) showToast("Joined a seat!", "success");
-        else showToast("No seats available", "warning");
+        if (ok) {
+          showToast("Joined seat! Enabling mic...", "success");
+          await enableMicForSeat();
+        } else {
+          showToast("No seats available", "warning");
+        }
       } else {
         showToast("No seats available", "warning");
       }
@@ -273,6 +308,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
     try {
       if (action === "kick") {
         const seatUser = room.seats[seatIdx]?.username;
+        const seatUserId = room.seats[seatIdx]?.userId;
+        if (seatUserId === user.uid) {
+          await disableMicForSeat();
+        }
         await kickFromSeat(roomId, seatIdx);
         showToast(`${seatUser} removed from seat`, "info");
         sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6AB}", text: `${seatUser} was removed from seat`, type: "system" }).catch(console.error);
@@ -337,16 +376,25 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
   };
 
   const handleMicToggle = async () => {
+    if (!isOnSeat) {
+      showToast("Take a seat first to use the mic", "warning", "\u{1F3A4}");
+      return;
+    }
+    if (!voiceService.micEnabled) {
+      await enableMicForSeat();
+      return;
+    }
     const newMuted = !isMuted;
     setIsMuted(newMuted);
     await voiceService.setMuted(newMuted);
-    if (room) {
-      const mySeat = room.seats.findIndex(s => s.userId === user.uid);
-      if (mySeat >= 0) toggleMuteSeat(roomId, mySeat, newMuted).catch(console.error);
+    if (room && mySeatIndex >= 0) {
+      toggleMuteSeat(roomId, mySeatIndex, newMuted).catch(console.error);
     }
+    showToast(newMuted ? "Mic muted" : "Mic unmuted", "info", newMuted ? "\u{1F507}" : "\u{1F3A4}");
   };
 
   const handleLeave = async () => {
+    await disableMicForSeat();
     await voiceService.leave();
     if (room) {
       const mySeat = room.seats.findIndex(s => s.userId === user.uid);
@@ -492,7 +540,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         officialUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isOfficial).map((ru: any) => ru.uid))}
         superAdminUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isSuperAdmin).map((ru: any) => ru.uid))}
         onSeatTap={(i, seat) => {
-          if (seat.userId === user.uid) return;
+          if (seat.userId === user.uid) {
+            setShowSeatSheet(i);
+            return;
+          }
           if (seat.userId) {
             setShowProfileCard({ uid: seat.userId, name: seat.username || "User", avatar: seat.avatar || "\u{1F464}", seatIdx: i });
           } else if (seat.isLocked && hasControl) {
@@ -514,6 +565,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         setInputText={setInputText}
         isMuted={isMuted}
         isSpeakerOff={isSpeakerOff}
+        isOnSeat={isOnSeat}
         onSendChat={sendChat}
         onSendEmoji={sendEmojiMsg}
         onHandleGift={handleGift}
@@ -560,25 +612,45 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
               {"\u{1F3A4}"} Seat {showSeatSheet + 1}
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button className="btn btn-primary btn-full" onClick={async () => {
-                if (room.micPermission === "admin_only" && !hasControl) {
-                  showToast("Only owner/admins can take seats", "warning");
+              {room.seats[showSeatSheet]?.userId === user.uid ? (
+                <button className="btn btn-danger btn-full" onClick={async () => {
+                  await disableMicForSeat();
+                  await leaveSeat(roomId, showSeatSheet).catch(console.error);
+                  if (mySeatIndex >= 0) toggleMuteSeat(roomId, mySeatIndex, true).catch(console.error);
+                  showToast("Left seat, mic disabled", "info", "\u{1F3A4}");
+                  sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F3A4}", text: `${cleanName(user.name)} left the mic`, type: "system" }).catch(console.error);
                   setShowSeatSheet(null);
-                  return;
-                }
-                if (room.micPermission === "request" && !hasControl) {
-                  showToast("Mic request sent to owner/admin", "info");
-                  sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u270B", text: `${cleanName(user.name)} is requesting to speak`, type: "system" }).catch(console.error);
-                  setShowSeatSheet(null);
-                  return;
-                }
-                const ok = await joinSeat(roomId, showSeatSheet, user.uid, user.name, user.avatar);
-                if (ok) showToast("Joined seat!", "success");
-                else showToast("Seat not available", "warning");
-                setShowSeatSheet(null);
-              }}>
-                {room.seats.some(s => s.userId === user.uid) ? "\u{1F504} Switch to This Seat" : "\u{1F3A4} Take This Seat"}
-              </button>
+                }}>
+                  {"\u{1F6AA}"} Leave Seat
+                </button>
+              ) : (
+                <button className="btn btn-primary btn-full" onClick={async () => {
+                  if (room.micPermission === "admin_only" && !hasControl) {
+                    showToast("Only owner/admins can take seats", "warning");
+                    setShowSeatSheet(null);
+                    return;
+                  }
+                  if (room.micPermission === "request" && !hasControl) {
+                    showToast("Mic request sent to owner/admin", "info");
+                    sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u270B", text: `${cleanName(user.name)} is requesting to speak`, type: "system" }).catch(console.error);
+                    setShowSeatSheet(null);
+                    return;
+                  }
+                  const wasOnSeat = room.seats.some(s => s.userId === user.uid);
+                  if (wasOnSeat) await disableMicForSeat();
+                  const ok = await joinSeat(roomId, showSeatSheet, user.uid, user.name, user.avatar);
+                  if (ok) {
+                    showToast("Joined seat! Enabling mic...", "success");
+                    setShowSeatSheet(null);
+                    await enableMicForSeat();
+                  } else {
+                    showToast("Seat not available", "warning");
+                    setShowSeatSheet(null);
+                  }
+                }}>
+                  {room.seats.some(s => s.userId === user.uid) ? "\u{1F504} Switch to This Seat" : "\u{1F3A4} Take This Seat"}
+                </button>
+              )}
               {hasControl && (
                 <button className="btn btn-ghost btn-full" onClick={() => {
                   toggleLockSeat(roomId, showSeatSheet, !room.seats[showSeatSheet]?.isLocked).catch(console.error);

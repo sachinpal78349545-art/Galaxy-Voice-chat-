@@ -33,6 +33,7 @@ interface BottomBarProps {
   setInputText: (v: string) => void;
   isMuted: boolean;
   isSpeakerOff: boolean;
+  isOnSeat: boolean;
   onSendChat: () => void;
   onSendEmoji: (emoji: string) => void;
   onHandleGift: (gift: { emoji: string; name: string; cost: number }, combo: number) => void;
@@ -47,7 +48,7 @@ interface BottomBarProps {
 
 export default function BottomBar({
   room, user, inputText, setInputText,
-  isMuted, isSpeakerOff,
+  isMuted, isSpeakerOff, isOnSeat,
   onSendChat, onSendEmoji, onHandleGift, onHandleReaction,
   onMicToggle, onSpeakerToggle, onRaiseHand, onShare, showToast, onOpenGame,
 }: BottomBarProps) {
@@ -62,9 +63,9 @@ export default function BottomBar({
     <>
       <div className="room-hand-fab">
         <button onClick={onRaiseHand} className="room-btn-circle" style={{
-          width: 44, height: 44, border: "1.5px solid rgba(138,43,226,0.3)",
-          boxShadow: "0 0 12px rgba(138,43,226,0.3)", fontSize: 22,
-        }}>{"\u{1F6CB}\uFE0F"}</button>
+          width: 44, height: 44, border: isOnSeat ? "1.5px solid rgba(0,255,255,0.3)" : "1.5px solid rgba(138,43,226,0.3)",
+          boxShadow: isOnSeat ? "0 0 12px rgba(0,255,255,0.3)" : "0 0 12px rgba(138,43,226,0.3)", fontSize: 22,
+        }}>{isOnSeat ? "\u270B" : "\u{1F3A4}"}</button>
       </div>
 
       <div className="room-bottom">
@@ -85,8 +86,9 @@ export default function BottomBar({
               {isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}
             </button>
             <button onClick={onMicToggle}
-              className={`room-btn-circle room-btn-mic ${isMuted ? "mic-btn-muted" : "mic-btn-active"}`}>
-              {isMuted ? "\u{1F507}" : "\u{1F3A4}"}
+              className={`room-btn-circle room-btn-mic ${!isOnSeat ? "mic-btn-disabled" : isMuted ? "mic-btn-muted" : "mic-btn-active"}`}
+              title={!isOnSeat ? "Take a seat to use mic" : isMuted ? "Unmute" : "Mute"}>
+              {!isOnSeat ? "\u{1F507}" : isMuted ? "\u{1F507}" : "\u{1F3A4}"}
             </button>
           </div>
 
