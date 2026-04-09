@@ -8,7 +8,7 @@ interface GameHubProps {
 
 const GAMES = [
   { id: "dice", emoji: "\u{1F3B2}", name: "Dice Roll", desc: "Roll dice, everyone sees live!", adminOnly: false },
-  { id: "ludo", emoji: "\u{1F3AF}", name: "Mini Ludo", desc: "Race to finish! Turn-based dice race", adminOnly: true },
+  { id: "ludo", emoji: "\u265F\uFE0F", name: "Classic Ludo", desc: "4-player board game with tokens, kills & safe zones!", adminOnly: true },
   { id: "carrom", emoji: "\u{1F3B1}", name: "Carrom Board", desc: "Pocket the coins! Turn-based scoring", adminOnly: true },
   { id: "tod", emoji: "\u{1F3A1}", name: "Truth or Dare", desc: "Spin the wheel! Pick truth or dare", adminOnly: true },
 ];

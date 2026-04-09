@@ -4,7 +4,7 @@ export { default as ChatSection } from "./ChatSection";
 export { default as BottomBar } from "./BottomBar";
 export { default as DiceGame } from "./DiceGame";
 export { default as GameHub } from "./GameHub";
-export { default as MiniLudo } from "./MiniLudo";
+export { default as ClassicLudo } from "./ClassicLudo";
 export { default as CarromGame } from "./CarromGame";
 export { default as TruthDareWheel } from "./TruthDareWheel";
 export { cleanName, hashCode } from "./types";

@@ -14,7 +14,7 @@ import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } f
 import { sendNotification } from "../lib/notificationService";
 import { voiceService } from "../lib/voiceService";
 import { useToast } from "../lib/toastContext";
-import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, MiniLudo, CarromGame, TruthDareWheel, cleanName, hashCode } from "../components/room";
+import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, ClassicLudo, CarromGame, TruthDareWheel, cleanName, hashCode } from "../components/room";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; }
 
@@ -510,7 +510,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword }
           onClose={() => setActiveGame(null)} />
       )}
       {activeGame === "ludo" && (
-        <MiniLudo roomId={roomId} userId={user.uid} username={user.name}
+        <ClassicLudo roomId={roomId} userId={user.uid} username={user.name}
           hasControl={hasControl} onClose={() => setActiveGame(null)} />
       )}
       {activeGame === "carrom" && (
