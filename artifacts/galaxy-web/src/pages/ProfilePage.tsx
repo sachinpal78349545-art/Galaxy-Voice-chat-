@@ -337,7 +337,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
               {isAdmin ? (
                 <div className="super-admin-tag-wrapper">
-                  <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.svg`} alt="Super Admin" className="super-admin-tag" style={{ height: 28 }} />
+                  <img src={`${import.meta.env.BASE_URL}assets/tags/super_admin_v2.png`} alt="Super Admin" className="super-admin-tag" style={{ height: 28 }} />
                   <div className="super-admin-particles" />
                 </div>
               ) : (user.globalRole === "official") ? (
