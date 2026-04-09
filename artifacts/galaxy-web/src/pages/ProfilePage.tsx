@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { auth, db } from "../lib/firebase";
+import { ref, onValue, off } from "firebase/database";
 import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser } from "../lib/userService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
@@ -73,6 +74,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [followerLoading, setFollowerLoading] = useState(false);
   const [followingLoading, setFollowingLoading] = useState(false);
   const [viewingProfile, setViewingProfile] = useState<UserProfile | null>(null);
+  const [momentCount, setMomentCount] = useState(0);
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [reportTarget, setReportTarget] = useState("");
@@ -95,6 +97,17 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   useEffect(() => {
     if (isAdmin) ensureSuperAdmin(user.uid).catch(console.error);
   }, [isAdmin, user.uid]);
+
+  useEffect(() => {
+    const momentsRef = ref(db, "moments");
+    const handler = onValue(momentsRef, snap => {
+      if (!snap.exists()) { setMomentCount(0); return; }
+      const val = snap.val();
+      const count = Object.values(val).filter((m: any) => m.uid === user.uid).length;
+      setMomentCount(count);
+    });
+    return () => off(momentsRef);
+  }, [user.uid]);
 
   useEffect(() => {
     const unsub = subscribeFriendRequests(user.uid, setFriendRequests);
@@ -405,16 +418,18 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 20, marginTop: 8, width: "100%", justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 14, marginTop: 8, width: "100%", justifyContent: "center", flexWrap: "wrap" }}>
             {[
               { label: "Followers", val: (user.followers || 0).toLocaleString(), action: () => { setShowFollowersList(true); loadFollowers(); } },
               { label: "Following", val: (user.following || 0).toLocaleString(), action: () => { setShowFollowingList(true); loadFollowing(); } },
               { label: "Friends", val: (user.friends || 0).toLocaleString(), action: () => { setShowFriendsList(true); loadFriends(); } },
+              { label: "Moments", val: (momentCount).toLocaleString(), icon: "\u{1F4F8}" },
+              { label: "Gifts", val: (user.totalEarnings || 0).toLocaleString(), icon: "\u{1F381}" },
               { label: "Coins", val: user.coins.toLocaleString(), icon: "\u{1F48E}", action: () => setShowWallet(true) },
             ].map(s => (
-              <div key={s.label} onClick={s.action} style={{ textAlign: "center", flex: 1, cursor: "pointer" }}>
-                <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1 }}>{"icon" in s && s.icon ? `${s.icon} ` : ""}{s.val}</p>
-                <p style={{ fontSize: 10, color: "rgba(162,155,254,0.45)", marginTop: 4 }}>{s.label}</p>
+              <div key={s.label} onClick={"action" in s && s.action ? s.action as () => void : undefined} style={{ textAlign: "center", minWidth: 52, cursor: "action" in s && s.action ? "pointer" : "default" }}>
+                <p style={{ fontSize: 16, fontWeight: 900, lineHeight: 1 }}>{"icon" in s && s.icon ? `${s.icon} ` : ""}{s.val}</p>
+                <p style={{ fontSize: 9, color: "rgba(162,155,254,0.45)", marginTop: 4 }}>{s.label}</p>
               </div>
             ))}
           </div>
@@ -920,10 +935,11 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
               <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginTop: 4 }}>Level {viewingProfile.level} {"\u00B7"} {viewingProfile.xp} XP</p>
               {viewingProfile.bio && <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 6, lineHeight: 1.5 }}>{viewingProfile.bio}</p>}
             </div>
-            <div style={{ display: "flex", gap: 24, marginTop: 4 }}>
+            <div style={{ display: "flex", gap: 16, marginTop: 4, flexWrap: "wrap", justifyContent: "center" }}>
               <div style={{ textAlign: "center" }}><p style={{ fontSize: 16, fontWeight: 900 }}>{viewingProfile.followers || 0}</p><p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>Followers</p></div>
               <div style={{ textAlign: "center" }}><p style={{ fontSize: 16, fontWeight: 900 }}>{viewingProfile.following || 0}</p><p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>Following</p></div>
               <div style={{ textAlign: "center" }}><p style={{ fontSize: 16, fontWeight: 900 }}>{viewingProfile.friends || 0}</p><p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>Friends</p></div>
+              <div style={{ textAlign: "center" }}><p style={{ fontSize: 16, fontWeight: 900 }}>{"\u{1F381}"} {viewingProfile.totalEarnings || 0}</p><p style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>Gifts</p></div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 8, width: "100%" }}>
               <button className="btn btn-primary" style={{ flex: 1, fontSize: 13, padding: "12px 0", borderRadius: 14 }} onClick={async () => {

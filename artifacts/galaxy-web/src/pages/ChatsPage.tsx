@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked, canChatSync, isSuperAdmin, SUPER_ADMIN_USER_ID } from "../lib/userService";
+import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked, canChatSync, isSuperAdmin, SUPER_ADMIN_USER_ID, sendGift } from "../lib/userService";
 import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, sendVoiceMessage, addReaction, setTyping, subscribeTyping, markRead, clearChat } from "../lib/chatService";
 import { sendNotification } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
@@ -17,6 +17,14 @@ const REACTION_EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u{1F602}", "\u{1F44D}", 
 
 const QUICK_PHRASES = ["Welcome!", "Hi there!", "Follow me", "GG!", "Nice to meet you", "Thanks!", "See you later", "Let's talk!"];
 
+const UNLOCK_GIFTS = [
+  { emoji: "\u{1F339}", name: "Rose", cost: 20 },
+  { emoji: "\u{1F381}", name: "Gift Box", cost: 10 },
+  { emoji: "\u2B50", name: "Star", cost: 40 },
+  { emoji: "\u{1F48E}", name: "Diamond", cost: 50 },
+  { emoji: "\u{1F451}", name: "Crown", cost: 100 },
+];
+
 export default function ChatsPage({ user, initialChatUid }: Props) {
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +37,9 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
   const [recordDuration, setRecordDuration] = useState(0);
   const [reactionMsgId, setReactionMsgId] = useState<string | null>(null);
   const [showQuickPhrases, setShowQuickPhrases] = useState(false);
+  const [giftSending, setGiftSending] = useState(false);
   const msgEnd = useRef<HTMLDivElement>(null);
+  const unlockedConvs = useRef<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -170,14 +180,19 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
     if (!active) return;
     const otherId = active.participants[0] === user.uid ? active.participants[1] : active.participants[0];
     setIsFollowing((user.followingList || []).includes(otherId));
+    const isUnlocked = unlockedConvs.current.has(active.id);
     const unsubPresence = subscribeUser(otherId, u => {
       if (u) {
         setOtherOnline(u.online ?? false);
         setOtherProfile(u);
-        setChatLocked(!canChatSync(user, u));
+        const isMutual = canChatSync(user, u);
+        const eitherIsSuperAdmin = isSuperAdmin(user) || isSuperAdmin(u);
+        const giftUnlocked = unlockedConvs.current.has(active!.id);
+        setChatLocked(!isMutual && !eitherIsSuperAdmin && !giftUnlocked);
       } else {
         setOtherOnline(false);
-        setChatLocked(true);
+        const giftUnlocked = unlockedConvs.current.has(active!.id);
+        setChatLocked(!isSuperAdmin(user) && !giftUnlocked);
       }
     });
     return unsubPresence;
@@ -400,23 +415,59 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
 
         {chatLocked && (
           <div style={{
-            padding: "16px 20px", textAlign: "center",
+            padding: "16px 14px", textAlign: "center",
             background: "rgba(108,92,231,0.08)", borderTop: "1px solid rgba(108,92,231,0.15)",
           }}>
-            <p style={{ fontSize: 28, marginBottom: 8 }}>{"\u{1F512}"}</p>
-            <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Chat Locked</p>
-            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.5, marginBottom: 10 }}>
-              Both users must follow each other to unlock chat
+            <p style={{ fontSize: 28, marginBottom: 6 }}>{"\u{1F381}"}</p>
+            <p style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Send a Gift to Unlock Chat</p>
+            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.5, marginBottom: 12 }}>
+              Send a gift (min 10 coins) to start chatting with this user
             </p>
+            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginBottom: 10 }}>
+              {"\u{1F48E}"} Your balance: <span style={{ color: "#FFD700", fontWeight: 700 }}>{user.coins.toLocaleString()} coins</span>
+            </p>
+            <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 12 }}>
+              {UNLOCK_GIFTS.map(g => {
+                const canAfford = user.coins >= g.cost;
+                return (
+                  <button key={g.name} disabled={!canAfford || giftSending} onClick={async () => {
+                    if (!active) return;
+                    const otherId = active.participants.find(p => p !== user.uid);
+                    if (!otherId) return;
+                    setGiftSending(true);
+                    try {
+                      const ok = await sendGift(user.uid, user as UserProfile, otherId, g.emoji, g.cost);
+                      if (!ok) { showToast("Not enough coins!", "error"); setGiftSending(false); return; }
+                      unlockedConvs.current.add(active.id);
+                      setChatLocked(false);
+                      showToast(`${g.emoji} ${g.name} sent! Chat unlocked!`, "success");
+                      await sendMessage(active.id, user.uid, `sent ${g.emoji} ${g.name} to unlock chat`, "system");
+                      sendNotification(otherId, {
+                        type: "gift", title: "Gift Received!", body: `${user.name} sent you ${g.emoji} ${g.name}`,
+                        icon: g.emoji, fromUid: user.uid, fromName: user.name,
+                      }).catch(() => {});
+                    } catch { showToast("Gift failed", "error"); }
+                    finally { setGiftSending(false); }
+                  }} style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                    padding: "10px 12px", borderRadius: 14,
+                    background: canAfford ? "rgba(108,92,231,0.15)" : "rgba(255,255,255,0.04)",
+                    border: canAfford ? "1px solid rgba(108,92,231,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                    cursor: canAfford ? "pointer" : "not-allowed",
+                    opacity: canAfford ? 1 : 0.4,
+                    fontFamily: "inherit", minWidth: 64,
+                  }}>
+                    <span style={{ fontSize: 24 }}>{g.emoji}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#A29BFE" }}>{g.name}</span>
+                    <span style={{ fontSize: 9, color: "rgba(162,155,254,0.5)" }}>{g.cost} {"\u{1F48E}"}</span>
+                  </button>
+                );
+              })}
+            </div>
             {!isFollowing && (
-              <button onClick={handleFollow} disabled={followLoading} className="btn btn-primary btn-sm" style={{ fontSize: 12 }}>
-                {followLoading ? "..." : "\u{1F31F} Follow to unlock"}
+              <button onClick={handleFollow} disabled={followLoading} className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>
+                {followLoading ? "..." : "or Follow to connect for free"}
               </button>
-            )}
-            {isFollowing && (
-              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)" }}>
-                Waiting for them to follow you back...
-              </p>
             )}
           </div>
         )}
