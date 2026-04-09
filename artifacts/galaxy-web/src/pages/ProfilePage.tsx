@@ -52,6 +52,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
   const [showHelp, setShowHelp] = useState(false);
   const [showHelpArticle, setShowHelpArticle] = useState<string | null>(null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showOfficialRules, setShowOfficialRules] = useState(false);
   const [adminPromoteId, setAdminPromoteId] = useState("");
   const [adminLookupResult, setAdminLookupResult] = useState<UserProfile | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -143,7 +144,15 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
 
   const handleFriendResponse = async (reqId: string, accept: boolean) => {
     await respondFriendRequest(user.uid, reqId, accept);
+    setFriendRequests(prev => prev.filter(r => r.id !== reqId));
     showToast(accept ? "Friend added!" : "Request declined", accept ? "success" : "info");
+  };
+
+  const handleFriendBlock = async (req: FriendRequest) => {
+    await respondFriendRequest(user.uid, req.id, false);
+    await blockUser(user.uid, req.fromUid);
+    setFriendRequests(prev => prev.filter(r => r.id !== req.id));
+    showToast(`${req.fromName} blocked`, "info");
   };
 
   const handleUnblock = async (uid: string) => {
@@ -317,8 +326,12 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
             <p style={{ fontSize: 10, color: "rgba(162,155,254,0.25)", marginBottom: 8, fontFamily: "monospace" }}>
               UID: {user.uid.slice(0, 14).toUpperCase()}
             </p>
-            <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-              <span className="badge badge-accent" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u2B50"} Lv.{user.level}</span>
+            <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
+              {(user.globalRole === "official" || isAdmin) ? (
+                <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 22, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }} />
+              ) : (
+                <span className="badge badge-accent" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u2B50"} Lv.{user.level}</span>
+              )}
               <span className="badge badge-gold" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u{1F3C6}"} {unlockedCount}/{achievements.length}</span>
             </div>
           </div>
@@ -405,6 +418,21 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
             </React.Fragment>
           ))}
         </div>
+
+        {(user.globalRole === "official" || isAdmin) && (
+          <button
+            className="btn btn-full"
+            style={{
+              padding: "14px 0", fontSize: 15, fontWeight: 800,
+              background: "linear-gradient(135deg, rgba(0,255,255,0.08), rgba(191,0,255,0.08))",
+              border: "1.5px solid rgba(0,255,255,0.3)",
+              color: "#00ffff",
+            }}
+            onClick={() => setShowOfficialRules(true)}
+          >
+            {"\u{1F4DC}"} Official Guidelines
+          </button>
+        )}
 
         {isAdmin && (
           <button
@@ -611,14 +639,55 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
               <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No pending requests</p>
             ) : (
               friendRequests.map(req => (
-                <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  <span style={{ fontSize: 24 }}>{req.fromAvatar}</span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 700 }}>{req.fromName}</p>
-                    <p style={{ fontSize: 10, color: "rgba(162,155,254,0.35)" }}>{new Date(req.timestamp).toLocaleDateString()}</p>
+                <div key={req.id} className="card" style={{ padding: 14, marginBottom: 10, border: "1px solid rgba(108,92,231,0.15)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 24, fontSize: 24,
+                      background: "rgba(108,92,231,0.12)",
+                      border: "2px solid rgba(108,92,231,0.3)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      overflow: "hidden",
+                    }}>
+                      {req.fromAvatar?.startsWith("http")
+                        ? <img src={req.fromAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                        : <span>{req.fromAvatar || "\u{1F464}"}</span>
+                      }
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{req.fromName}</p>
+                      <p style={{ fontSize: 10, color: "rgba(162,155,254,0.35)", marginTop: 2 }}>
+                        {new Date(req.timestamp).toLocaleDateString()} {"\u00B7"} wants to be friends
+                      </p>
+                    </div>
                   </div>
-                  <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "6px 12px" }} onClick={() => handleFriendResponse(req.id, true)}>{"\u2714"}</button>
-                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "6px 12px" }} onClick={() => handleFriendResponse(req.id, false)}>{"\u2715"}</button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => handleFriendResponse(req.id, true)}
+                      style={{
+                        flex: 1, padding: "10px 0", borderRadius: 12, border: "none", cursor: "pointer",
+                        background: "linear-gradient(135deg, rgba(0,230,118,0.2), rgba(0,230,118,0.08))",
+                        color: "#00e676", fontSize: 13, fontWeight: 800, fontFamily: "inherit",
+                        boxShadow: "0 0 12px rgba(0,230,118,0.15)",
+                      }}
+                    >{"\u2714"} Accept</button>
+                    <button
+                      onClick={() => handleFriendResponse(req.id, false)}
+                      style={{
+                        flex: 1, padding: "10px 0", borderRadius: 12, border: "none", cursor: "pointer",
+                        background: "linear-gradient(135deg, rgba(255,82,82,0.2), rgba(255,82,82,0.08))",
+                        color: "#ff5252", fontSize: 13, fontWeight: 800, fontFamily: "inherit",
+                        boxShadow: "0 0 12px rgba(255,82,82,0.15)",
+                      }}
+                    >{"\u2715"} Decline</button>
+                    <button
+                      onClick={() => handleFriendBlock(req)}
+                      style={{
+                        flex: 1, padding: "10px 0", borderRadius: 12, border: "none", cursor: "pointer",
+                        background: "rgba(255,255,255,0.06)",
+                        color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 800, fontFamily: "inherit",
+                      }}
+                    >{"\u{1F6AB}"} Block</button>
+                  </div>
                 </div>
               ))
             )}
@@ -930,6 +999,49 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile }:
                   <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Active on all Official avatars</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </BottomSheet>
+      )}
+
+      {showOfficialRules && (
+        <BottomSheet onClose={() => setShowOfficialRules(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#00ffff" }}>{"\u{1F4DC}"} Official Guidelines</h2>
+            <button onClick={() => setShowOfficialRules(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 28, filter: "drop-shadow(0 0 8px rgba(255,215,0,0.5))" }} />
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginTop: 8 }}>As an Official, you represent the app</p>
+            </div>
+            {[
+              { icon: "\u{1F91D}", rule: "Be respectful to all users.", color: "#00e676" },
+              { icon: "\u26A0\uFE0F", rule: "Do not abuse Kick/Mute powers.", color: "#ff9800" },
+              { icon: "\u2696\uFE0F", rule: "Solve conflicts neutrally.", color: "#00bcd4" },
+              { icon: "\u{1F4E2}", rule: "Report severe violations to Super Admin.", color: "#ff5252" },
+              { icon: "\u{1F451}", rule: "Your frame and tag represent the app's reputation.", color: "#FFD700" },
+            ].map((item, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 16px", marginBottom: 8,
+                borderRadius: 14,
+                background: `linear-gradient(135deg, ${item.color}08, ${item.color}04)`,
+                border: `1px solid ${item.color}25`,
+              }}>
+                <span style={{ fontSize: 20, flexShrink: 0, filter: `drop-shadow(0 0 4px ${item.color}60)` }}>{item.icon}</span>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", lineHeight: 1.5, letterSpacing: 0.2 }}>
+                  {item.rule}
+                </p>
+              </div>
+            ))}
+            <div style={{
+              marginTop: 16, padding: "14px 16px", borderRadius: 14, textAlign: "center",
+              background: "rgba(0,255,255,0.04)", border: "1px solid rgba(0,255,255,0.12)",
+            }}>
+              <p style={{ fontSize: 11, color: "rgba(0,255,255,0.6)", fontWeight: 700, lineHeight: 1.6 }}>
+                Violation of these rules may result in removal of Official status.
+                Always act with integrity and fairness.
+              </p>
             </div>
           </div>
         </BottomSheet>

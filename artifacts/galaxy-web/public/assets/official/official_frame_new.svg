@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="50%" stop-color="#FFA500"/>
+      <stop offset="100%" stop-color="#FFD700"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="40" cy="40" r="37" stroke="url(#fg)" stroke-width="3" filter="url(#glow)"/>
+  <path d="M40 3 L44 10 L40 7 L36 10 Z" fill="#FFD700" filter="url(#glow)"/>
+  <path d="M40 77 L44 70 L40 73 L36 70 Z" fill="#FFD700" filter="url(#glow)"/>
+  <path d="M3 40 L10 36 L7 40 L10 44 Z" fill="#FFD700" filter="url(#glow)"/>
+  <path d="M77 40 L70 36 L73 40 L70 44 Z" fill="#FFD700" filter="url(#glow)"/>
+  <path d="M12 12 L17 16 L14 14 L16 17 Z" fill="#FFA500" opacity="0.8"/>
+  <path d="M68 12 L63 16 L66 14 L64 17 Z" fill="#FFA500" opacity="0.8"/>
+  <path d="M12 68 L17 64 L14 66 L16 63 Z" fill="#FFA500" opacity="0.8"/>
+  <path d="M68 68 L63 64 L66 66 L64 63 Z" fill="#FFA500" opacity="0.8"/>
+</svg>

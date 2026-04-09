@@ -106,7 +106,9 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   return (
     <div className="seat-cell" style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
       <div className="seat-wrapper">
-        {isOfficial && isActive && <div className="official-frame-ring" />}
+        {isOfficial && isActive && (
+          <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.svg`} alt="" className="official-phoenix-frame" />
+        )}
         {isSpeaking && <AudioWaveRing />}
         {isSpeaking && (
           <>
@@ -126,7 +128,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
           )}
         </div>
         {isOfficial && isActive && (
-          <div className="seat-badge seat-badge-official">{"\u{1F6E1}\uFE0F"}</div>
+          <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.svg`} alt="Official" className="official-badge-label" />
         )}
         {role === "owner" && isActive && !isOfficial && (
           <div className="seat-badge seat-badge-owner">{"\u{1F451}"}</div>
