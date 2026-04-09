@@ -1276,3 +1276,43 @@ textarea.input-field { resize: none; line-height: 1.5; }
   .app-container { max-width: 100%; }
   .room-container { max-width: 100%; }
 }
+
+.chat-bg-texture {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(108,92,231,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 30%, rgba(191,0,255,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(0,255,255,0.03) 0%, transparent 40%),
+    linear-gradient(180deg, rgba(15,5,30,0.02) 0%, rgba(26,15,46,0.05) 100%);
+}
+
+.super-admin-chat-tag {
+  font-size: 8px;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(191,0,255,0.25), rgba(108,92,231,0.2));
+  color: #bf00ff;
+  border: 1px solid rgba(191,0,255,0.4);
+  text-shadow: 0 0 6px rgba(191,0,255,0.5);
+  letter-spacing: 0.5px;
+  animation: superAdminTagPulse 2s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+@keyframes superAdminTagPulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(191,0,255,0.2); }
+  50% { box-shadow: 0 0 10px rgba(191,0,255,0.4), 0 0 20px rgba(191,0,255,0.15); }
+}
+
+@keyframes voiceBarPulse {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.3); }
+}
+
+.notif-hub-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.notif-hub-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 0 16px rgba(108,92,231,0.3);
+}

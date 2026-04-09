@@ -8,12 +8,13 @@ export interface ChatMessage {
   senderDP?: string;
   text: string;
   timestamp: number;
-  type?: "text" | "image" | "emoji" | "voice";
+  type?: "text" | "image" | "emoji" | "voice" | "system";
   imageUrl?: string;
   voiceUrl?: string;
   voiceDuration?: number;
   status?: "sent" | "delivered" | "seen";
   reactions?: Record<string, string>;
+  replyTo?: { id: string; text: string; senderName: string };
 }
 
 export interface Conversation {
@@ -106,15 +107,23 @@ async function checkMutualFollow(senderUid: string, convId: string): Promise<boo
   return senderFollowing.includes(otherUid) && otherFollowing.includes(senderUid);
 }
 
-export async function sendMessage(convId: string, senderId: string, text: string, type: "text" | "emoji" = "text"): Promise<void> {
-  const allowed = await checkMutualFollow(senderId, convId);
-  if (!allowed) throw new Error("Chat locked: mutual follow required");
+export async function sendMessage(convId: string, senderId: string, text: string, type: "text" | "emoji" | "system" = "text", replyTo?: { id: string; text: string; senderName: string }): Promise<void> {
+  if (type === "system") {
+    const senderSnap = await get(ref(db, `users/${senderId}`));
+    const sData = senderSnap.exists() ? senderSnap.val() : {};
+    const isSA = String(sData.userId) === "306623582" || String(senderId) === "306623582";
+    const hasGiftContext = text.startsWith("sent ");
+    if (!isSA && !hasGiftContext) throw new Error("Unauthorized system message");
+  } else {
+    const allowed = await checkMutualFollow(senderId, convId);
+    if (!allowed) throw new Error("Chat locked: mutual follow required");
+  }
 
   const senderSnap = await get(ref(db, `users/${senderId}`));
   const senderData = senderSnap.exists() ? senderSnap.val() : {};
 
   const msgRef = push(ref(db, `messages/${convId}`));
-  await set(msgRef, {
+  const msgData: Record<string, unknown> = {
     senderId,
     senderName: senderData.name || "User",
     senderDP: senderData.avatar || "",
@@ -122,7 +131,9 @@ export async function sendMessage(convId: string, senderId: string, text: string
     timestamp: Date.now(),
     type,
     status: "sent",
-  });
+  };
+  if (replyTo) msgData.replyTo = replyTo;
+  await set(msgRef, msgData);
 
   setTimeout(async () => {
     try {
@@ -282,6 +293,14 @@ export async function markRead(convId: string, userId: string): Promise<void> {
 export async function clearChat(convId: string): Promise<void> {
   await remove(ref(db, `messages/${convId}`));
   await update(ref(db, `conversations/${convId}`), { lastMessage: "Chat cleared", lastTime: Date.now() });
+}
+
+export async function updateLastSeen(convId: string, userId: string): Promise<void> {
+  try {
+    await update(ref(db, `conversations/${convId}/lastSeen`), { [userId]: Date.now() });
+  } catch (err) {
+    console.warn("Last seen update error:", err);
+  }
 }
 
 export async function getOrCreateConversation(
