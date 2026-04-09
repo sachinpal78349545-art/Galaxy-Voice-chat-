@@ -1,0 +1,28 @@
+{
+  "name": "Galaxy Voice Chat",
+  "displayName": "Galaxy Voice Chat",
+  "expo": {
+    "name": "Galaxy Voice Chat",
+    "slug": "galaxy-voice-chat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./public/logo.png",
+    "splash": {
+      "backgroundColor": "#1A0F2E"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1A0F2E"
+      },
+      "package": "com.galaxy.voice",
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
+    },
+    "plugins": []
+  }
+}
