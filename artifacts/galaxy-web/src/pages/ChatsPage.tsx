@@ -601,7 +601,11 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
                   onDoubleClick={() => setReactionMsgId(reactionMsgId === msg.id ? null : msg.id)}
                 >
                   {msg.type === "image" && msg.imageUrl ? (
-                    <img src={msg.imageUrl} alt="shared" style={{ width: "100%", borderRadius: 14, display: "block" }} />
+                    <img src={msg.imageUrl} alt="shared" style={{
+                      width: "100%", maxWidth: 260, minWidth: 120, borderRadius: 12,
+                      display: "block", objectFit: "cover", maxHeight: 320,
+                      backgroundColor: "rgba(108,92,231,0.1)",
+                    }} onLoad={e => { (e.target as HTMLImageElement).style.backgroundColor = "transparent"; }} />
                   ) : msg.type === "voice" && msg.voiceUrl ? (
                     <VoicePlayer url={msg.voiceUrl} duration={msg.voiceDuration || 0} isSelf={isSelf} />
                   ) : (
@@ -665,19 +669,14 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
 
         {chatLocked && (
           <div style={{
-            padding: "16px 14px", textAlign: "center",
-            background: "rgba(108,92,231,0.08)", borderTop: "1px solid rgba(108,92,231,0.15)",
+            padding: "12px 14px", textAlign: "center",
+            background: "rgba(108,92,231,0.06)", borderTop: "1px solid rgba(108,92,231,0.12)",
           }}>
-            <p style={{ fontSize: 28, marginBottom: 6 }}>{"\u{1F381}"}</p>
-            <p style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>Send a Gift to Unlock Chat</p>
-            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.5, marginBottom: 12 }}>
-              Send a gift (min 10 coins) to start chatting with this user
+            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.5 }}>
+              {"\u{1F512}"} Send a gift or follow to unlock chat
             </p>
-            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginBottom: 10 }}>
-              {"\u{1F48E}"} Your balance: <span style={{ color: "#FFD700", fontWeight: 700 }}>{user.coins.toLocaleString()} coins</span>
-            </p>
-            <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 12 }}>
-              {UNLOCK_GIFTS.map(g => {
+            <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 8 }}>
+              {UNLOCK_GIFTS.slice(0, 3).map(g => {
                 const canAfford = user.coins >= g.cost;
                 return (
                   <button key={g.name} disabled={!canAfford || giftSending} onClick={async () => {
@@ -699,68 +698,54 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
                     } catch { showToast("Gift failed", "error"); }
                     finally { setGiftSending(false); }
                   }} style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                    padding: "10px 12px", borderRadius: 14,
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "6px 12px", borderRadius: 20,
                     background: canAfford ? "rgba(108,92,231,0.15)" : "rgba(255,255,255,0.04)",
                     border: canAfford ? "1px solid rgba(108,92,231,0.3)" : "1px solid rgba(255,255,255,0.06)",
                     cursor: canAfford ? "pointer" : "not-allowed",
-                    opacity: canAfford ? 1 : 0.4,
-                    fontFamily: "inherit", minWidth: 64,
+                    opacity: canAfford ? 1 : 0.4, fontFamily: "inherit", fontSize: 11,
                   }}>
-                    <span style={{ fontSize: 24 }}>{g.emoji}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#A29BFE" }}>{g.name}</span>
-                    <span style={{ fontSize: 9, color: "rgba(162,155,254,0.5)" }}>{g.cost} {"\u{1F48E}"}</span>
+                    <span>{g.emoji}</span>
+                    <span style={{ fontWeight: 700, color: "#A29BFE" }}>{g.cost}</span>
                   </button>
                 );
               })}
+              {!isFollowing && (
+                <button onClick={handleFollow} disabled={followLoading} style={{
+                  padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  background: "rgba(108,92,231,0.2)", border: "1px solid rgba(108,92,231,0.3)",
+                  color: "#6C5CE7", cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  {followLoading ? "..." : "Follow"}
+                </button>
+              )}
             </div>
-            {!isFollowing && (
-              <button onClick={handleFollow} disabled={followLoading} className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>
-                {followLoading ? "..." : "or Follow to connect for free"}
-              </button>
-            )}
           </div>
         )}
 
-        {!chatLocked && showEmojiPicker && (
+        {showEmojiPicker && (
           <div style={{
             padding: "8px 14px", borderTop: "1px solid rgba(255,255,255,0.06)",
             background: "rgba(8,4,24,0.95)", display: "flex", flexWrap: "wrap", gap: 4,
             animation: "slide-up 0.2s ease",
           }}>
             {EMOJI_GRID.map(e => (
-              <button key={e} onClick={async () => { await sendMessage(active.id, user.uid, e, "emoji"); setShowEmojiPicker(false); }}
+              <button key={e} onClick={async () => {
+                if (chatLocked) { showToast("Unlock chat first to send messages", "warning", "\u{1F512}"); return; }
+                await sendMessage(active.id, user.uid, e, "emoji"); setShowEmojiPicker(false);
+              }}
                 style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 4, borderRadius: 8 }}>{e}</button>
             ))}
           </div>
         )}
 
-        {chatLocked && (
-          <div style={{
-            display: "flex", gap: 8, padding: "8px 12px", alignItems: "center",
-            borderTop: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(8,4,24,0.85)", backdropFilter: "blur(14px)", flexShrink: 0,
-          }}>
-            <button onClick={() => setShowChatGifts(!showChatGifts)} style={{
-              background: showChatGifts ? "rgba(255,100,130,0.15)" : "rgba(108,92,231,0.15)",
-              border: showChatGifts ? "1px solid rgba(255,100,130,0.3)" : "1px solid rgba(108,92,231,0.3)",
-              borderRadius: 14, padding: "8px 16px", cursor: "pointer", fontSize: 13, fontWeight: 700,
-              color: showChatGifts ? "#ff6482" : "#A29BFE", fontFamily: "inherit",
-              display: "flex", alignItems: "center", gap: 6,
-            }}>{"\u{1F381}"} Send Gift to Chat</button>
-            <div style={{ flex: 1, borderRadius: 22, padding: "10px 14px", fontSize: 13, color: "rgba(162,155,254,0.3)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              Unlock to message...
-            </div>
-          </div>
-        )}
-
-        {chatLocked && showChatGifts && (
+        {showChatGifts && (
           <div style={{
             padding: "10px 14px", borderTop: "1px solid rgba(255,255,255,0.06)",
             background: "rgba(8,4,24,0.95)", animation: "slide-up 0.2s ease",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#A29BFE" }}>Send Gift to Unlock Chat</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#A29BFE" }}>{chatLocked ? "Send Gift to Unlock" : "Send Gift"}</span>
               <span style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>{"\u{1F48E}"} {user.coins.toLocaleString()}</span>
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
@@ -782,35 +767,7 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
           </div>
         )}
 
-        {!chatLocked && showChatGifts && (
-          <div style={{
-            padding: "10px 14px", borderTop: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(8,4,24,0.95)", animation: "slide-up 0.2s ease",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#A29BFE" }}>Send Gift</span>
-              <span style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>{"\u{1F48E}"} {user.coins.toLocaleString()}</span>
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-              {CHAT_GIFTS.map(g => (
-                <button key={g.name} disabled={user.coins < g.cost || giftSending} onClick={() => handleChatGift(g)} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                  padding: "8px 14px", borderRadius: 14,
-                  background: user.coins >= g.cost ? "rgba(108,92,231,0.15)" : "rgba(255,255,255,0.04)",
-                  border: user.coins >= g.cost ? "1px solid rgba(108,92,231,0.3)" : "1px solid rgba(255,255,255,0.06)",
-                  cursor: user.coins >= g.cost ? "pointer" : "not-allowed",
-                  opacity: user.coins >= g.cost ? 1 : 0.4, fontFamily: "inherit",
-                }}>
-                  <span style={{ fontSize: 22 }}>{g.emoji}</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: "#A29BFE" }}>{g.name}</span>
-                  <span style={{ fontSize: 8, color: "rgba(162,155,254,0.4)" }}>{g.cost} coins</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!chatLocked && showQuickPhrases && (
+        {showQuickPhrases && (
           <div style={{
             padding: "8px 12px", borderTop: "1px solid rgba(255,255,255,0.06)",
             background: "rgba(8,4,24,0.95)", display: "flex", flexWrap: "wrap", gap: 6,
@@ -818,6 +775,7 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
           }}>
             {QUICK_PHRASES.map(phrase => (
               <button key={phrase} onClick={async () => {
+                if (chatLocked) { showToast("Unlock chat first to send messages", "warning", "\u{1F512}"); return; }
                 try {
                   await sendMessage(active.id, user.uid, phrase);
                   setShowQuickPhrases(false);
@@ -834,7 +792,7 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
           </div>
         )}
 
-        {!chatLocked && replyingTo && (
+        {replyingTo && (
           <div style={{
             padding: "8px 14px", borderTop: "1px solid rgba(108,92,231,0.15)",
             background: "rgba(108,92,231,0.06)", display: "flex", alignItems: "center", gap: 8,
@@ -850,16 +808,21 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
           </div>
         )}
 
-        {!chatLocked && <div style={{
+        <div style={{
           display: "flex", gap: 6, padding: "10px 12px 26px", alignItems: "center",
           borderTop: "1px solid rgba(255,255,255,0.06)",
           background: "rgba(8,4,24,0.85)", backdropFilter: "blur(14px)", flexShrink: 0,
         }}>
+          <button onClick={() => fileRef.current?.click()} style={{
+            width: 36, height: 36, borderRadius: 18, cursor: "pointer",
+            background: "rgba(108,92,231,0.15)", border: "1px solid rgba(108,92,231,0.25)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#A29BFE", flexShrink: 0,
+          }}>+</button>
+          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSend} />
+
           <button onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowQuickPhrases(false); setShowChatGifts(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: "0 2px" }}>{"\u{1F60A}"}</button>
           <button onClick={() => { setShowQuickPhrases(!showQuickPhrases); setShowEmojiPicker(false); setShowChatGifts(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "0 2px", color: showQuickPhrases ? "#6C5CE7" : "#A29BFE", fontWeight: 800 }}>{"\u26A1"}</button>
           <button onClick={() => { setShowChatGifts(!showChatGifts); setShowEmojiPicker(false); setShowQuickPhrases(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: "0 2px", color: showChatGifts ? "#ff6482" : "#A29BFE" }}>{"\u{1F381}"}</button>
-          <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: "0 2px" }}>{"\u{1F4F7}"}</button>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSend} />
 
           {isRecording ? (
             <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "rgba(255,100,130,0.1)", borderRadius: 22, border: "1px solid rgba(255,100,130,0.3)" }}>
@@ -874,22 +837,38 @@ export default function ChatsPage({ user, initialChatUid }: Props) {
               <input
                 className="input-field"
                 style={{ flex: 1, borderRadius: 22, padding: "10px 14px", fontSize: 13 }}
-                placeholder="Message..."
+                placeholder="Type a message..."
                 value={input}
                 onChange={e => handleTyping(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSend()}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    if (chatLocked) { showToast("Unlock chat first to send messages", "warning", "\u{1F512}"); return; }
+                    handleSend();
+                  }
+                }}
               />
               {input.trim() ? (
-                <button className="btn btn-primary btn-sm" style={{ width: 40, height: 40, padding: 0, borderRadius: 14, flexShrink: 0 }} onClick={handleSend}>{"\u27A4"}</button>
+                <button onClick={() => {
+                  if (chatLocked) { showToast("Unlock chat first to send messages", "warning", "\u{1F512}"); return; }
+                  handleSend();
+                }} style={{
+                  width: 40, height: 40, padding: 0, borderRadius: "50%", flexShrink: 0, border: "none", cursor: "pointer",
+                  background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+                  color: "#fff", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 2px 10px rgba(108,92,231,0.4)",
+                }}>{"\u27A4"}</button>
               ) : (
-                <button onClick={startRecording} style={{
-                  width: 40, height: 40, borderRadius: 14, border: "none", cursor: "pointer",
-                  background: "rgba(108,92,231,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#A29BFE", flexShrink: 0,
+                <button onClick={() => {
+                  if (chatLocked) { showToast("Unlock chat first to send messages", "warning", "\u{1F512}"); return; }
+                  startRecording();
+                }} style={{
+                  width: 40, height: 40, borderRadius: "50%", border: "none", cursor: "pointer",
+                  background: "rgba(108,92,231,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#A29BFE", flexShrink: 0,
                 }}>{"\u{1F3A4}"}</button>
               )}
             </>
           )}
-        </div>}
+        </div>
       </div>
     );
   }
