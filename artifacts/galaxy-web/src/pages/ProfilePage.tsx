@@ -7,6 +7,7 @@ import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
 import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, DEFAULT_FRAME_ID } from "../lib/storeService";
+import SuperAdminAvatar from "../components/SuperAdminAvatar";
 
 interface Props {
   user: UserProfile;
@@ -415,34 +416,42 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
         background: "linear-gradient(180deg, rgba(108,92,231,0.14) 0%, rgba(108,92,231,0.02) 60%, transparent 100%)",
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-          <div style={{ position: "relative" }}>
-            {(() => {
-              const activeFrame = user.equippedFrame || DEFAULT_FRAME_ID;
-              if (!isPngFrame(activeFrame)) return null;
-              const pngPath = getPngFramePath(activeFrame);
-              return pngPath ? <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" className="png-frame-profile" /> : null;
-            })()}
-            <div style={{
-              width: 100, height: 100, borderRadius: 50, fontSize: 50,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-              border: "none",
-              boxShadow: "none",
-              cursor: "pointer", overflow: "hidden",
-            }} onClick={onEditProfile}>
-              {user.avatar.startsWith("http") ? (
-                <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : user.avatar}
-            </div>
-            {user.online && (
+          <div style={{ position: "relative", paddingTop: isAdmin ? 16 : 0, paddingBottom: isAdmin ? 20 : 0 }}>
+            {isAdmin ? (
+              <SuperAdminAvatar src={user.avatar} userId={user.userId || ""} size={100} onClick={onEditProfile} />
+            ) : (
+              <>
+                {(() => {
+                  const activeFrame = user.equippedFrame || DEFAULT_FRAME_ID;
+                  if (!isPngFrame(activeFrame)) return null;
+                  const pngPath = getPngFramePath(activeFrame);
+                  return pngPath ? <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" className="png-frame-profile" /> : null;
+                })()}
+                <div style={{
+                  width: 100, height: 100, borderRadius: 50, fontSize: 50,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
+                  border: "none",
+                  boxShadow: "none",
+                  cursor: "pointer", overflow: "hidden",
+                }} onClick={onEditProfile}>
+                  {user.avatar.startsWith("http") ? (
+                    <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : user.avatar}
+                </div>
+              </>
+            )}
+            {user.online && !isAdmin && (
               <div style={{ position: "absolute", bottom: 6, right: 6, width: 16, height: 16, borderRadius: 8, background: "#00e676", border: "2.5px solid #0F0F1A", boxShadow: "0 0 8px rgba(0,230,118,0.4)" }} />
             )}
-            <div style={{
-              position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14,
-              background: "linear-gradient(135deg, #6C5CE7, #8B7CF6)", border: "2px solid #0F0F1A", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
-              boxShadow: "0 2px 8px rgba(108,92,231,0.4)",
-            }} onClick={onEditProfile}>{"\u270F\uFE0F"}</div>
+            {!isAdmin && (
+              <div style={{
+                position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14,
+                background: "linear-gradient(135deg, #6C5CE7, #8B7CF6)", border: "2px solid #0F0F1A", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
+                boxShadow: "0 2px 8px rgba(108,92,231,0.4)",
+              }} onClick={onEditProfile}>{"\u270F\uFE0F"}</div>
+            )}
           </div>
 
           <div style={{ textAlign: "center" }}>

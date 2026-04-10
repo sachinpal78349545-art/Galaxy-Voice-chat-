@@ -108,16 +108,15 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
   const isSpecial = isOfficial || isSuperAdmin;
-  const activeFrameId = frameId || (isActive ? DEFAULT_FRAME_ID : undefined);
+  const activeFrameId = isSuperAdmin ? undefined : (frameId || (isActive ? DEFAULT_FRAME_ID : undefined));
   const hasPngFrame = activeFrameId && isPngFrame(activeFrameId);
 
   const seatClass = [
     "seat-bubble",
-    hasPngFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty"),
-    isOwner && isActive && !hasPngFrame ? "seat-owner" : "",
+    isSuperAdmin && isActive ? "" : (hasPngFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty")),
+    isOwner && isActive && !hasPngFrame && !isSuperAdmin ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
-    !hasPngFrame && isSpecial && isActive ? "seat-official" : "",
-    !hasPngFrame && isSuperAdmin && isActive ? "seat-super-admin" : "",
+    !hasPngFrame && !isSuperAdmin && isOfficial && isActive ? "seat-official" : "",
   ].filter(Boolean).join(" ");
 
   const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
@@ -126,10 +125,15 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   return (
     <div className="seat-cell" style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
       <div className="seat-wrapper">
-        {!hasPngFrame && isSuperAdmin && isActive && (
-          <div className="super-admin-seat-frame" />
+        {isSuperAdmin && isActive && (
+          <>
+            <div className="sa-seat-ring" style={{ width: 66, height: 66, transform: "translate(-50%, -50%)" }}>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#1A0F2E" }} />
+            </div>
+            <div className="sa-seat-crown">{"\u{1F451}"}</div>
+          </>
         )}
-        {!hasPngFrame && isOfficial && !isSuperAdmin && isActive && (
+        {!isSuperAdmin && !hasPngFrame && isOfficial && isActive && (
           <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" className="official-phoenix-frame" />
         )}
         {pngPath && isActive && (
