@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import logoUrl from "/logo.png?url";
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
 
 interface Props { onDone: () => void; }
 

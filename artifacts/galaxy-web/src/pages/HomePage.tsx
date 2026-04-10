@@ -114,7 +114,7 @@ export default function HomePage({ user, onJoinRoom }: Props) {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <img src="/logo.png" alt="" style={{ width: 28, height: 28, borderRadius: 8 }} />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" style={{ width: 28, height: 28, borderRadius: 8 }} />
           <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: -0.3, background: "linear-gradient(135deg,#A29BFE,#6C5CE7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Galaxy</span>
         </div>
         <div style={{ display: "flex", gap: 5 }}>
