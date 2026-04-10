@@ -6,6 +6,7 @@ import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, ge
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
+import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor } from "../lib/storeService";
 
 interface Props {
   user: UserProfile;
@@ -17,6 +18,8 @@ interface Props {
 
 const MENU_ITEMS = [
   { icon: "\u270F\uFE0F", label: "Edit Profile", action: "edit" },
+  { icon: "\u{1F6CD}\uFE0F", label: "Store", action: "store" },
+  { icon: "\u{1F392}", label: "Backpack", action: "backpack" },
   { icon: "\u{1F4B0}", label: "My Wallet", action: "wallet" },
   { icon: "\u2705", label: "Daily Tasks", action: "dailyTasks" },
   { icon: "\u{1F381}", label: "Daily Reward", action: "daily" },
@@ -54,6 +57,12 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [showFeedback, setShowFeedback] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showHelpArticle, setShowHelpArticle] = useState<string | null>(null);
+  const [showStore, setShowStore] = useState(false);
+  const [showBackpack, setShowBackpack] = useState(false);
+  const [storeCategory, setStoreCategory] = useState<"frame" | "entry" | "theme">("frame");
+  const [storeLoading, setStoreLoading] = useState<string | null>(null);
+  const [ownedItems, setOwnedItems] = useState<OwnedItem[]>([]);
+  const [backpackCategory, setBackpackCategory] = useState<"frame" | "entry" | "theme">("frame");
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showOfficialRules, setShowOfficialRules] = useState(false);
   const [adminPromoteId, setAdminPromoteId] = useState("");
@@ -318,6 +327,68 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
     setAdminLoading(false);
   };
 
+  const loadInventory = async () => {
+    const items = await getInventory(user.uid);
+    setOwnedItems(items);
+  };
+
+  const handlePurchase = async (item: StoreItem) => {
+    if (user.coins < item.price) { showToast("Not enough coins!", "warning"); return; }
+    const owned = user.inventory || {};
+    if (owned[item.id]) { showToast("Already owned!", "info"); return; }
+    setStoreLoading(item.id);
+    try {
+      const ok = await purchaseItem(user.uid, item.id, user.coins);
+      if (ok) {
+        onUpdate({ ...user, coins: user.coins - item.price, inventory: { ...owned, [item.id]: { itemId: item.id, purchasedAt: Date.now(), equipped: false } } });
+        showToast(`${item.name} purchased!`, "success");
+      } else {
+        showToast("Purchase failed", "error");
+      }
+    } catch { showToast("Purchase failed", "error"); }
+    setStoreLoading(null);
+  };
+
+  const handleEquip = async (itemId: string) => {
+    setStoreLoading(itemId);
+    try {
+      await equipItem(user.uid, itemId);
+      const item = getStoreItem(itemId);
+      const updatedInv = { ...(user.inventory || {}) };
+      for (const [k, v] of Object.entries(updatedInv)) {
+        const si = getStoreItem(v.itemId);
+        if (si && item && si.category === item.category) updatedInv[k] = { ...v, equipped: false };
+      }
+      if (updatedInv[itemId]) updatedInv[itemId] = { ...updatedInv[itemId], equipped: true };
+      const updates: Partial<typeof user> = { inventory: updatedInv };
+      if (item?.category === "frame") updates.equippedFrame = itemId;
+      if (item?.category === "entry") updates.equippedEntry = itemId;
+      if (item?.category === "theme") updates.equippedTheme = itemId;
+      onUpdate({ ...user, ...updates });
+      await loadInventory();
+      showToast(`${item?.name || "Item"} equipped!`, "success");
+    } catch { showToast("Equip failed", "error"); }
+    setStoreLoading(null);
+  };
+
+  const handleUnequip = async (itemId: string) => {
+    setStoreLoading(itemId);
+    try {
+      await unequipItem(user.uid, itemId);
+      const item = getStoreItem(itemId);
+      const updatedInv = { ...(user.inventory || {}) };
+      if (updatedInv[itemId]) updatedInv[itemId] = { ...updatedInv[itemId], equipped: false };
+      const updates: Partial<typeof user> = { inventory: updatedInv };
+      if (item?.category === "frame") updates.equippedFrame = undefined;
+      if (item?.category === "entry") updates.equippedEntry = undefined;
+      if (item?.category === "theme") updates.equippedTheme = undefined;
+      onUpdate({ ...user, ...updates });
+      await loadInventory();
+      showToast("Item unequipped", "info");
+    } catch { showToast("Unequip failed", "error"); }
+    setStoreLoading(null);
+  };
+
   const handleMenu = (action: string) => {
     if (action === "edit") onEditProfile();
     if (action === "wallet") setShowWallet(true);
@@ -328,6 +399,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
     if (action === "blocked") { setShowBlocked(true); loadBlocked(); }
     if (action === "friendRequests") setShowFriendRequests(true);
     if (action === "friendsList") { setShowFriendsList(true); loadFriends(); }
+    if (action === "store") { setShowStore(true); setStoreCategory("frame"); }
+    if (action === "backpack") { loadInventory(); setShowBackpack(true); setBackpackCategory("frame"); }
     if (action === "report") setShowReport(true);
     if (action === "search") setShowSearch(true);
     if (action === "feedback") setShowFeedback(true);
@@ -347,11 +420,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
               width: 100, height: 100, borderRadius: 50, fontSize: 50,
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-              border: isAdmin ? "3px solid #FFD700" : user.globalRole === "official" ? "3px solid #FFD700" : "3px solid rgba(108,92,231,0.5)",
+              border: isAdmin ? "3px solid #FFD700" : user.globalRole === "official" ? "3px solid #FFD700" : user.equippedFrame ? `3px solid ${(() => { const fi = getStoreItem(user.equippedFrame); return fi ? getRarityColor(fi.rarity) : "rgba(108,92,231,0.5)"; })()}` : "3px solid rgba(108,92,231,0.5)",
               boxShadow: isAdmin
                 ? "0 0 20px rgba(255,215,0,0.5), 0 0 40px rgba(191,0,255,0.25), 0 0 60px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
                 : user.globalRole === "official"
                 ? "0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
+                : user.equippedFrame
+                ? `0 0 20px ${(() => { const fi = getStoreItem(user.equippedFrame); return fi ? getRarityColor(fi.rarity) + "60" : "rgba(108,92,231,0.4)"; })()}, 0 8px 32px rgba(0,0,0,0.3)`
                 : "0 0 32px rgba(108,92,231,0.4), 0 8px 32px rgba(0,0,0,0.3)",
               cursor: "pointer", overflow: "hidden",
             }} onClick={onEditProfile}>
@@ -373,6 +448,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           <div style={{ textAlign: "center" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
               <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.name}</h2>
+              {user.equippedFrame && (() => { const fi = getStoreItem(user.equippedFrame); return fi ? <span style={{ fontSize: 16 }}>{fi.icon}</span> : null; })()}
               {user.vip && <span className="badge badge-vip">{"\u{1F451}"} VIP</span>}
               {isAdmin ? (
                 <span className="super-admin-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>
@@ -1255,6 +1331,185 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             </div>
           </div>
         </BottomSheet>
+      )}
+
+      {showStore && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 500, background: "#0F0F1A",
+          display: "flex", flexDirection: "column", maxWidth: 430, margin: "0 auto",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "52px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <button onClick={() => setShowStore(false)} style={{ width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)", cursor: "pointer", fontSize: 16, color: "#fff" }}>{"\u2039"}</button>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F6CD}\uFE0F"} Store</h2>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,215,0,0.1)", padding: "6px 12px", borderRadius: 20, border: "1px solid rgba(255,215,0,0.2)" }}>
+              <span style={{ fontSize: 14 }}>{"\u{1F48E}"}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#FFD700" }}>{user.coins.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 0, padding: "0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            {([["frame", "\u{1F5BC}\uFE0F", "Frames"], ["entry", "\u26A1", "Entry FX"], ["theme", "\u{1F3A8}", "Themes"]] as const).map(([cat, ico, label]) => (
+              <button key={cat} onClick={() => setStoreCategory(cat)} style={{
+                flex: 1, padding: "14px 0", border: "none", cursor: "pointer", fontFamily: "inherit",
+                background: storeCategory === cat ? "rgba(108,92,231,0.15)" : "transparent",
+                borderBottom: storeCategory === cat ? "2px solid #6C5CE7" : "2px solid transparent",
+                color: storeCategory === cat ? "#A29BFE" : "rgba(162,155,254,0.45)",
+                fontSize: 13, fontWeight: 700, transition: "all 0.2s",
+              }}>{ico} {label}</button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {STORE_ITEMS.filter(i => i.category === storeCategory).map(item => {
+              const owned = !!(user.inventory && user.inventory[item.id]);
+              const equipped = user.inventory?.[item.id]?.equipped;
+              const rc = getRarityColor(item.rarity);
+              return (
+                <div key={item.id} style={{
+                  borderRadius: 16, overflow: "hidden",
+                  border: `1px solid ${rc}30`,
+                  background: "rgba(255,255,255,0.03)",
+                  display: "flex", flexDirection: "column",
+                }}>
+                  <div style={{
+                    height: 90, background: item.preview,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 40, position: "relative",
+                  }}>
+                    {item.icon}
+                    <span style={{
+                      position: "absolute", top: 6, right: 6, fontSize: 9, fontWeight: 800,
+                      padding: "2px 8px", borderRadius: 8,
+                      background: `${rc}20`, color: rc, border: `1px solid ${rc}40`,
+                      textTransform: "uppercase",
+                    }}>{item.rarity}</span>
+                  </div>
+                  <div style={{ padding: "10px 12px" }}>
+                    <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 4, color: "#fff" }}>{item.name}</p>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      {owned ? (
+                        equipped ? (
+                          <span style={{ fontSize: 11, color: "#00e676", fontWeight: 700 }}>{"\u2705"} Equipped</span>
+                        ) : (
+                          <span style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 600 }}>Owned</span>
+                        )
+                      ) : (
+                        <span style={{ fontSize: 13, fontWeight: 800, color: "#FFD700" }}>{"\u{1F48E}"} {item.price}</span>
+                      )}
+                      {!owned && (
+                        <button onClick={() => handlePurchase(item)} disabled={storeLoading === item.id || user.coins < item.price}
+                          style={{
+                            padding: "6px 14px", borderRadius: 10, border: "none", cursor: user.coins < item.price ? "not-allowed" : "pointer",
+                            background: user.coins < item.price ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg, #6C5CE7, #8B7CF6)",
+                            color: "#fff", fontSize: 11, fontWeight: 800, fontFamily: "inherit",
+                            opacity: user.coins < item.price ? 0.5 : 1,
+                          }}>
+                          {storeLoading === item.id ? "..." : "Buy"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {showBackpack && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 500, background: "#0F0F1A",
+          display: "flex", flexDirection: "column", maxWidth: 430, margin: "0 auto",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "52px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <button onClick={() => setShowBackpack(false)} style={{ width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)", cursor: "pointer", fontSize: 16, color: "#fff" }}>{"\u2039"}</button>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F392}"} Backpack</h2>
+            <div style={{ width: 36 }} />
+          </div>
+
+          <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            {([["frame", "\u{1F5BC}\uFE0F", "Frames"], ["entry", "\u26A1", "Entry FX"], ["theme", "\u{1F3A8}", "Themes"]] as const).map(([cat, ico, label]) => (
+              <button key={cat} onClick={() => setBackpackCategory(cat)} style={{
+                flex: 1, padding: "14px 0", border: "none", cursor: "pointer", fontFamily: "inherit",
+                background: backpackCategory === cat ? "rgba(108,92,231,0.15)" : "transparent",
+                borderBottom: backpackCategory === cat ? "2px solid #6C5CE7" : "2px solid transparent",
+                color: backpackCategory === cat ? "#A29BFE" : "rgba(162,155,254,0.45)",
+                fontSize: 13, fontWeight: 700, transition: "all 0.2s",
+              }}>{ico} {label}</button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
+            {(() => {
+              const inv = user.inventory || {};
+              const categoryItems = Object.values(inv).filter(o => {
+                const si = getStoreItem(o.itemId);
+                return si && si.category === backpackCategory;
+              });
+              if (categoryItems.length === 0) {
+                return (
+                  <div style={{ textAlign: "center", padding: "60px 20px" }}>
+                    <span style={{ fontSize: 48, opacity: 0.3 }}>{"\u{1F4E6}"}</span>
+                    <p style={{ fontSize: 14, color: "rgba(162,155,254,0.4)", marginTop: 12 }}>No items yet</p>
+                    <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => { setShowBackpack(false); setShowStore(true); setStoreCategory(backpackCategory); }}>
+                      Visit Store
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {categoryItems.map(owned => {
+                    const item = getStoreItem(owned.itemId);
+                    if (!item) return null;
+                    const rc = getRarityColor(item.rarity);
+                    return (
+                      <div key={owned.itemId} style={{
+                        display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
+                        borderRadius: 16,
+                        background: owned.equipped ? "rgba(108,92,231,0.1)" : "rgba(255,255,255,0.03)",
+                        border: owned.equipped ? `1.5px solid ${rc}50` : "1px solid rgba(255,255,255,0.06)",
+                      }}>
+                        <div style={{
+                          width: 52, height: 52, borderRadius: 14, background: item.preview,
+                          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+                          border: `2px solid ${rc}40`,
+                          boxShadow: owned.equipped ? `0 0 16px ${rc}30` : "none",
+                        }}>{item.icon}</div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>{item.name}</p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                            <span style={{ fontSize: 10, color: rc, fontWeight: 700, textTransform: "uppercase" }}>{item.rarity}</span>
+                            {owned.equipped && <span style={{ fontSize: 10, color: "#00e676", fontWeight: 700 }}>{"\u2022"} Active</span>}
+                          </div>
+                        </div>
+                        {owned.equipped ? (
+                          <button onClick={() => handleUnequip(owned.itemId)} disabled={storeLoading === owned.itemId}
+                            style={{
+                              padding: "8px 16px", borderRadius: 12, border: "1px solid rgba(255,100,130,0.3)", cursor: "pointer",
+                              background: "rgba(255,100,130,0.1)", color: "#ff6482", fontSize: 12, fontWeight: 800, fontFamily: "inherit",
+                            }}>
+                            {storeLoading === owned.itemId ? "..." : "Remove"}
+                          </button>
+                        ) : (
+                          <button onClick={() => handleEquip(owned.itemId)} disabled={storeLoading === owned.itemId}
+                            style={{
+                              padding: "8px 16px", borderRadius: 12, border: "none", cursor: "pointer",
+                              background: "linear-gradient(135deg, #6C5CE7, #8B7CF6)", color: "#fff",
+                              fontSize: 12, fontWeight: 800, fontFamily: "inherit",
+                              boxShadow: "0 0 12px rgba(108,92,231,0.3)",
+                            }}>
+                            {storeLoading === owned.itemId ? "..." : "Equip"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
       )}
 
       {showOfficialRules && (

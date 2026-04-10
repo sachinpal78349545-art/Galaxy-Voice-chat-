@@ -96,6 +96,10 @@ export interface UserProfile {
   };
   dailyTasks?: Record<string, { progress: number; completed: boolean; claimedAt?: number }>;
   lastTaskReset?: number;
+  inventory?: Record<string, { itemId: string; purchasedAt: number; equipped: boolean }>;
+  equippedFrame?: string;
+  equippedEntry?: string;
+  equippedTheme?: string;
 }
 
 export const DEFAULT_PROFILE: Partial<UserProfile> = {

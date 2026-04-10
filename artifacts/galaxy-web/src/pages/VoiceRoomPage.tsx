@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { uploadWithAppCheck } from "../lib/firebase";
+import { getStoreItem } from "../lib/storeService";
 import {
   Room, RoomSeat, RoomUser, RoomMessage, ROOM_THEMES, ROOM_AVATARS,
   subscribeRoom, subscribeRoomMessages, sendRoomMessage,
@@ -85,7 +86,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
           if (officialFlag) {
             sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6E1}\uFE0F", text: `Official Support ${cleanName(user.name)} has entered the room`, type: "system" }).catch(console.error);
           } else {
-            sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F389}", text: `Welcome ${cleanName(user.name)} to the room \u{1F389}`, type: "welcome" }).catch(console.error);
+            const entryItem = user.equippedEntry ? getStoreItem(user.equippedEntry) : null;
+            const entryIcon = entryItem ? entryItem.icon : "\u{1F389}";
+            const entryText = entryItem
+              ? `${entryIcon} ${cleanName(user.name)} arrived with ${entryItem.name}! ${entryIcon}`
+              : `Welcome ${cleanName(user.name)} to the room \u{1F389}`;
+            sendRoomMessage(roomId, { userId: "system", username: "System", avatar: entryIcon, text: entryText, type: "welcome" }).catch(console.error);
           }
           setWelcomeAnim(cleanName(user.name));
           setTimeout(() => setWelcomeAnim(null), 3500);

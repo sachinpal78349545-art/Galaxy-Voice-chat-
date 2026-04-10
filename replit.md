@@ -52,12 +52,19 @@ I prefer iterative development with a focus on delivering working features incre
     - Daily/weekly/monthly gift leaderboards.
     - Gift history tracking.
 - **Notification System**: In-app notifications for various events (follows, gifts, friend requests, messages, room invites, system alerts).
+- **Store & Backpack System** (`storeService.ts`):
+    - In-app store with Avatar Frames, Entry Effects, and Room Themes.
+    - Items have rarity tiers: Common, Rare, Epic, Legendary (color-coded).
+    - Purchase with coins, equip/unequip from Backpack.
+    - Equipped frames show as glowing borders on profile avatar.
+    - Equipped entry effects trigger custom system messages when joining rooms.
+    - User inventory stored at `users/{uid}/inventory/` with `equippedFrame`, `equippedEntry`, `equippedTheme` fields.
 - **Daily Rewards & Achievements**: System for rewarding user engagement and progress.
 - **Support System**: Integrated feedback form and help center articles.
 - **Toast Notifications**: Global system for user feedback (success/error/info/warning).
 
 ### System Design Choices
-- **Data Persistence**: Firebase Realtime Database for core data; Cloudinary for all image/media uploads (Cloud Name: `dz1bhfpkc`, Upload Preset: `profile_pics`). No reliance on `localStorage` for core data.
+- **Data Persistence**: Firebase Realtime Database for core data; Cloudinary for all image/media uploads (Cloud Name: `dz1bhfpkc`, Upload Preset: `Profile_pic`). No reliance on `localStorage` for core data.
 - **Modular Services**: Codebase organized into distinct service modules (e.g., `userService`, `roomService`, `chatService`, `voiceService`) for maintainability and separation of concerns.
 - **Real-time Focus**: Extensive use of Firebase real-time listeners for dynamic UI updates across all features.
 - **Security**: Firebase App Check with reCAPTCHA Enterprise, user blocking, reporting system, and permission enforcement for room actions.
