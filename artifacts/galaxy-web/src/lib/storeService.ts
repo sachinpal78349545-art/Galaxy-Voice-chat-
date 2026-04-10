@@ -50,9 +50,11 @@ export function getStoreItem(itemId: string): StoreItem | undefined {
 }
 
 const PNG_FRAME_MAP: Record<string, string> = {
-  frame_divine_wing: "assets/86874.png",
-  frame_crystal_pink: "assets/86875.png",
+  frame_divine_wing: "assets/ur.1.png",
+  frame_crystal_pink: "assets/ur.2.png",
 };
+
+export const DEFAULT_FRAME_ID = "frame_divine_wing";
 
 export function getPngFramePath(frameId: string): string | null {
   return PNG_FRAME_MAP[frameId] || null;

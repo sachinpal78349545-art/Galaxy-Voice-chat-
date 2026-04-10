@@ -6,7 +6,7 @@ import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, ge
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
-import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath } from "../lib/storeService";
+import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, DEFAULT_FRAME_ID } from "../lib/storeService";
 
 interface Props {
   user: UserProfile;
@@ -417,25 +417,17 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <div style={{ position: "relative" }}>
             {(() => {
-              if (!user.equippedFrame || isAdmin || user.globalRole === "official") return null;
-              if (isPngFrame(user.equippedFrame)) {
-                const pngPath = getPngFramePath(user.equippedFrame);
-                return pngPath ? <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" className="png-frame-profile" /> : null;
-              }
-              return null;
+              const activeFrame = user.equippedFrame || DEFAULT_FRAME_ID;
+              if (!isPngFrame(activeFrame)) return null;
+              const pngPath = getPngFramePath(activeFrame);
+              return pngPath ? <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" className="png-frame-profile" /> : null;
             })()}
             <div style={{
               width: 100, height: 100, borderRadius: 50, fontSize: 50,
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-              border: isAdmin ? "3px solid #FFD700" : user.globalRole === "official" ? "3px solid #FFD700" : (user.equippedFrame && isPngFrame(user.equippedFrame)) ? "none" : "3px solid rgba(108,92,231,0.5)",
-              boxShadow: isAdmin
-                ? "0 0 20px rgba(255,215,0,0.5), 0 0 40px rgba(191,0,255,0.25), 0 0 60px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
-                : user.globalRole === "official"
-                ? "0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
-                : (user.equippedFrame && isPngFrame(user.equippedFrame))
-                ? "none"
-                : "0 0 32px rgba(108,92,231,0.4), 0 8px 32px rgba(0,0,0,0.3)",
+              border: "none",
+              boxShadow: "none",
               cursor: "pointer", overflow: "hidden",
             }} onClick={onEditProfile}>
               {user.avatar.startsWith("http") ? (

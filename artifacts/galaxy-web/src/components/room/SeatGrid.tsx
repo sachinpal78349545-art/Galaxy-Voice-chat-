@@ -2,7 +2,7 @@ import React from "react";
 import { Room, RoomSeat, cleanName } from "./types";
 import { getUserRole } from "../../lib/roomService";
 import { SUPER_ADMIN_USER_ID } from "../../lib/userService";
-import { isPngFrame, getPngFramePath } from "../../lib/storeService";
+import { isPngFrame, getPngFramePath, DEFAULT_FRAME_ID } from "../../lib/storeService";
 
 interface SeatGridProps {
   room: Room;
@@ -108,27 +108,28 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
   const isSpecial = isOfficial || isSuperAdmin;
-  const hasPngFrame = frameId && !isSpecial && isPngFrame(frameId);
+  const activeFrameId = frameId || (isActive ? DEFAULT_FRAME_ID : undefined);
+  const hasPngFrame = activeFrameId && isPngFrame(activeFrameId);
 
   const seatClass = [
     "seat-bubble",
     hasPngFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty"),
     isOwner && isActive && !hasPngFrame ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
-    isSpecial && isActive ? "seat-official" : "",
-    isSuperAdmin && isActive ? "seat-super-admin" : "",
+    !hasPngFrame && isSpecial && isActive ? "seat-official" : "",
+    !hasPngFrame && isSuperAdmin && isActive ? "seat-super-admin" : "",
   ].filter(Boolean).join(" ");
 
   const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
-  const pngPath = hasPngFrame ? getPngFramePath(frameId!) : null;
+  const pngPath = hasPngFrame ? getPngFramePath(activeFrameId!) : null;
 
   return (
     <div className="seat-cell" style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
       <div className="seat-wrapper">
-        {isSuperAdmin && isActive && (
+        {!hasPngFrame && isSuperAdmin && isActive && (
           <div className="super-admin-seat-frame" />
         )}
-        {isOfficial && !isSuperAdmin && isActive && (
+        {!hasPngFrame && isOfficial && !isSuperAdmin && isActive && (
           <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" className="official-phoenix-frame" />
         )}
         {pngPath && isActive && (
