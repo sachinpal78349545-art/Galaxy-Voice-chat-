@@ -1584,3 +1584,21 @@ textarea.input-field { resize: none; line-height: 1.5; }
   pointer-events: none;
   z-index: 1;
 }
+
+.svg-frame-seat {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.svg-frame-profile {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+}

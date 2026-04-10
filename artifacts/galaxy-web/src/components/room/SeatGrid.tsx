@@ -2,7 +2,8 @@ import React from "react";
 import { Room, RoomSeat, cleanName } from "./types";
 import { getUserRole } from "../../lib/roomService";
 import { SUPER_ADMIN_USER_ID } from "../../lib/userService";
-import { getFrameCssClass } from "../../lib/storeService";
+import { getFrameCssClass, isSvgFrame } from "../../lib/storeService";
+import { DivineWingFrame, CrystalPinkFrame } from "../frames";
 
 interface SeatGridProps {
   room: Room;
@@ -104,11 +105,18 @@ function AudioWaveRing({ color = "cyan" }: { color?: "cyan" | "gold" | "blue" })
   );
 }
 
+function SvgFrameOverlay({ frameId, size }: { frameId: string; size: number }) {
+  if (frameId === "frame_divine_wing") return <DivineWingFrame size={size} className="svg-frame-seat" />;
+  if (frameId === "frame_crystal_pink") return <CrystalPinkFrame size={size} className="svg-frame-seat" />;
+  return null;
+}
+
 function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial, isSuperAdmin, frameId, onTap }: SeatCellProps) {
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
   const isSpecial = isOfficial || isSuperAdmin;
-  const frameCss = frameId && !isSpecial ? getFrameCssClass(frameId) : null;
+  const hasSvgFrame = frameId && !isSpecial && isSvgFrame(frameId);
+  const frameCss = frameId && !isSpecial && !hasSvgFrame ? getFrameCssClass(frameId) : null;
 
   const seatClass = [
     "seat-bubble",
@@ -132,6 +140,9 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
         )}
         {frameCss && isActive && (
           <div className={`store-frame-overlay ${frameCss}`} />
+        )}
+        {hasSvgFrame && isActive && (
+          <SvgFrameOverlay frameId={frameId!} size={76} />
         )}
         {isSpeaking && <AudioWaveRing color={isSuperAdmin ? "gold" : isOfficial ? "blue" : "cyan"} />}
         {isSpeaking && (

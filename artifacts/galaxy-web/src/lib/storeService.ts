@@ -36,6 +36,8 @@ export const STORE_ITEMS: StoreItem[] = [
   { id: "frame_neon", name: "Neon Pulse", icon: "\u{1F4A0}", category: "frame", price: 800, preview: "radial-gradient(circle, #00FF88, #1A0F2E)", rarity: "epic" },
   { id: "frame_dragon", name: "Dragon Aura", icon: "\u{1F409}", category: "frame", price: 1500, preview: "radial-gradient(circle, #FF1744, #FFD700, #1A0F2E)", rarity: "legendary" },
   { id: "frame_diamond", name: "Diamond Crown", icon: "\u{1F48E}", category: "frame", price: 2000, preview: "radial-gradient(circle, #E0E0E0, #64B5F6, #1A0F2E)", rarity: "legendary" },
+  { id: "frame_divine_wing", name: "Divine Wing", icon: "\u{1F451}", category: "frame", price: 500000, preview: "radial-gradient(circle, #FFD700, #4169E1, #1A0F2E)", rarity: "legendary" },
+  { id: "frame_crystal_pink", name: "Crystal Pink", icon: "\u{1F338}", category: "frame", price: 300000, preview: "radial-gradient(circle, #FF69B4, #C0C0C0, #1A0F2E)", rarity: "epic" },
 
   { id: "entry_lightning", name: "Lightning Strike", icon: "\u26A1", category: "entry", price: 300, preview: "linear-gradient(135deg, #FFD700, #FF6B35)", rarity: "common" },
   { id: "entry_stars", name: "Starfall", icon: "\u2B50", category: "entry", price: 600, preview: "linear-gradient(135deg, #6C5CE7, #A29BFE)", rarity: "rare" },
@@ -61,6 +63,12 @@ const FRAME_CSS_MAP: Record<string, string> = {
   frame_dragon: "store-frame-dragon",
   frame_diamond: "store-frame-diamond",
 };
+
+export const SVG_FRAME_IDS = new Set(["frame_divine_wing", "frame_crystal_pink"]);
+
+export function isSvgFrame(frameId: string): boolean {
+  return SVG_FRAME_IDS.has(frameId);
+}
 
 export function getFrameCssClass(frameId: string): string | null {
   return FRAME_CSS_MAP[frameId] || null;

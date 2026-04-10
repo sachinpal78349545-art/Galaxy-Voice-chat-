@@ -6,7 +6,8 @@ import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, ge
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
-import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, getFrameCssClass } from "../lib/storeService";
+import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, getFrameCssClass, isSvgFrame } from "../lib/storeService";
+import { DivineWingFrame, CrystalPinkFrame } from "../components/frames";
 
 interface Props {
   user: UserProfile;
@@ -417,7 +418,12 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <div style={{ position: "relative" }}>
             {(() => {
-              const profileFrameCss = user.equippedFrame && !isAdmin && user.globalRole !== "official" ? getFrameCssClass(user.equippedFrame) : null;
+              if (!user.equippedFrame || isAdmin || user.globalRole === "official") return null;
+              if (isSvgFrame(user.equippedFrame)) {
+                const SvgComp = user.equippedFrame === "frame_divine_wing" ? DivineWingFrame : CrystalPinkFrame;
+                return <SvgComp size={130} className="svg-frame-profile" />;
+              }
+              const profileFrameCss = getFrameCssClass(user.equippedFrame);
               return profileFrameCss ? <div className={`store-frame-profile ${profileFrameCss}`} /> : null;
             })()}
             <div style={{
@@ -1379,6 +1385,17 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     fontSize: 40, position: "relative",
                   }}>
                     {item.category === "frame" && (() => {
+                      if (isSvgFrame(item.id)) {
+                        const SvgComp = item.id === "frame_divine_wing" ? DivineWingFrame : CrystalPinkFrame;
+                        return (
+                          <div style={{ position: "relative", width: 56, height: 56 }}>
+                            <SvgComp size={70} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }} />
+                            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "rgba(108,92,231,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                              {item.icon}
+                            </div>
+                          </div>
+                        );
+                      }
                       const fc = getFrameCssClass(item.id);
                       return fc ? (
                         <div style={{ position: "absolute", width: 56, height: 56, borderRadius: "50%" }}>
@@ -1488,7 +1505,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                           display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
                           border: `2px solid ${rc}40`,
                           boxShadow: owned.equipped ? `0 0 16px ${rc}30` : "none",
-                        }}>{item.icon}</div>
+                          position: "relative", overflow: "visible",
+                        }}>
+                          {isSvgFrame(item.id) ? (() => {
+                            const SvgComp = item.id === "frame_divine_wing" ? DivineWingFrame : CrystalPinkFrame;
+                            return <SvgComp size={52} />;
+                          })() : item.icon}
+                        </div>
                         <div style={{ flex: 1 }}>
                           <p style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>{item.name}</p>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
