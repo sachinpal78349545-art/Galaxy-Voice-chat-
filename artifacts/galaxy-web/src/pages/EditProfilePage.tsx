@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
-import { storage, auth } from "../lib/firebase";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadToCloudinary } from "../lib/cloudinary";
 import { UserProfile, updateUser, AVATAR_LIST } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 import imageCompression from "browser-image-compression";
@@ -61,22 +60,13 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
       setUploadProgress(30);
       setUploadStep("Uploading...");
 
-      const blob = new Blob([compressed], { type: file.type });
-      const path = `avatars/${user.uid}_${Date.now()}.jpg`;
-      const sRef = storageRef(storage, path);
+      const blob = new Blob([compressed], { type: "image/jpeg" });
+      console.log("[DP] Uploading to Cloudinary, size:", blob.size, "bytes");
 
-      console.log("SUCCESS: Starting direct Blob upload without App Check.");
-      console.log("[DP] Blob size:", blob.size, "bytes");
-      console.log("[DP] Storage ref bucket:", sRef.bucket);
-      console.log("[DP] Storage ref path:", sRef.fullPath);
-      console.log("[DP] Auth user:", auth.currentUser?.uid ?? "NONE");
-
-      const snapshot = await uploadBytes(sRef, blob, { contentType: "image/jpeg" });
-      console.log("[DP] uploadBytes SUCCESS, bytes:", snapshot.metadata.size);
-
-      setUploadProgress(80);
-      const url = await getDownloadURL(sRef);
-      console.log("[DP] Download URL:", url);
+      const url = await uploadToCloudinary(blob, (pct) => {
+        setUploadProgress(30 + Math.round(pct * 0.7));
+      });
+      console.log("[DP] Cloudinary URL:", url);
 
       setUploadProgress(100);
       setUploadStep("Done!");

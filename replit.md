@@ -46,7 +46,7 @@ I prefer iterative development with a focus on delivering working features incre
     - Support for text, emoji, image, and voice messages.
     - Seen/delivered message statuses.
     - Double-tap chat reactions.
-    - Integrated with Firebase Storage for media uploads.
+    - Media uploads via Cloudinary (images auto-optimized with `w_400,h_400,c_fill,q_auto,f_auto` transformations).
 - **Gift System**:
     - Animated gift sending with coin deduction.
     - Daily/weekly/monthly gift leaderboards.
@@ -57,7 +57,7 @@ I prefer iterative development with a focus on delivering working features incre
 - **Toast Notifications**: Global system for user feedback (success/error/info/warning).
 
 ### System Design Choices
-- **Data Persistence**: Exclusively Firebase Realtime Database and Firebase Storage; no reliance on `localStorage` for core data.
+- **Data Persistence**: Firebase Realtime Database for core data; Cloudinary for all image/media uploads (Cloud Name: `dz1bhfpkc`, Upload Preset: `profile_pics`). No reliance on `localStorage` for core data.
 - **Modular Services**: Codebase organized into distinct service modules (e.g., `userService`, `roomService`, `chatService`, `voiceService`) for maintainability and separation of concerns.
 - **Real-time Focus**: Extensive use of Firebase real-time listeners for dynamic UI updates across all features.
 - **Security**: Firebase App Check with reCAPTCHA Enterprise, user blocking, reporting system, and permission enforcement for room actions.
@@ -66,7 +66,7 @@ I prefer iterative development with a focus on delivering working features incre
 
 - **Firebase**:
     - **Project ID**: `chalotalk-67106`
-    - **Services**: Realtime Database, Authentication, Storage, App Check.
+    - **Services**: Realtime Database, Authentication.
 - **Agora.io**:
     - **App ID**: `5a9957fd6a8047f48310fd0e5345d42c` (Web), `5a9957fd6a8047f48310fd0e5545d42c` (Mobile)
     - **SDKs**: `agora-rtc-sdk-ng` (Web), `react-native-agora` (Mobile)
