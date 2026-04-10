@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { ref, onValue, off } from "firebase/database";
-import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, BanDuration } from "../lib/userService";
+import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, BanDuration, setUserCoins, deleteUserAvatar, resetUserName } from "../lib/userService";
+import { sendGlobalAlert, clearGlobalAlerts } from "../lib/notificationService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
@@ -91,6 +92,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [reportTarget, setReportTarget] = useState("");
   const [showBanMenu, setShowBanMenu] = useState(false);
   const [banLoading, setBanLoading] = useState(false);
+  const [walletEditId, setWalletEditId] = useState("");
+  const [walletEditUser, setWalletEditUser] = useState<UserProfile | null>(null);
+  const [walletNewCoins, setWalletNewCoins] = useState("");
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [globalAlertText, setGlobalAlertText] = useState("");
+  const [alertSending, setAlertSending] = useState(false);
+  const [modLoading, setModLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [privacy, setPrivacy] = useState<NonNullable<UserProfile["privacy"]>>(user.privacy || {
@@ -1062,7 +1070,52 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             </div>
 
             {isAdmin && viewingProfile && !isSuperAdmin(viewingProfile) && (
-              <div style={{ width: "100%", marginTop: 12 }}>
+              <div style={{ display: "flex", gap: 8, width: "100%", marginTop: 8 }}>
+                <button
+                  disabled={modLoading}
+                  onClick={async () => {
+                    if (!confirm(`Delete ${viewingProfile!.name}'s profile picture?`)) return;
+                    setModLoading(true);
+                    try {
+                      await deleteUserAvatar(viewingProfile!.uid);
+                      const refreshed = await getUser(viewingProfile!.uid);
+                      if (refreshed) setViewingProfile(refreshed);
+                      showToast("Profile picture deleted", "success");
+                    } catch { showToast("Failed to delete DP", "error"); }
+                    setModLoading(false);
+                  }}
+                  style={{
+                    flex: 1, padding: "11px 0", borderRadius: 12,
+                    background: "rgba(255,60,60,0.08)", border: "1px solid rgba(255,60,60,0.2)",
+                    color: "#ff5555", fontWeight: 700, fontSize: 12, cursor: "pointer",
+                    opacity: modLoading ? 0.5 : 1,
+                  }}
+                >{"\u{1F5D1}\uFE0F"} Delete DP</button>
+                <button
+                  disabled={modLoading}
+                  onClick={async () => {
+                    if (!confirm(`Reset ${viewingProfile!.name}'s name to "Galaxy User"?`)) return;
+                    setModLoading(true);
+                    try {
+                      await resetUserName(viewingProfile!.uid);
+                      const refreshed = await getUser(viewingProfile!.uid);
+                      if (refreshed) setViewingProfile(refreshed);
+                      showToast("Name reset to Galaxy User", "success");
+                    } catch { showToast("Failed to reset name", "error"); }
+                    setModLoading(false);
+                  }}
+                  style={{
+                    flex: 1, padding: "11px 0", borderRadius: 12,
+                    background: "rgba(255,165,0,0.08)", border: "1px solid rgba(255,165,0,0.2)",
+                    color: "#ff9933", fontWeight: 700, fontSize: 12, cursor: "pointer",
+                    opacity: modLoading ? 0.5 : 1,
+                  }}
+                >{"\u{1F504}"} Reset Name</button>
+              </div>
+            )}
+
+            {isAdmin && viewingProfile && !isSuperAdmin(viewingProfile) && (
+              <div style={{ width: "100%", marginTop: 8 }}>
                 <button
                   onClick={() => setShowBanMenu(!showBanMenu)}
                   style={{
@@ -1463,6 +1516,141 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                   <p style={{ fontSize: 12, fontWeight: 700, color: "#FFD700" }}>Golden Frame Preview</p>
                   <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Active on all Official avatars</p>
                 </div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: 16, marginTop: 14, border: "1px solid rgba(0,255,200,0.2)" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: "#00ffc8" }}>{"\u{1F4B0}"} Wallet Admin</h3>
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 10 }}>
+                Edit any user's coin balance
+              </p>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <input
+                  type="text"
+                  value={walletEditId}
+                  onChange={e => { setWalletEditId(e.target.value); setWalletEditUser(null); }}
+                  placeholder="Enter User ID..."
+                  style={{
+                    flex: 1, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(0,255,200,0.2)",
+                    background: "rgba(255,255,255,0.04)", color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none",
+                  }}
+                />
+                <button className="btn btn-sm" style={{ background: "rgba(0,255,200,0.12)", color: "#00ffc8", border: "1px solid rgba(0,255,200,0.3)", fontWeight: 700, padding: "8px 16px" }}
+                  onClick={async () => {
+                    if (!walletEditId.trim()) return;
+                    setWalletLoading(true);
+                    try {
+                      const found = await getUserByUserId(walletEditId.trim());
+                      setWalletEditUser(found);
+                      if (found) setWalletNewCoins(String(found.coins || 0));
+                      else showToast("User not found", "warning");
+                    } catch { showToast("Lookup failed", "error"); }
+                    setWalletLoading(false);
+                  }} disabled={walletLoading}>
+                  {walletLoading ? "..." : "\u{1F50D}"}
+                </button>
+              </div>
+              {walletEditUser && (
+                <div style={{
+                  padding: 14, borderRadius: 14,
+                  background: "rgba(0,255,200,0.04)", border: "1px solid rgba(0,255,200,0.12)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 18, fontSize: 18,
+                      background: "rgba(108,92,231,0.12)", border: "2px solid rgba(0,255,200,0.3)",
+                      display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                    }}>
+                      {walletEditUser.avatar?.startsWith("http")
+                        ? <img src={walletEditUser.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                        : walletEditUser.avatar}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700 }}>{walletEditUser.name}</p>
+                      <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontFamily: "monospace" }}>Current: {"\u{1F48E}"} {(walletEditUser.coins || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="number"
+                      value={walletNewCoins}
+                      onChange={e => setWalletNewCoins(e.target.value)}
+                      placeholder="New balance..."
+                      style={{
+                        flex: 1, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(0,255,200,0.2)",
+                        background: "rgba(255,255,255,0.04)", color: "#fff", fontSize: 14, fontWeight: 700, outline: "none",
+                      }}
+                    />
+                    <button className="btn btn-sm" style={{
+                      background: "rgba(0,255,200,0.15)", color: "#00ffc8", border: "1px solid rgba(0,255,200,0.3)",
+                      fontWeight: 800, padding: "10px 20px",
+                    }} onClick={async () => {
+                      const val = parseInt(walletNewCoins);
+                      if (isNaN(val) || val < 0) { showToast("Enter a valid amount", "warning"); return; }
+                      if (!confirm(`Set ${walletEditUser!.name}'s coins to ${val.toLocaleString()}?`)) return;
+                      setWalletLoading(true);
+                      try {
+                        await setUserCoins(walletEditUser!.uid, val);
+                        setWalletEditUser({ ...walletEditUser!, coins: val });
+                        showToast(`Coins updated to ${val.toLocaleString()}`, "success");
+                      } catch { showToast("Failed to update coins", "error"); }
+                      setWalletLoading(false);
+                    }} disabled={walletLoading}>
+                      {walletLoading ? "..." : "\u2714 Set"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="card" style={{ padding: 16, marginTop: 14, border: "1px solid rgba(191,0,255,0.2)" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: "#bf00ff" }}>{"\u{1F4E2}"} Global Notice</h3>
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 10 }}>
+                Send a scrolling alert visible to all users
+              </p>
+              <textarea
+                value={globalAlertText}
+                onChange={e => setGlobalAlertText(e.target.value)}
+                placeholder="Type your global alert message..."
+                maxLength={200}
+                style={{
+                  width: "100%", padding: "12px 14px", borderRadius: 12,
+                  border: "1px solid rgba(191,0,255,0.2)", background: "rgba(255,255,255,0.04)",
+                  color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none",
+                  resize: "none", minHeight: 60, boxSizing: "border-box",
+                }}
+              />
+              <p style={{ fontSize: 10, color: "rgba(162,155,254,0.3)", textAlign: "right", marginTop: 4 }}>
+                {globalAlertText.length}/200
+              </p>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button className="btn btn-sm" style={{
+                  flex: 1, background: "linear-gradient(135deg, rgba(191,0,255,0.2), rgba(191,0,255,0.08))",
+                  border: "1px solid rgba(191,0,255,0.3)", color: "#bf00ff", fontWeight: 800, padding: "10px 0",
+                }} onClick={async () => {
+                  if (!globalAlertText.trim()) { showToast("Enter a message", "warning"); return; }
+                  setAlertSending(true);
+                  try {
+                    await sendGlobalAlert(globalAlertText.trim(), user.uid, user.name);
+                    showToast("Global alert sent!", "success");
+                    setGlobalAlertText("");
+                  } catch { showToast("Failed to send alert", "error"); }
+                  setAlertSending(false);
+                }} disabled={alertSending || !globalAlertText.trim()}>
+                  {alertSending ? "Sending..." : "\u{1F4E2} Send Alert"}
+                </button>
+                <button className="btn btn-sm" style={{
+                  background: "rgba(255,60,60,0.08)", border: "1px solid rgba(255,60,60,0.2)",
+                  color: "#ff5555", fontWeight: 700, padding: "10px 16px",
+                }} onClick={async () => {
+                  if (!confirm("Clear all global alerts?")) return;
+                  try {
+                    await clearGlobalAlerts();
+                    showToast("All alerts cleared", "info");
+                  } catch { showToast("Failed to clear", "error"); }
+                }}>
+                  {"\u{1F5D1}\uFE0F"} Clear
+                </button>
               </div>
             </div>
           </div>

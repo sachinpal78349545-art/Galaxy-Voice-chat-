@@ -4,7 +4,7 @@ import { auth } from "./lib/firebase";
 import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward, isUserBanned, getBanTimeRemaining } from "./lib/userService";
 import { Room } from "./lib/roomService";
 import { subscribeConversations, Conversation } from "./lib/chatService";
-import { Notification, subscribeNotifications } from "./lib/notificationService";
+import { Notification, subscribeNotifications, GlobalAlert, subscribeGlobalAlerts } from "./lib/notificationService";
 import { ToastProvider, useToast } from "./lib/toastContext";
 import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
@@ -67,9 +67,11 @@ function AppInner() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
   const [chatActive, setChatActive] = useState(false);
+  const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
   const notifSubCleanup = useRef<(() => void) | null>(null);
+  const alertSubCleanup = useRef<(() => void) | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -94,6 +96,8 @@ function AppInner() {
           userSubCleanup.current = subscribeUser(u.uid, up => { if (up) setProfile(up); });
           presenceCleanup.current = setupOnlinePresence(u.uid);
           notifSubCleanup.current = subscribeNotifications(u.uid, setNotifications);
+          alertSubCleanup.current?.();
+          alertSubCleanup.current = subscribeGlobalAlerts(setGlobalAlerts);
           const reward = await claimDailyReward(u.uid, p);
           if (reward) {
             showToast(`Daily reward: +${reward.coins} coins! (Day ${reward.streak} streak)`, "success", "\u{1F381}");
@@ -109,6 +113,8 @@ function AppInner() {
         presenceCleanup.current?.();
         notifSubCleanup.current?.();
         notifSubCleanup.current = null;
+        alertSubCleanup.current?.();
+        alertSubCleanup.current = null;
       }
     });
     return () => {
@@ -116,6 +122,7 @@ function AppInner() {
       userSubCleanup.current?.();
       presenceCleanup.current?.();
       notifSubCleanup.current?.();
+      alertSubCleanup.current?.();
     };
   }, []);
 
@@ -263,6 +270,19 @@ function AppInner() {
                 }}>{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
               )}
             </button>
+          </div>
+        )}
+
+        {globalAlerts.length > 0 && (
+          <div className="global-alert-bar">
+            <span className="global-alert-icon">{"\u{1F4E2}"}</span>
+            <div className="global-alert-scroll-wrap">
+              <div className="global-alert-scroll">
+                {globalAlerts.map(a => (
+                  <span key={a.id} className="global-alert-text">{a.message}</span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

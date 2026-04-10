@@ -55,3 +55,42 @@ export async function markAllNotificationsRead(uid: string): Promise<void> {
 export async function clearNotifications(uid: string): Promise<void> {
   await set(ref(db, `notifications/${uid}`), null);
 }
+
+export interface GlobalAlert {
+  id: string;
+  message: string;
+  fromUid: string;
+  fromName: string;
+  timestamp: number;
+  expiresAt: number;
+}
+
+export async function sendGlobalAlert(message: string, fromUid: string, fromName: string): Promise<void> {
+  const alertRef = push(ref(db, "globalAlerts"));
+  await set(alertRef, {
+    message,
+    fromUid,
+    fromName,
+    timestamp: Date.now(),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  });
+}
+
+export function subscribeGlobalAlerts(cb: (alerts: GlobalAlert[]) => void): () => void {
+  const r = ref(db, "globalAlerts");
+  onValue(r, snap => {
+    if (!snap.exists()) { cb([]); return; }
+    const val = snap.val();
+    const now = Date.now();
+    const alerts: GlobalAlert[] = Object.keys(val)
+      .map(k => ({ ...val[k], id: k }))
+      .filter(a => a.expiresAt > now)
+      .sort((a, b) => b.timestamp - a.timestamp);
+    cb(alerts);
+  });
+  return () => off(r);
+}
+
+export async function clearGlobalAlerts(): Promise<void> {
+  await set(ref(db, "globalAlerts"), null);
+}

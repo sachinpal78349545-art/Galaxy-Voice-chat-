@@ -37,6 +37,11 @@ I prefer iterative development with a focus on delivering working features incre
     - Mutual follow OR friendship system to gate chat access (friends can chat without gift).
     - Super Admin system with specific user IDs.
     - **Ban/Unban System**: Super Admin (userId `306623582`) exclusive feature. Can ban users for 7 hours, 24 hours, 7 days, or permanently. Ban data stored at `users/{uid}/isBanned`, `banUntil`, `bannedBy`, `banReason`. Banned users see "Account Suspended" screen with ban duration and Sign Out button. Auto-expiry check via `isUserBanned()` (client-side time comparison). Unban restores access immediately.
+    - **Super Admin Powers** (all gated to userId `306623582`):
+      - **Wallet Admin**: Edit any user's coin balance via Admin Panel (lookup by User ID, set new balance).
+      - **Profile Moderator**: "Delete DP" and "Reset Name" buttons on other users' profile bottom sheets.
+      - **Global Notice**: Send scrolling alert banner visible to all users (stored at `globalAlerts/` in RTDB, auto-expires after 24h). Clear all alerts option.
+      - **Room Master**: Super Admin has full owner-level control in every voice room (mute, kick, ban, settings, admin management) regardless of room ownership.
 - **Room Management**:
     - 12-seat grid (4x3) with host and co-host roles.
     - Real-time room listeners, seat management, and room messages.

@@ -1845,3 +1845,51 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .af-seat-wrapper .af-wrapper:hover {
   transform: none;
 }
+
+.global-alert-bar {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  max-width: 400px;
+  margin: 0 auto;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(191,0,255,0.15), rgba(26,15,46,0.95));
+  border-bottom: 1px solid rgba(191,0,255,0.2);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+.global-alert-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  animation: alertPulse 2s ease-in-out infinite;
+}
+.global-alert-scroll-wrap {
+  flex: 1;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.global-alert-scroll {
+  display: flex;
+  gap: 60px;
+  white-space: nowrap;
+  animation: alertScroll 18s linear infinite;
+}
+.global-alert-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.3px;
+}
+@keyframes alertScroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+@keyframes alertPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

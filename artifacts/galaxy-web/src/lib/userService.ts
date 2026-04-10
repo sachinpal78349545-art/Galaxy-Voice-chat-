@@ -677,6 +677,18 @@ export function getBanTimeRemaining(user: UserProfile): string {
   return `${hours}h ${minutes}m remaining`;
 }
 
+export async function setUserCoins(targetUid: string, newBalance: number): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), { coins: newBalance });
+}
+
+export async function deleteUserAvatar(targetUid: string): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), { avatar: "\u{1F30C}" });
+}
+
+export async function resetUserName(targetUid: string): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), { name: "Galaxy User" });
+}
+
 export async function getUserByUserId(userId: string): Promise<UserProfile | null> {
   const snap = await get(ref(db, "users"));
   if (!snap.exists()) return null;

@@ -200,10 +200,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
 
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const isOwner = room?.hostId === user.uid;
+  const isRealOwner = room?.hostId === user.uid;
   const userIsOfficial = isOfficialOrAdmin(user);
-  const hasControl = room ? (isOwnerOrAdmin(room, user.uid) || userIsOfficial) : false;
-  const myRole = room ? getUserRole(room, user.uid) : "user";
+  const userIsSuperAdmin = isSuperAdmin(user);
+  const isOwner = isRealOwner || userIsSuperAdmin;
+  const hasControl = room ? (isOwnerOrAdmin(room, user.uid) || userIsOfficial || userIsSuperAdmin) : false;
+  const myRole = room ? (userIsSuperAdmin ? "owner" as const : getUserRole(room, user.uid)) : "user";
   const liveCount = room ? Object.keys(room.roomUsers || {}).length || room.listeners : 0;
 
   const spawnFloat = (item: string, big = false) => {
