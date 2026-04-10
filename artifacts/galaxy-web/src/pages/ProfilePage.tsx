@@ -456,7 +456,6 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           <div style={{ textAlign: "center" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
               <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.name}</h2>
-              {user.equippedFrame && (() => { const fi = getStoreItem(user.equippedFrame); return fi ? <span style={{ fontSize: 16 }}>{fi.icon}</span> : null; })()}
               {user.vip && <span className="badge badge-vip">{"\u{1F451}"} VIP</span>}
               {isAdmin ? (
                 <span className="super-admin-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>

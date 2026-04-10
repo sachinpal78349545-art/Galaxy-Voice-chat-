@@ -637,6 +637,7 @@ textarea.input-field { resize: none; line-height: 1.5; }
 
 .seat-badge {
   position: absolute; left: 50%; transform: translateX(-50%);
+  z-index: 5;
 }
 
 .seat-badge-owner {
@@ -674,7 +675,7 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .official-badge-label {
   position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
   width: 50px; height: 14px;
-  pointer-events: none; z-index: 2;
+  pointer-events: none; z-index: 5;
   filter: drop-shadow(0 0 4px rgba(0,206,201,0.5)) drop-shadow(0 0 8px rgba(9,132,227,0.3));
 }
 
@@ -712,7 +713,7 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .super-admin-seat-badge {
   position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
   width: 52px; height: 16px;
-  pointer-events: none; z-index: 2;
+  pointer-events: none; z-index: 5;
   filter: drop-shadow(0 0 6px rgba(255,215,0,0.6)) drop-shadow(0 0 10px rgba(191,0,255,0.3));
 }
 
@@ -777,12 +778,14 @@ textarea.input-field { resize: none; line-height: 1.5; }
   background: rgba(0,0,0,0.7); border: 2px solid rgba(0,255,255,0.4);
   display: flex; align-items: center; justify-content: center; font-size: 8px;
   color: rgba(0,255,255,0.9);
+  z-index: 5;
 }
 
 .seat-hand-raised {
   position: absolute; top: -6px; right: -4px; font-size: 13px;
   animation: handWave 0.8s ease-in-out infinite;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  z-index: 5;
 }
 
 .room-chat {
@@ -1384,11 +1387,11 @@ textarea.input-field { resize: none; line-height: 1.5; }
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 76px;
-  height: 76px;
+  width: 78px;
+  height: 78px;
   object-fit: contain;
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
 }
 
 .png-frame-profile {
@@ -1396,9 +1399,9 @@ textarea.input-field { resize: none; line-height: 1.5; }
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 132px;
-  height: 132px;
+  width: 136px;
+  height: 136px;
   object-fit: contain;
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
 }
