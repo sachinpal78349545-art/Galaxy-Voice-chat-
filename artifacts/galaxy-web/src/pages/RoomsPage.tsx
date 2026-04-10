@@ -165,13 +165,13 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
                   <img src={room.roomAvatar} alt="" style={{
                     width: 48, height: 48, borderRadius: 14, objectFit: "cover",
                     border: "1px solid rgba(108,92,231,0.3)", flexShrink: 0,
-                  }} />
+                  }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; const p = (e.target as HTMLImageElement).parentElement; if (p) { const d = document.createElement("div"); d.style.cssText = "width:48px;height:48px;border-radius:14px;font-size:24px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0"; d.textContent = "\u{1F3A4}"; p.replaceChild(d, e.target as HTMLImageElement); }}} />
                 ) : (
                   <div style={{
                     width: 48, height: 48, borderRadius: 14, fontSize: 24,
                     background: "rgba(108,92,231,0.15)", border: "1px solid rgba(108,92,231,0.3)",
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>{room.roomAvatar || room.coverEmoji || "\u{1F3A4}"}</div>
+                  }}>{(() => { const av = room.roomAvatar || room.coverEmoji || "\u{1F3A4}"; return av && av.length <= 4 ? av : "\u{1F3A4}"; })()}</div>
                 )}
                 <div style={{ flex: 1, overflow: "hidden" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>

@@ -36,9 +36,9 @@ function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
       ) : (
         <div className="chat-pill">
           {msg.avatar?.startsWith?.("http") ? (
-            <img src={msg.avatar} alt="" style={{ width: 18, height: 18, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
+            <img src={msg.avatar} alt="" style={{ width: 18, height: 18, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
           ) : (
-            <span style={{ fontSize: 12, flexShrink: 0 }}>{msg.avatar || "\u{1F464}"}</span>
+            <span style={{ fontSize: 12, flexShrink: 0 }}>{msg.avatar && msg.avatar.length <= 4 ? msg.avatar : "\u{1F464}"}</span>
           )}
           <span className="chat-pill-name" style={{
             fontSize: 10, color: isMe ? "#2DD4BF" : "rgba(255,255,255,0.7)",

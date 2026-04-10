@@ -259,9 +259,9 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   boxShadow: "0 2px 12px rgba(108,92,231,0.15)", overflow: "hidden",
                 }}>
-                  {u.avatar.startsWith("http") ? (
-                    <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : u.avatar}
+                  {u.avatar?.startsWith?.("http") ? (
+                    <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                  ) : (u.avatar && u.avatar.length <= 4 ? u.avatar : "\u{1F464}")}
                 </div>
                 <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11, borderRadius: 6, background: "#00e676", border: "2px solid #0F0F1A" }} />
               </div>
@@ -294,7 +294,11 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
                     border: `2.5px solid ${MEDAL_COLORS[i] || "rgba(108,92,231,0.3)"}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     boxShadow: i < 3 ? `0 0 14px ${MEDAL_COLORS[i]}40` : "none",
-                  }}>{g.avatar}</div>
+                  }}>
+                    {g.avatar?.startsWith?.("http")
+                      ? <img src={g.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                      : (g.avatar && g.avatar.length <= 4 ? g.avatar : "\u{1F464}")}
+                  </div>
                   {i < 3 && (
                     <div style={{
                       position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: 9,
@@ -416,8 +420,8 @@ function RoomCard({ room, onJoin }: { room: Room; onJoin: () => void }) {
             boxShadow: "0 4px 16px rgba(108,92,231,0.15)",
           }}>
             {hostAvatar?.startsWith?.("http")
-              ? <img src={hostAvatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 16, objectFit: "cover" }} />
-              : hostAvatar}
+              ? <img src={hostAvatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 16, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F3A4}"; }} />
+              : (hostAvatar && hostAvatar.length <= 4 ? hostAvatar : "\u{1F3A4}")}
           </div>
           {room.isLive && (
             <div style={{

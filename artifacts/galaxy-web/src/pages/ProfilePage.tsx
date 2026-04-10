@@ -487,9 +487,9 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     boxShadow: "none",
                     cursor: "pointer", overflow: "hidden",
                   }} onClick={onEditProfile}>
-                    {user.avatar.startsWith("http") ? (
-                      <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : user.avatar}
+                    {user.avatar?.startsWith?.("http") ? (
+                      <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                    ) : (user.avatar && user.avatar.length <= 4 ? user.avatar : "\u{1F464}")}
                   </div>
                 </>
               );
@@ -939,8 +939,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, cursor: "pointer",
                   }}>
                     {fp.avatar?.startsWith("http")
-                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} />
-                      : fp.avatar}
+                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                      : (fp.avatar && fp.avatar.length <= 4 ? fp.avatar : "\u{1F464}")}
                   </div>
                   <div onClick={() => { setShowFriendsList(false); setViewingProfile(fp); }} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
                     <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fp.name}</p>
@@ -986,8 +986,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, cursor: "pointer",
                   }}>
                     {fp.avatar?.startsWith("http")
-                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} />
-                      : fp.avatar}
+                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                      : (fp.avatar && fp.avatar.length <= 4 ? fp.avatar : "\u{1F464}")}
                   </div>
                   <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => { setShowFollowersList(false); setViewingProfile(fp); }}>
                     <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fp.name}</p>
@@ -1032,8 +1032,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, cursor: "pointer",
                   }}>
                     {fp.avatar?.startsWith("http")
-                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} />
-                      : fp.avatar}
+                      ? <img src={fp.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                      : (fp.avatar && fp.avatar.length <= 4 ? fp.avatar : "\u{1F464}")}
                   </div>
                   <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => { setShowFollowingList(false); setViewingProfile(fp); }}>
                     <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fp.name}</p>
@@ -1069,8 +1069,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                 boxShadow: isSuperAdmin(viewingProfile) ? "0 0 20px rgba(255,215,0,0.3)" : "0 0 15px rgba(108,92,231,0.2)",
               }}>
                 {viewingProfile.avatar?.startsWith("http")
-                  ? <img src={viewingProfile.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 40 }} />
-                  : viewingProfile.avatar}
+                  ? <img src={viewingProfile.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 40 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                  : (viewingProfile.avatar && viewingProfile.avatar.length <= 4 ? viewingProfile.avatar : "\u{1F464}")}
               </div>
               {isSuperAdmin(viewingProfile) && (
                 <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_v2.png`} alt="Super Admin" style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", height: 20 }} />

@@ -721,7 +721,11 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                 width: 44, height: 44, borderRadius: 22, fontSize: 22,
                 background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-              }}>{room.seats[selectedSeat].avatar}</div>
+              }}>
+                {room.seats[selectedSeat].avatar?.startsWith?.("http")
+                  ? <img src={room.seats[selectedSeat].avatar!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 22 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                  : (room.seats[selectedSeat].avatar && room.seats[selectedSeat].avatar!.length <= 4 ? room.seats[selectedSeat].avatar : "\u{1F464}")}
+              </div>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 800 }}>{room.seats[selectedSeat].username}</p>
                 <RoleBadge role={getUserRole(room, room.seats[selectedSeat].userId!)} />
@@ -779,8 +783,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                   <div style={{
                     width: 36, height: 36, borderRadius: 18, fontSize: 18,
                     background: "rgba(108,92,231,0.12)", border: `1.5px solid ${ru.role === "owner" ? "rgba(255,215,0,0.5)" : ru.role === "admin" ? "rgba(108,92,231,0.5)" : "rgba(108,92,231,0.2)"}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>{ru.avatar}</div>
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                  }}>
+                    {ru.avatar?.startsWith?.("http")
+                      ? <img src={ru.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                      : (ru.avatar && ru.avatar.length <= 4 ? ru.avatar : "\u{1F464}")}
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ru.name}</span>
@@ -1167,7 +1175,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                           width: 38, height: 38, borderRadius: 19, fontSize: 19,
                           background: "rgba(108,92,231,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
                           border: `2px solid ${ru.role === "owner" ? "rgba(255,215,0,0.5)" : ru.role === "admin" ? "rgba(108,92,231,0.5)" : "rgba(108,92,231,0.2)"}`,
-                        }}>{ru.avatar}</div>
+                          overflow: "hidden",
+                        }}>
+                          {ru.avatar?.startsWith?.("http")
+                            ? <img src={ru.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 19 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                            : (ru.avatar && ru.avatar.length <= 4 ? ru.avatar : "\u{1F464}")}
+                        </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ru.name}</span>
@@ -1225,8 +1238,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                           <div style={{
                             width: 32, height: 32, borderRadius: 16, fontSize: 16,
                             background: "rgba(255,215,0,0.08)", border: "1.5px solid rgba(255,215,0,0.2)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                          }}>{f.avatar}</div>
+                            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                          }}>
+                            {f.avatar?.startsWith?.("http")
+                              ? <img src={f.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 16 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                              : (f.avatar && f.avatar.length <= 4 ? f.avatar : "\u{1F464}")}
+                          </div>
                           <span style={{ flex: 1, fontSize: 12, fontWeight: 600 }}>{f.name}</span>
                           <span style={{ fontSize: 9, color: "rgba(162,155,254,0.3)" }}>
                             {new Date(f.followedAt).toLocaleDateString()}
@@ -1282,7 +1299,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                     width: 36, height: 36, borderRadius: 18, fontSize: 18,
                     background: "rgba(108,92,231,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
                     border: `1.5px solid ${idx === 0 ? "rgba(255,215,0,0.5)" : "rgba(108,92,231,0.2)"}`,
-                  }}>{entry.avatar || "\u{1F464}"}</div>
+                    overflow: "hidden",
+                  }}>
+                    {entry.avatar?.startsWith?.("http")
+                      ? <img src={entry.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                      : (entry.avatar && entry.avatar.length <= 4 ? entry.avatar : "\u{1F464}")}
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{entry.name}</span>
                   </div>
@@ -1305,9 +1327,9 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                 background: "rgba(108,92,231,0.15)", border: "2px solid rgba(108,92,231,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
               }}>
-                {showProfileCard.avatar.startsWith("http")
-                  ? <img src={showProfileCard.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 28 }} />
-                  : showProfileCard.avatar}
+                {showProfileCard.avatar?.startsWith?.("http")
+                  ? <img src={showProfileCard.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 28 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                  : (showProfileCard.avatar && showProfileCard.avatar.length <= 4 ? showProfileCard.avatar : "\u{1F464}")}
               </div>
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 16, fontWeight: 900 }}>{showProfileCard.name}</p>

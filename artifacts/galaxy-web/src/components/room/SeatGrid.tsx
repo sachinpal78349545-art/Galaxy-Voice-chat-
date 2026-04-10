@@ -178,8 +178,8 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
             <span className="seat-locked-icon">{"\u{1F512}"}</span>
           ) : isActive ? (
             seat.avatar?.startsWith("http")
-              ? <img src={seat.avatar} alt="" className="seat-avatar-img" />
-              : <span>{seat.avatar}</span>
+              ? <img src={seat.avatar} alt="" className="seat-avatar-img" onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.innerHTML = '<span>\u{1F464}</span>'; }} />
+              : <span>{seat.avatar && seat.avatar.length <= 4 ? seat.avatar : "\u{1F464}"}</span>
           ) : (
             <span className="seat-empty-plus">+</span>
           )}

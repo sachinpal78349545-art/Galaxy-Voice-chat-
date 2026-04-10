@@ -29,10 +29,10 @@ export default function FrameAvatar({ frameId, src, size = 56, onClick }: FrameA
       <div className="af-glow" style={{
         boxShadow: `0 0 12px ${colors.primary}99, 0 0 24px ${colors.secondary}66, 0 0 36px ${colors.tertiary}44`,
       }} />
-      {src.startsWith("http") ? (
-        <img src={src} alt="" className="af-img" />
+      {src?.startsWith?.("http") ? (
+        <img src={src} alt="" className="af-img" onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
       ) : (
-        <div className="af-img af-img-placeholder">{src}</div>
+        <div className="af-img af-img-placeholder">{src && src.length <= 4 ? src : "\u{1F464}"}</div>
       )}
       <FrameOverlay frameId={frameId} colors={colors} />
     </div>

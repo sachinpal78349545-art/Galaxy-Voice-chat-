@@ -165,8 +165,8 @@ export default function SearchPage({ user, onMessage, onBack }: Props) {
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>
                 {u.avatar?.startsWith("http") ? (
-                  <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 23, objectFit: "cover" }} />
-                ) : u.avatar}
+                  <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: 23, objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
+                ) : (u.avatar && u.avatar.length <= 4 ? u.avatar : "\u{1F464}")}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
