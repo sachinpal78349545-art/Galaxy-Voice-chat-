@@ -109,10 +109,39 @@ export function getFrameColors(frameId: string) {
   return FRAME_COLORS[frameId] || null;
 }
 
+export async function getEffectivePrice(itemId: string): Promise<number> {
+  const item = getStoreItem(itemId);
+  if (!item) return 0;
+  try {
+    const overSnap = await get(ref(db, `appConfig/storeOverrides/${itemId}`));
+    if (overSnap.exists()) {
+      const ov = overSnap.val();
+      if (ov.price !== undefined) return ov.price;
+    }
+  } catch {}
+  return item.price;
+}
+
+export async function isItemDisabled(itemId: string): Promise<boolean> {
+  try {
+    const overSnap = await get(ref(db, `appConfig/storeOverrides/${itemId}`));
+    if (overSnap.exists()) {
+      const ov = overSnap.val();
+      return !!ov.disabled;
+    }
+  } catch {}
+  return false;
+}
+
 export async function purchaseItem(uid: string, itemId: string, currentCoins: number): Promise<boolean> {
   const item = getStoreItem(itemId);
   if (!item) return false;
-  if (currentCoins < item.price) return false;
+
+  const disabled = await isItemDisabled(itemId);
+  if (disabled) return false;
+
+  const effectivePrice = await getEffectivePrice(itemId);
+  if (currentCoins < effectivePrice) return false;
 
   const owned = await getInventory(uid);
   if (owned.some(o => o.itemId === itemId)) return false;
@@ -120,8 +149,8 @@ export async function purchaseItem(uid: string, itemId: string, currentCoins: nu
   const coinsRef = ref(db, `users/${uid}/coins`);
   const result = await runTransaction(coinsRef, (c: number | null) => {
     const coins = c ?? 0;
-    if (coins < item.price) return undefined;
-    return coins - item.price;
+    if (coins < effectivePrice) return undefined;
+    return coins - effectivePrice;
   });
 
   if (!result.committed) return false;
@@ -134,7 +163,7 @@ export async function purchaseItem(uid: string, itemId: string, currentCoins: nu
 
   await addTransaction(uid, {
     type: "gift_sent",
-    amount: -item.price,
+    amount: -effectivePrice,
     description: `Bought ${item.name}`,
   });
 

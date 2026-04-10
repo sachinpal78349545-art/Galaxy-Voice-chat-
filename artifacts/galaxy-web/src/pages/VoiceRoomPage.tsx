@@ -76,7 +76,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         const officialFlag = isOfficialOrAdmin(user);
         const superAdminFlag = isSuperAdmin(user);
         if (superAdminFlag) ensureSuperAdmin(user.uid).catch(console.error);
-        joinRoom(roomId, user.uid, user.name, user.avatar, enteredPassword, officialFlag, superAdminFlag).then(res => {
+        joinRoom(roomId, user.uid, user.name, user.avatar, enteredPassword, officialFlag, superAdminFlag, user.ghostMode || false).then(res => {
           if (!res.joined) {
             showToast(res.reason || "Cannot join room", "error");
             onLeave();
@@ -560,6 +560,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         officialUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isOfficial).map((ru: any) => ru.uid))}
         superAdminUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isSuperAdmin).map((ru: any) => ru.uid))}
         equippedFrames={equippedFrames}
+        ghostUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.ghostMode).map((ru: any) => ru.uid))}
         onSeatTap={(i, seat) => {
           if (seat.userId === user.uid) {
             setShowSeatSheet(i);

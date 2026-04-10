@@ -42,6 +42,22 @@ I prefer iterative development with a focus on delivering working features incre
       - **Profile Moderator**: "Delete DP" and "Reset Name" buttons on other users' profile bottom sheets.
       - **Global Notice**: Send scrolling alert banner visible to all users (stored at `globalAlerts/` in RTDB, auto-expires after 24h). Clear all alerts option.
       - **Room Master**: Super Admin has full owner-level control in every voice room (mute, kick, ban, settings, admin management) regardless of room ownership.
+    - **God Mode Control Panel** (15 features, full-screen panel via "God Mode Control Panel" button on Profile):
+      1. **Device ID Ban**: Permanently ban a device; stored at `bannedDevices/{deviceId}` in RTDB.
+      2. **Shadow Ban**: User can still use app but messages hidden from others; `users/{uid}/shadowBanned`.
+      3. **Room Hijack**: SA bypasses all room passwords and joins as Owner automatically (always active).
+      4. **Coin Tracker**: View any user's coin balance, level, XP, VIP status, and transaction history.
+      5. **Mass DM**: Send notification to ALL users at once; stored at `notifications/{uid}/`.
+      6. **Server Maintenance**: Toggle maintenance mode; non-SA users see maintenance screen. Stored at `appConfig/maintenance`.
+      7. **ID Transfer**: Transfer coins, inventory, level, XP, equipped items between two users.
+      8. **VIP ID Generator**: Assign custom short/VIP user IDs (e.g. "007", "1") via atomic transaction. Stored at `userIds/{customId}`.
+      9. **Ghost Mode**: SA appears invisible in rooms; seat shows empty to others, faint to self.
+      10. **Live Store Editor**: Override store item prices or disable items in real-time. Stored at `appConfig/storeOverrides`.
+      11. **Level Booster**: Set any user's level and XP directly; auto-grants VIP at level 10+.
+      12. **Custom Badge Tool**: Add/remove custom emoji badges on any user; stored at `users/{uid}/customBadges/`.
+      13. **Anti-Screenshot**: Toggle CSS watermark overlay to deter screenshots.
+      14. **Vanish Chat**: Clear all messages in any room by Room ID.
+      15. **IP Tracker**: View user's device ID, user agent, last login, and account creation date.
 - **Room Management**:
     - 12-seat grid (4x3) with host and co-host roles.
     - Real-time room listeners, seat management, and room messages.

@@ -15,9 +15,10 @@ interface SeatGridProps {
   officialUids?: Set<string>;
   superAdminUids?: Set<string>;
   equippedFrames?: Record<string, string>;
+  ghostUids?: Set<string>;
 }
 
-export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids, superAdminUids, equippedFrames }: SeatGridProps) {
+export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids, superAdminUids, equippedFrames, ghostUids }: SeatGridProps) {
   return (
     <div className="room-seat-area">
       <div className="room-seat-grid-8" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, padding: "6px 0", justifyItems: "center" }}>
@@ -28,20 +29,23 @@ export default function SeatGrid({ room, userUid, hasControl, speakingUids, voic
             ? (voiceJoined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking)
             : false;
           const frameId = seat.userId && equippedFrames ? equippedFrames[seat.userId] : undefined;
+          const isGhost = seat.userId ? (ghostUids?.has(seat.userId) || false) : false;
+          const isGhostMe = isGhost && seat.userId === userUid;
           return (
+            <div key={i} style={{ opacity: isGhost && !isGhostMe ? 0 : isGhostMe ? 0.4 : 1, transition: "opacity 0.3s" }}>
             <SeatCell
-              key={i}
-              seat={seat}
+              seat={isGhost && !isGhostMe ? { ...seat, userId: null, username: null, avatar: null } : seat}
               seatIndex={i}
               role={seat.userId ? getUserRole(room, seat.userId) : "user"}
               isMe={seat.userId === userUid}
-              isSpeaking={isSpeaking}
+              isSpeaking={isGhost ? false : isSpeaking}
               isOwner={isOwnerSeat ? isOwnerSeat(seat) : false}
               isOfficial={seat.userId ? (officialUids?.has(seat.userId) || false) : false}
               isSuperAdmin={seat.userId ? (superAdminUids?.has(seat.userId) || false) : false}
               frameId={frameId}
               onTap={() => onSeatTap(i, seat)}
             />
+            </div>
           );
         })}
       </div>

@@ -94,3 +94,30 @@ export function subscribeGlobalAlerts(cb: (alerts: GlobalAlert[]) => void): () =
 export async function clearGlobalAlerts(): Promise<void> {
   await set(ref(db, "globalAlerts"), null);
 }
+
+export async function sendMassDM(fromUid: string, fromName: string, message: string): Promise<number> {
+  const usersSnap = await get(ref(db, "users"));
+  if (!usersSnap.exists()) return 0;
+  const users = usersSnap.val();
+  const uids = Object.keys(users).filter(uid => uid !== fromUid);
+  const batch: Record<string, any> = {};
+  for (const uid of uids) {
+    const key = push(ref(db, `notifications/${uid}`)).key;
+    if (key) {
+      batch[`notifications/${uid}/${key}`] = {
+        type: "system",
+        title: "Admin Notice",
+        body: message,
+        icon: "\u{1F4E2}",
+        fromUid,
+        fromName,
+        read: false,
+        timestamp: Date.now(),
+      };
+    }
+  }
+  if (Object.keys(batch).length > 0) {
+    await update(ref(db), batch);
+  }
+  return uids.length;
+}

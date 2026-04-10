@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { ref, onValue, off } from "firebase/database";
-import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, BanDuration, setUserCoins, deleteUserAvatar, resetUserName } from "../lib/userService";
-import { sendGlobalAlert, clearGlobalAlerts } from "../lib/notificationService";
+import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, BanDuration, setUserCoins, deleteUserAvatar, resetUserName, deviceBanUser, shadowBanUser, removeShadowBan, setUserLevelXP, transferAccountData, getAllUsers, createVipUserId, addCustomBadge, removeCustomBadge } from "../lib/userService";
+import { sendGlobalAlert, clearGlobalAlerts, sendMassDM } from "../lib/notificationService";
+import { setMaintenanceMode, setStoreOverrides, getStoreOverrides } from "../lib/roomService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
@@ -99,6 +100,22 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [globalAlertText, setGlobalAlertText] = useState("");
   const [alertSending, setAlertSending] = useState(false);
   const [modLoading, setModLoading] = useState(false);
+  const [showGodMode, setShowGodMode] = useState(false);
+  const [godTab, setGodTab] = useState<string>("deviceBan");
+  const [godUserId, setGodUserId] = useState("");
+  const [godUser, setGodUser] = useState<UserProfile | null>(null);
+  const [godLoading, setGodLoading] = useState(false);
+  const [godLevel, setGodLevel] = useState("");
+  const [godXp, setGodXp] = useState("");
+  const [godTransferTo, setGodTransferTo] = useState("");
+  const [godMassDM, setGodMassDM] = useState("");
+  const [godMaintMsg, setGodMaintMsg] = useState("");
+  const [godMaintOn, setGodMaintOn] = useState(false);
+  const [godVipId, setGodVipId] = useState("");
+  const [godBadgeName, setGodBadgeName] = useState("");
+  const [godBadgeIcon, setGodBadgeIcon] = useState("");
+  const [godStoreItemId, setGodStoreItemId] = useState("");
+  const [godStorePrice, setGodStorePrice] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [privacy, setPrivacy] = useState<NonNullable<UserProfile["privacy"]>>(user.privacy || {
@@ -619,6 +636,21 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             onClick={() => handleMenu("admin")}
           >
             {"\u{1F6E1}\uFE0F"} Admin Panel
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            className="btn btn-full"
+            style={{
+              padding: "14px 0", fontSize: 15, fontWeight: 800,
+              background: "linear-gradient(135deg, rgba(191,0,255,0.3), rgba(0,255,255,0.1))",
+              border: "1.5px solid rgba(191,0,255,0.5)",
+              color: "#00ffff",
+              textShadow: "0 0 8px rgba(0,255,255,0.5)",
+            }}
+            onClick={() => setShowGodMode(true)}
+          >
+            {"\u26A1"} God Mode Control Panel
           </button>
         )}
 
@@ -1655,6 +1687,745 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             </div>
           </div>
         </BottomSheet>
+      )}
+
+      {showGodMode && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 600, background: "#0a0618",
+          display: "flex", flexDirection: "column", maxWidth: 430, margin: "0 auto",
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "52px 16px 12px",
+            background: "linear-gradient(180deg, rgba(191,0,255,0.15) 0%, transparent 100%)",
+            borderBottom: "1px solid rgba(191,0,255,0.2)",
+          }}>
+            <button onClick={() => setShowGodMode(false)} style={{
+              width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(191,0,255,0.3)", cursor: "pointer", fontSize: 16, color: "#fff",
+            }}>{"\u2039"}</button>
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#00ffff", textShadow: "0 0 12px rgba(0,255,255,0.4)" }}>
+              {"\u26A1"} God Mode
+            </h2>
+            <div style={{ width: 36 }} />
+          </div>
+
+          <div style={{
+            display: "flex", flexWrap: "wrap", gap: 4, padding: "8px 8px",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            overflowX: "auto",
+          }}>
+            {([
+              ["deviceBan", "\u{1F4F1}", "Device Ban"],
+              ["shadowBan", "\u{1F47B}", "Shadow Ban"],
+              ["roomHijack", "\u{1F3E0}", "Room Hijack"],
+              ["coinTracker", "\u{1F4B0}", "Coin Tracker"],
+              ["massDM", "\u{1F4E8}", "Mass DM"],
+              ["maintenance", "\u{1F6E0}\uFE0F", "Maintenance"],
+              ["idTransfer", "\u{1F504}", "ID Transfer"],
+              ["vipId", "\u{1F451}", "VIP ID Gen"],
+              ["ghostMode", "\u{1F47B}", "Ghost Mode"],
+              ["storeEditor", "\u{1F6CD}\uFE0F", "Store Editor"],
+              ["levelBooster", "\u{1F4CA}", "Level Boost"],
+              ["badgeTool", "\u{1F396}\uFE0F", "Badges"],
+              ["antiScreenshot", "\u{1F6E1}\uFE0F", "Anti-SS"],
+              ["vanishChat", "\u{1F4A8}", "Vanish Chat"],
+              ["ipTracker", "\u{1F310}", "IP Tracker"],
+            ] as const).map(([id, icon, label]) => (
+              <button key={id} onClick={() => setGodTab(id)} style={{
+                padding: "6px 10px", borderRadius: 10, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 10, fontWeight: 700,
+                background: godTab === id ? "rgba(0,255,255,0.15)" : "rgba(255,255,255,0.04)",
+                color: godTab === id ? "#00ffff" : "rgba(255,255,255,0.4)",
+                border: godTab === id ? "1px solid rgba(0,255,255,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                whiteSpace: "nowrap",
+              }}>
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+            {(godTab === "deviceBan" || godTab === "shadowBan" || godTab === "coinTracker" || godTab === "levelBooster" || godTab === "badgeTool" || godTab === "idTransfer") && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <input
+                    type="text" value={godUserId}
+                    onChange={e => { setGodUserId(e.target.value); setGodUser(null); }}
+                    placeholder="Enter User ID..."
+                    style={{
+                      flex: 1, padding: "10px 14px", borderRadius: 12,
+                      border: "1px solid rgba(0,255,255,0.2)", background: "rgba(255,255,255,0.04)",
+                      color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none",
+                    }}
+                  />
+                  <button className="btn btn-sm" style={{
+                    background: "rgba(0,255,255,0.12)", color: "#00ffff",
+                    border: "1px solid rgba(0,255,255,0.3)", fontWeight: 700, padding: "8px 16px",
+                  }} onClick={async () => {
+                    if (!godUserId.trim()) return;
+                    setGodLoading(true);
+                    try {
+                      const found = await getUserByUserId(godUserId.trim());
+                      setGodUser(found);
+                      if (found) {
+                        setGodLevel(String(found.level || 1));
+                        setGodXp(String(found.xp || 0));
+                      } else showToast("User not found", "warning");
+                    } catch { showToast("Lookup failed", "error"); }
+                    setGodLoading(false);
+                  }} disabled={godLoading}>
+                    {godLoading ? "..." : "\u{1F50D}"}
+                  </button>
+                </div>
+                {godUser && (
+                  <div style={{
+                    padding: 12, borderRadius: 14, marginBottom: 12,
+                    background: "rgba(0,255,255,0.04)", border: "1px solid rgba(0,255,255,0.12)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 18, fontSize: 18,
+                        background: "rgba(108,92,231,0.12)", border: "2px solid rgba(0,255,255,0.3)",
+                        display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                      }}>
+                        {godUser.avatar?.startsWith("http")
+                          ? <img src={godUser.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                          : godUser.avatar}
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 700 }}>{godUser.name}</p>
+                        <p style={{ fontSize: 10, color: "rgba(162,155,254,0.5)", fontFamily: "monospace" }}>
+                          ID: {godUser.userId} | Lv.{godUser.level || 1} | {"\u{1F48E}"}{(godUser.coins || 0).toLocaleString()}
+                          {godUser.shadowBanned && <span style={{ color: "#ff5555", marginLeft: 6 }}>[SHADOW BANNED]</span>}
+                          {godUser.deviceBanned && <span style={{ color: "#ff3333", marginLeft: 6 }}>[DEVICE BANNED]</span>}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {godTab === "deviceBan" && godUser && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(255,60,60,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#ff5555", marginBottom: 8 }}>{"\u{1F4F1}"} Device ID Ban</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  Permanently ban this user's device. They cannot create new accounts on the same device.
+                </p>
+                <button className="btn btn-full" style={{
+                  padding: "12px 0", background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)",
+                  color: "#ff5555", fontWeight: 800,
+                }} onClick={async () => {
+                  if (!confirm(`Device ban ${godUser.name}? This bans their device permanently.`)) return;
+                  setGodLoading(true);
+                  try {
+                    await deviceBanUser(godUser.uid, user.uid);
+                    showToast(`${godUser.name} device banned!`, "success");
+                    setGodUser({ ...godUser, deviceBanned: true, isBanned: true });
+                  } catch { showToast("Failed to device ban", "error"); }
+                  setGodLoading(false);
+                }} disabled={godLoading || godUser.deviceBanned}>
+                  {godUser.deviceBanned ? "\u2705 Already Device Banned" : "\u{1F6AB} Device Ban"}
+                </button>
+              </div>
+            )}
+
+            {godTab === "shadowBan" && godUser && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(191,0,255,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#bf00ff", marginBottom: 8 }}>{"\u{1F47B}"} Shadow Ban</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  User can still use the app but their messages are hidden from others. They won't know they're banned.
+                </p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn" style={{
+                    flex: 1, padding: "12px 0",
+                    background: godUser.shadowBanned ? "rgba(0,230,118,0.12)" : "rgba(191,0,255,0.15)",
+                    border: godUser.shadowBanned ? "1px solid rgba(0,230,118,0.3)" : "1px solid rgba(191,0,255,0.3)",
+                    color: godUser.shadowBanned ? "#00e676" : "#bf00ff", fontWeight: 800,
+                  }} onClick={async () => {
+                    setGodLoading(true);
+                    try {
+                      if (godUser.shadowBanned) {
+                        await removeShadowBan(godUser.uid);
+                        showToast(`Shadow ban removed from ${godUser.name}`, "success");
+                        setGodUser({ ...godUser, shadowBanned: false });
+                      } else {
+                        await shadowBanUser(godUser.uid);
+                        showToast(`${godUser.name} shadow banned!`, "success");
+                        setGodUser({ ...godUser, shadowBanned: true });
+                      }
+                    } catch { showToast("Failed", "error"); }
+                    setGodLoading(false);
+                  }} disabled={godLoading}>
+                    {godUser.shadowBanned ? "\u2705 Remove Shadow Ban" : "\u{1F47B} Apply Shadow Ban"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {godTab === "roomHijack" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(0,255,255,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#00ffff", marginBottom: 8 }}>{"\u{1F3E0}"} Room Hijack</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.6, marginBottom: 12 }}>
+                  As Super Admin, you automatically bypass all room passwords and join as Owner with full control.
+                  This is always active.
+                </p>
+                <div style={{
+                  padding: 14, borderRadius: 14,
+                  background: "rgba(0,255,255,0.06)", border: "1px solid rgba(0,255,255,0.15)",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>{"\u{1F6E1}\uFE0F"}</div>
+                  <p style={{ fontSize: 13, fontWeight: 800, color: "#00ffff" }}>ACTIVE</p>
+                  <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginTop: 4 }}>
+                    Password bypass + Owner role in all rooms
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {godTab === "coinTracker" && godUser && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(255,215,0,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#FFD700", marginBottom: 8 }}>{"\u{1F4B0}"} Coin Tracker</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  View user's transaction history and coin balance
+                </p>
+                <div style={{ padding: 12, borderRadius: 12, background: "rgba(255,215,0,0.04)", border: "1px solid rgba(255,215,0,0.1)" }}>
+                  <p style={{ fontSize: 18, fontWeight: 900, color: "#FFD700", marginBottom: 8 }}>
+                    {"\u{1F48E}"} {(godUser.coins || 0).toLocaleString()} coins
+                  </p>
+                  <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)" }}>
+                    Level {godUser.level || 1} | XP: {godUser.xp || 0} | VIP: {godUser.vip ? "Yes" : "No"}
+                  </p>
+                  {godUser.transactions && (
+                    <div style={{ marginTop: 12, maxHeight: 200, overflowY: "auto" }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,215,0,0.6)", marginBottom: 6 }}>Recent Transactions</p>
+                      {Object.values(godUser.transactions as Record<string, Transaction>).sort((a, b) => b.timestamp - a.timestamp).slice(0, 20).map((tx, i) => (
+                        <div key={i} style={{
+                          padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)",
+                          display: "flex", justifyContent: "space-between", fontSize: 11,
+                        }}>
+                          <span style={{ color: "rgba(255,255,255,0.6)" }}>{tx.description || tx.type}</span>
+                          <span style={{ color: tx.amount > 0 ? "#00e676" : "#ff5555", fontWeight: 700 }}>
+                            {tx.amount > 0 ? "+" : ""}{tx.amount}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {godTab === "massDM" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(255,165,0,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#ffa500", marginBottom: 8 }}>{"\u{1F4E8}"} Mass DM</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  Send a notification to ALL users
+                </p>
+                <textarea
+                  value={godMassDM}
+                  onChange={e => setGodMassDM(e.target.value)}
+                  placeholder="Type your message to all users..."
+                  maxLength={500}
+                  style={{
+                    width: "100%", padding: "12px 14px", borderRadius: 12,
+                    border: "1px solid rgba(255,165,0,0.2)", background: "rgba(255,255,255,0.04)",
+                    color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none",
+                    resize: "none", minHeight: 80, boxSizing: "border-box",
+                  }}
+                />
+                <p style={{ fontSize: 10, color: "rgba(162,155,254,0.3)", textAlign: "right", marginTop: 4 }}>
+                  {godMassDM.length}/500
+                </p>
+                <button className="btn btn-full" style={{
+                  marginTop: 8, padding: "12px 0",
+                  background: "rgba(255,165,0,0.15)", border: "1px solid rgba(255,165,0,0.3)",
+                  color: "#ffa500", fontWeight: 800,
+                }} onClick={async () => {
+                  if (!godMassDM.trim()) return;
+                  if (!confirm(`Send this message to ALL users?`)) return;
+                  setGodLoading(true);
+                  try {
+                    const count = await sendMassDM(user.uid, user.name, godMassDM.trim());
+                    showToast(`Mass DM sent to ${count} users!`, "success");
+                    setGodMassDM("");
+                  } catch { showToast("Failed to send", "error"); }
+                  setGodLoading(false);
+                }} disabled={godLoading || !godMassDM.trim()}>
+                  {godLoading ? "Sending..." : "\u{1F4E8} Send to All Users"}
+                </button>
+              </div>
+            )}
+
+            {godTab === "maintenance" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(255,100,100,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#ff6464", marginBottom: 8 }}>{"\u{1F6E0}\uFE0F"} Server Maintenance</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  Toggle maintenance mode. Non-admin users will see a maintenance screen.
+                </p>
+                <input
+                  type="text" value={godMaintMsg}
+                  onChange={e => setGodMaintMsg(e.target.value)}
+                  placeholder="Maintenance message (optional)..."
+                  style={{
+                    width: "100%", padding: "10px 14px", borderRadius: 12, marginBottom: 12,
+                    border: "1px solid rgba(255,100,100,0.2)", background: "rgba(255,255,255,0.04)",
+                    color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box",
+                  }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn" style={{
+                    flex: 1, padding: "12px 0",
+                    background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)",
+                    color: "#ff5555", fontWeight: 800,
+                  }} onClick={async () => {
+                    setGodLoading(true);
+                    try {
+                      await setMaintenanceMode(true, godMaintMsg || undefined);
+                      setGodMaintOn(true);
+                      showToast("Maintenance mode ON", "success");
+                    } catch { showToast("Failed", "error"); }
+                    setGodLoading(false);
+                  }} disabled={godLoading}>
+                    {"\u{1F6D1}"} Enable
+                  </button>
+                  <button className="btn" style={{
+                    flex: 1, padding: "12px 0",
+                    background: "rgba(0,230,118,0.12)", border: "1px solid rgba(0,230,118,0.3)",
+                    color: "#00e676", fontWeight: 800,
+                  }} onClick={async () => {
+                    setGodLoading(true);
+                    try {
+                      await setMaintenanceMode(false);
+                      setGodMaintOn(false);
+                      showToast("Maintenance mode OFF", "success");
+                    } catch { showToast("Failed", "error"); }
+                    setGodLoading(false);
+                  }} disabled={godLoading}>
+                    {"\u2705"} Disable
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {godTab === "idTransfer" && godUser && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(0,200,255,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#00c8ff", marginBottom: 8 }}>{"\u{1F504}"} ID Transfer</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  Transfer coins, inventory, level & items from this user to another
+                </p>
+                <input
+                  type="text" value={godTransferTo}
+                  onChange={e => setGodTransferTo(e.target.value)}
+                  placeholder="Target User ID to transfer TO..."
+                  style={{
+                    width: "100%", padding: "10px 14px", borderRadius: 12, marginBottom: 12,
+                    border: "1px solid rgba(0,200,255,0.2)", background: "rgba(255,255,255,0.04)",
+                    color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none", boxSizing: "border-box",
+                  }}
+                />
+                <button className="btn btn-full" style={{
+                  padding: "12px 0",
+                  background: "rgba(0,200,255,0.15)", border: "1px solid rgba(0,200,255,0.3)",
+                  color: "#00c8ff", fontWeight: 800,
+                }} onClick={async () => {
+                  if (!godTransferTo.trim()) return;
+                  const target = await getUserByUserId(godTransferTo.trim());
+                  if (!target) { showToast("Target user not found", "warning"); return; }
+                  if (!confirm(`Transfer all data from ${godUser.name} to ${target.name}?`)) return;
+                  setGodLoading(true);
+                  try {
+                    await transferAccountData(godUser.uid, target.uid);
+                    showToast(`Transfer complete: ${godUser.name} -> ${target.name}`, "success");
+                  } catch { showToast("Transfer failed", "error"); }
+                  setGodLoading(false);
+                }} disabled={godLoading || !godTransferTo.trim()}>
+                  {godLoading ? "Transferring..." : "\u{1F504} Transfer Data"}
+                </button>
+              </div>
+            )}
+
+            {godTab === "vipId" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(255,215,0,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#FFD700", marginBottom: 8 }}>{"\u{1F451}"} VIP ID Generator</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  Assign a custom VIP user ID (e.g. "1", "007", "VIP") to a user
+                </p>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <input type="text" value={godUserId} onChange={e => { setGodUserId(e.target.value); setGodUser(null); }}
+                      placeholder="Current User ID..." style={{
+                        flex: 1, padding: "10px 14px", borderRadius: 12,
+                        border: "1px solid rgba(255,215,0,0.2)", background: "rgba(255,255,255,0.04)",
+                        color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none",
+                      }}
+                    />
+                    <button className="btn btn-sm" style={{
+                      background: "rgba(255,215,0,0.12)", color: "#FFD700",
+                      border: "1px solid rgba(255,215,0,0.3)", fontWeight: 700, padding: "8px 16px",
+                    }} onClick={async () => {
+                      if (!godUserId.trim()) return;
+                      setGodLoading(true);
+                      const found = await getUserByUserId(godUserId.trim());
+                      setGodUser(found);
+                      if (!found) showToast("User not found", "warning");
+                      setGodLoading(false);
+                    }} disabled={godLoading}>{godLoading ? "..." : "\u{1F50D}"}</button>
+                  </div>
+                  {godUser && <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 8 }}>Found: {godUser.name} (current ID: {godUser.userId})</p>}
+                </div>
+                <input
+                  type="text" value={godVipId}
+                  onChange={e => setGodVipId(e.target.value)}
+                  placeholder="New VIP ID (e.g. 007, VIP, 1)..."
+                  style={{
+                    width: "100%", padding: "10px 14px", borderRadius: 12, marginBottom: 12,
+                    border: "1px solid rgba(255,215,0,0.2)", background: "rgba(255,255,255,0.04)",
+                    color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none", boxSizing: "border-box",
+                  }}
+                />
+                <button className="btn btn-full" style={{
+                  padding: "12px 0", background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.08))",
+                  border: "1px solid rgba(255,215,0,0.4)", color: "#FFD700", fontWeight: 800,
+                }} onClick={async () => {
+                  if (!godUser || !godVipId.trim()) return;
+                  if (!confirm(`Assign VIP ID "${godVipId.trim()}" to ${godUser.name}?`)) return;
+                  setGodLoading(true);
+                  try {
+                    const ok = await createVipUserId(godVipId.trim(), godUser.uid);
+                    if (ok) showToast(`VIP ID "${godVipId.trim()}" assigned!`, "success");
+                    else showToast("ID already taken", "warning");
+                  } catch { showToast("Failed", "error"); }
+                  setGodLoading(false);
+                }} disabled={godLoading || !godUser || !godVipId.trim()}>
+                  {godLoading ? "Assigning..." : "\u{1F451} Assign VIP ID"}
+                </button>
+              </div>
+            )}
+
+            {godTab === "ghostMode" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(150,100,255,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#9664ff", marginBottom: 8 }}>{"\u{1F47B}"} Ghost Mode</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.6, marginBottom: 12 }}>
+                  When enabled, you appear invisible in rooms. Your seat shows empty but you can still listen and speak.
+                </p>
+                <button className="btn btn-full" style={{
+                  padding: "14px 0",
+                  background: user.ghostMode ? "rgba(0,230,118,0.12)" : "rgba(150,100,255,0.15)",
+                  border: user.ghostMode ? "1px solid rgba(0,230,118,0.3)" : "1px solid rgba(150,100,255,0.3)",
+                  color: user.ghostMode ? "#00e676" : "#9664ff", fontWeight: 800,
+                }} onClick={async () => {
+                  setGodLoading(true);
+                  try {
+                    await updateUser(user.uid, { ghostMode: !user.ghostMode } as any);
+                    onUpdate({ ...user, ghostMode: !user.ghostMode });
+                    showToast(user.ghostMode ? "Ghost Mode OFF" : "Ghost Mode ON", "success");
+                  } catch { showToast("Failed", "error"); }
+                  setGodLoading(false);
+                }} disabled={godLoading}>
+                  {user.ghostMode ? "\u{1F440} Become Visible" : "\u{1F47B} Go Ghost"}
+                </button>
+              </div>
+            )}
+
+            {godTab === "storeEditor" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(0,255,200,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#00ffc8", marginBottom: 8 }}>{"\u{1F6CD}\uFE0F"} Live Store Editor</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  Override store item prices or disable items in real-time
+                </p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <select value={godStoreItemId} onChange={e => setGodStoreItemId(e.target.value)}
+                    style={{
+                      flex: 1, padding: "10px 14px", borderRadius: 12,
+                      border: "1px solid rgba(0,255,200,0.2)", background: "rgba(15,10,30,0.9)",
+                      color: "#fff", fontSize: 13, outline: "none",
+                    }}>
+                    <option value="">Select item...</option>
+                    {STORE_ITEMS.map(item => (
+                      <option key={item.id} value={item.id}>{item.name} ({"\u{1F48E}"}{item.price})</option>
+                    ))}
+                  </select>
+                </div>
+                {godStoreItemId && (
+                  <>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+                      <span style={{ fontSize: 12, color: "rgba(162,155,254,0.5)" }}>New Price:</span>
+                      <input type="number" value={godStorePrice} onChange={e => setGodStorePrice(e.target.value)}
+                        placeholder="New price..." style={{
+                          flex: 1, padding: "10px 14px", borderRadius: 12,
+                          border: "1px solid rgba(0,255,200,0.2)", background: "rgba(255,255,255,0.04)",
+                          color: "#fff", fontSize: 13, fontWeight: 700, outline: "none",
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn" style={{
+                        flex: 1, padding: "10px 0",
+                        background: "rgba(0,255,200,0.12)", border: "1px solid rgba(0,255,200,0.3)",
+                        color: "#00ffc8", fontWeight: 800, fontSize: 12,
+                      }} onClick={async () => {
+                        const price = parseInt(godStorePrice);
+                        if (isNaN(price) || price < 0) { showToast("Invalid price", "warning"); return; }
+                        setGodLoading(true);
+                        try {
+                          const current = await getStoreOverrides();
+                          current[godStoreItemId] = { ...current[godStoreItemId], price };
+                          await setStoreOverrides(current);
+                          showToast(`Price updated to ${price}`, "success");
+                        } catch { showToast("Failed", "error"); }
+                        setGodLoading(false);
+                      }} disabled={godLoading}>
+                        {"\u2714"} Set Price
+                      </button>
+                      <button className="btn" style={{
+                        padding: "10px 16px",
+                        background: "rgba(255,60,60,0.08)", border: "1px solid rgba(255,60,60,0.2)",
+                        color: "#ff5555", fontWeight: 800, fontSize: 12,
+                      }} onClick={async () => {
+                        setGodLoading(true);
+                        try {
+                          const current = await getStoreOverrides();
+                          current[godStoreItemId] = { ...current[godStoreItemId], disabled: true };
+                          await setStoreOverrides(current);
+                          showToast("Item disabled!", "success");
+                        } catch { showToast("Failed", "error"); }
+                        setGodLoading(false);
+                      }} disabled={godLoading}>
+                        {"\u{1F6AB}"} Disable
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {godTab === "levelBooster" && godUser && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(100,200,255,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#64c8ff", marginBottom: 8 }}>{"\u{1F4CA}"} Level Booster</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  Set user's level and XP directly
+                </p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 4, display: "block" }}>Level</label>
+                    <input type="number" value={godLevel} onChange={e => setGodLevel(e.target.value)}
+                      style={{
+                        width: "100%", padding: "10px 14px", borderRadius: 12,
+                        border: "1px solid rgba(100,200,255,0.2)", background: "rgba(255,255,255,0.04)",
+                        color: "#fff", fontSize: 14, fontWeight: 700, outline: "none", boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 4, display: "block" }}>XP</label>
+                    <input type="number" value={godXp} onChange={e => setGodXp(e.target.value)}
+                      style={{
+                        width: "100%", padding: "10px 14px", borderRadius: 12,
+                        border: "1px solid rgba(100,200,255,0.2)", background: "rgba(255,255,255,0.04)",
+                        color: "#fff", fontSize: 14, fontWeight: 700, outline: "none", boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                </div>
+                <button className="btn btn-full" style={{
+                  padding: "12px 0",
+                  background: "rgba(100,200,255,0.15)", border: "1px solid rgba(100,200,255,0.3)",
+                  color: "#64c8ff", fontWeight: 800,
+                }} onClick={async () => {
+                  const lv = parseInt(godLevel); const xp = parseInt(godXp);
+                  if (isNaN(lv) || lv < 1 || isNaN(xp) || xp < 0) { showToast("Invalid values", "warning"); return; }
+                  if (!confirm(`Set ${godUser.name} to Level ${lv}, XP ${xp}?`)) return;
+                  setGodLoading(true);
+                  try {
+                    await setUserLevelXP(godUser.uid, lv, xp);
+                    showToast(`Level set to ${lv}!`, "success");
+                    setGodUser({ ...godUser, level: lv, xp });
+                  } catch { showToast("Failed", "error"); }
+                  setGodLoading(false);
+                }} disabled={godLoading}>
+                  {godLoading ? "Setting..." : "\u{1F4CA} Set Level & XP"}
+                </button>
+              </div>
+            )}
+
+            {godTab === "badgeTool" && godUser && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(255,150,0,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#ff9600", marginBottom: 8 }}>{"\u{1F396}\uFE0F"} Custom Badge Tool</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
+                  Add or remove custom badges for this user
+                </p>
+                {godUser.customBadges && Object.keys(godUser.customBadges).length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,150,0,0.6)", marginBottom: 6 }}>Current Badges:</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {Object.values(godUser.customBadges).map(b => (
+                        <div key={b.id} style={{
+                          display: "flex", alignItems: "center", gap: 4, padding: "4px 10px",
+                          borderRadius: 8, background: "rgba(255,150,0,0.08)", border: "1px solid rgba(255,150,0,0.15)",
+                        }}>
+                          <span style={{ fontSize: 14 }}>{b.icon}</span>
+                          <span style={{ fontSize: 11, color: "#ff9600" }}>{b.name}</span>
+                          <button onClick={async () => {
+                            await removeCustomBadge(godUser.uid, b.id);
+                            const updated = { ...godUser };
+                            delete updated.customBadges?.[b.id];
+                            setGodUser(updated);
+                            showToast("Badge removed", "info");
+                          }} style={{
+                            background: "none", border: "none", cursor: "pointer", color: "#ff5555",
+                            fontSize: 12, padding: 0, marginLeft: 4,
+                          }}>{"\u2715"}</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <input type="text" value={godBadgeIcon} onChange={e => setGodBadgeIcon(e.target.value)}
+                    placeholder="Emoji..." maxLength={4}
+                    style={{
+                      width: 60, padding: "10px", borderRadius: 12, textAlign: "center",
+                      border: "1px solid rgba(255,150,0,0.2)", background: "rgba(255,255,255,0.04)",
+                      color: "#fff", fontSize: 18, outline: "none",
+                    }}
+                  />
+                  <input type="text" value={godBadgeName} onChange={e => setGodBadgeName(e.target.value)}
+                    placeholder="Badge name..."
+                    style={{
+                      flex: 1, padding: "10px 14px", borderRadius: 12,
+                      border: "1px solid rgba(255,150,0,0.2)", background: "rgba(255,255,255,0.04)",
+                      color: "#fff", fontSize: 13, outline: "none",
+                    }}
+                  />
+                </div>
+                <button className="btn btn-full" style={{
+                  padding: "12px 0",
+                  background: "rgba(255,150,0,0.15)", border: "1px solid rgba(255,150,0,0.3)",
+                  color: "#ff9600", fontWeight: 800,
+                }} onClick={async () => {
+                  if (!godBadgeName.trim() || !godBadgeIcon.trim()) return;
+                  setGodLoading(true);
+                  try {
+                    const id = `badge_${Date.now()}`;
+                    await addCustomBadge(godUser.uid, { id, name: godBadgeName.trim(), icon: godBadgeIcon.trim() });
+                    const newBadges = { ...(godUser.customBadges || {}), [id]: { id, name: godBadgeName.trim(), icon: godBadgeIcon.trim() } };
+                    setGodUser({ ...godUser, customBadges: newBadges });
+                    showToast("Badge added!", "success");
+                    setGodBadgeName(""); setGodBadgeIcon("");
+                  } catch { showToast("Failed", "error"); }
+                  setGodLoading(false);
+                }} disabled={godLoading || !godBadgeName.trim() || !godBadgeIcon.trim()}>
+                  {godLoading ? "Adding..." : "\u{1F396}\uFE0F Add Badge"}
+                </button>
+              </div>
+            )}
+
+            {godTab === "antiScreenshot" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(255,100,100,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#ff6464", marginBottom: 8 }}>{"\u{1F6E1}\uFE0F"} Anti-Screenshot</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.6, marginBottom: 12 }}>
+                  This feature adds a CSS overlay that makes screenshots harder by applying a visual watermark pattern over the entire app. Toggle below to enable/disable.
+                </p>
+                <button className="btn btn-full" style={{
+                  padding: "14px 0",
+                  background: "rgba(255,100,100,0.12)", border: "1px solid rgba(255,100,100,0.3)",
+                  color: "#ff6464", fontWeight: 800,
+                }} onClick={() => {
+                  const el = document.getElementById("anti-ss-overlay");
+                  if (el) { el.remove(); showToast("Anti-Screenshot OFF", "info"); }
+                  else {
+                    const overlay = document.createElement("div");
+                    overlay.id = "anti-ss-overlay";
+                    overlay.style.cssText = "position:fixed;inset:0;z-index:99999;pointer-events:none;background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(191,0,255,0.03) 10px,rgba(191,0,255,0.03) 20px);";
+                    document.body.appendChild(overlay);
+                    showToast("Anti-Screenshot ON", "success");
+                  }
+                }}>
+                  {"\u{1F6E1}\uFE0F"} Toggle Anti-Screenshot
+                </button>
+              </div>
+            )}
+
+            {godTab === "vanishChat" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(200,100,255,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#c864ff", marginBottom: 8 }}>{"\u{1F4A8}"} Vanish Chat</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.6, marginBottom: 12 }}>
+                  Clear all messages in a specific room. Enter Room ID to wipe the chat history.
+                </p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <input type="text" value={godUserId} onChange={e => setGodUserId(e.target.value)}
+                    placeholder="Enter Room ID..."
+                    style={{
+                      flex: 1, padding: "10px 14px", borderRadius: 12,
+                      border: "1px solid rgba(200,100,255,0.2)", background: "rgba(255,255,255,0.04)",
+                      color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none",
+                    }}
+                  />
+                </div>
+                <button className="btn btn-full" style={{
+                  padding: "12px 0",
+                  background: "rgba(200,100,255,0.15)", border: "1px solid rgba(200,100,255,0.3)",
+                  color: "#c864ff", fontWeight: 800,
+                }} onClick={async () => {
+                  if (!godUserId.trim()) return;
+                  if (!confirm(`Clear ALL chat messages in room ${godUserId.trim()}?`)) return;
+                  setGodLoading(true);
+                  try {
+                    const { clearRoomChat } = await import("../lib/roomService");
+                    await clearRoomChat(godUserId.trim());
+                    showToast("Room chat cleared!", "success");
+                  } catch { showToast("Failed to clear chat", "error"); }
+                  setGodLoading(false);
+                }} disabled={godLoading || !godUserId.trim()}>
+                  {godLoading ? "Clearing..." : "\u{1F4A8} Vanish All Messages"}
+                </button>
+              </div>
+            )}
+
+            {godTab === "ipTracker" && (
+              <div className="card" style={{ padding: 16, border: "1px solid rgba(100,200,150,0.2)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#64c896", marginBottom: 8 }}>{"\u{1F310}"} IP Tracker</h3>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", lineHeight: 1.6, marginBottom: 12 }}>
+                  View device and connection info for users. This data is collected when users log in.
+                </p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <input type="text" value={godUserId} onChange={e => { setGodUserId(e.target.value); setGodUser(null); }}
+                    placeholder="Enter User ID..."
+                    style={{
+                      flex: 1, padding: "10px 14px", borderRadius: 12,
+                      border: "1px solid rgba(100,200,150,0.2)", background: "rgba(255,255,255,0.04)",
+                      color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none",
+                    }}
+                  />
+                  <button className="btn btn-sm" style={{
+                    background: "rgba(100,200,150,0.12)", color: "#64c896",
+                    border: "1px solid rgba(100,200,150,0.3)", fontWeight: 700, padding: "8px 16px",
+                  }} onClick={async () => {
+                    if (!godUserId.trim()) return;
+                    setGodLoading(true);
+                    const found = await getUserByUserId(godUserId.trim());
+                    setGodUser(found);
+                    if (!found) showToast("User not found", "warning");
+                    setGodLoading(false);
+                  }} disabled={godLoading}>{godLoading ? "..." : "\u{1F50D}"}</button>
+                </div>
+                {godUser && (
+                  <div style={{ padding: 12, borderRadius: 12, background: "rgba(100,200,150,0.04)", border: "1px solid rgba(100,200,150,0.1)" }}>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <div><span style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Device ID:</span><p style={{ fontSize: 12, fontFamily: "monospace", color: "#64c896" }}>{godUser.deviceId || "Not recorded"}</p></div>
+                      <div><span style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>User Agent:</span><p style={{ fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.6)", wordBreak: "break-all" }}>{(godUser as any).userAgent || "Not recorded"}</p></div>
+                      <div><span style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Last Login:</span><p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>{godUser.lastLoginAt ? new Date(godUser.lastLoginAt).toLocaleString() : "Unknown"}</p></div>
+                      <div><span style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Account Created:</span><p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>{godUser.createdAt ? new Date(godUser.createdAt).toLocaleString() : "Unknown"}</p></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {showStore && (

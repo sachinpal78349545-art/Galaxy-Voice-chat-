@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, User as FBUser, getRedirectResult, signOut } from "firebase/auth";
 import { auth } from "./lib/firebase";
 import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward, isUserBanned, getBanTimeRemaining } from "./lib/userService";
-import { Room } from "./lib/roomService";
+import { Room, subscribeMaintenanceMode } from "./lib/roomService";
 import { subscribeConversations, Conversation } from "./lib/chatService";
 import { Notification, subscribeNotifications, GlobalAlert, subscribeGlobalAlerts } from "./lib/notificationService";
+import { isSuperAdmin as checkSuperAdmin } from "./lib/userService";
 import { ToastProvider, useToast } from "./lib/toastContext";
 import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
@@ -68,10 +69,12 @@ function AppInner() {
   const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
   const [chatActive, setChatActive] = useState(false);
   const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
+  const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
   const notifSubCleanup = useRef<(() => void) | null>(null);
   const alertSubCleanup = useRef<(() => void) | null>(null);
+  const maintSubCleanup = useRef<(() => void) | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -98,6 +101,8 @@ function AppInner() {
           notifSubCleanup.current = subscribeNotifications(u.uid, setNotifications);
           alertSubCleanup.current?.();
           alertSubCleanup.current = subscribeGlobalAlerts(setGlobalAlerts);
+          maintSubCleanup.current?.();
+          maintSubCleanup.current = subscribeMaintenanceMode(setMaintenance);
           const reward = await claimDailyReward(u.uid, p);
           if (reward) {
             showToast(`Daily reward: +${reward.coins} coins! (Day ${reward.streak} streak)`, "success", "\u{1F381}");
@@ -115,6 +120,8 @@ function AppInner() {
         notifSubCleanup.current = null;
         alertSubCleanup.current?.();
         alertSubCleanup.current = null;
+        maintSubCleanup.current?.();
+        maintSubCleanup.current = null;
       }
     });
     return () => {
@@ -123,6 +130,7 @@ function AppInner() {
       presenceCleanup.current?.();
       notifSubCleanup.current?.();
       alertSubCleanup.current?.();
+      maintSubCleanup.current?.();
     };
   }, []);
 
@@ -211,6 +219,21 @@ function AppInner() {
     );
   }
 
+  if (maintenance?.enabled && !checkSuperAdmin(profile)) {
+    return (
+      <div className="app-wrapper">
+        <div className="stars" />
+        <div className="app-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+          <div style={{ textAlign: "center", padding: 32 }}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>{"\u{1F6E0}\uFE0F"}</div>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: "#bf00ff", marginBottom: 8 }}>Under Maintenance</h2>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>{maintenance.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showEdit) {
     return (
       <div className="app-wrapper">
@@ -232,6 +255,10 @@ function AppInner() {
   }
 
   const joinRoom = (room: Room) => {
+    if (checkSuperAdmin(profile)) {
+      setActiveRoom(room);
+      return;
+    }
     if (room.password && room.password !== "" && room.hostId !== profile.uid && !(room.adminIds || []).includes(profile.uid)) {
       if ((room as any)._enteredPassword) {
         setActiveRoom(room);

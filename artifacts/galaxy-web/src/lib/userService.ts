@@ -104,6 +104,11 @@ export interface UserProfile {
   banUntil?: number | null;
   bannedBy?: string;
   banReason?: string;
+  deviceBanned?: boolean;
+  deviceId?: string;
+  shadowBanned?: boolean;
+  ghostMode?: boolean;
+  customBadges?: Record<string, { id: string; name: string; icon: string; imageUrl?: string }>;
 }
 
 export const DEFAULT_PROFILE: Partial<UserProfile> = {
@@ -175,17 +180,28 @@ export async function generateUserId(): Promise<string> {
   return String(Math.floor(Math.random() * (max - min + 1)) + min);
 }
 
+function generateDeviceFingerprint(): string {
+  const nav = navigator;
+  const screen = window.screen;
+  const raw = [nav.userAgent, nav.language, screen.width, screen.height, screen.colorDepth, new Date().getTimezoneOffset()].join("|");
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+  return "dev_" + Math.abs(hash).toString(36);
+}
+
 export async function initUser(uid: string, name: string, email: string, avatar: string): Promise<UserProfile> {
   const existing = await getUser(uid);
+  const deviceId = generateDeviceFingerprint();
+  const loginMeta = { online: true, lastSeen: Date.now(), lastLoginAt: Date.now(), userAgent: navigator.userAgent, deviceId };
   if (existing) {
     if (!existing.userId) {
       const userId = await generateUserId();
-      await update(ref(db, `users/${uid}`), { userId, online: true, lastSeen: Date.now() });
+      await update(ref(db, `users/${uid}`), { userId, ...loginMeta });
       await set(ref(db, `userIds/${userId}`), uid);
-      return { ...existing, userId, online: true };
+      return { ...existing, userId, ...loginMeta };
     }
-    await update(ref(db, `users/${uid}`), { online: true, lastSeen: Date.now() });
-    return { ...existing, online: true };
+    await update(ref(db, `users/${uid}`), loginMeta);
+    return { ...existing, ...loginMeta };
   }
   const userId = await generateUserId();
   const achievements: Record<string, Achievement> = {};
@@ -697,4 +713,99 @@ export async function getUserByUserId(userId: string): Promise<UserProfile | nul
     if (val[uid].userId === userId) return { ...val[uid], uid } as UserProfile;
   }
   return null;
+}
+
+export async function deviceBanUser(targetUid: string, bannedByUid: string): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), {
+    isBanned: true,
+    banUntil: null,
+    bannedBy: bannedByUid,
+    banReason: "Device ID Ban",
+    deviceBanned: true,
+  });
+  const targetUser = await getUser(targetUid);
+  if (targetUser?.deviceId) {
+    await set(ref(db, `bannedDevices/${targetUser.deviceId}`), {
+      uid: targetUid,
+      bannedAt: Date.now(),
+      bannedBy: bannedByUid,
+    });
+  }
+}
+
+export async function isDeviceBanned(deviceId: string): Promise<boolean> {
+  const snap = await get(ref(db, `bannedDevices/${deviceId}`));
+  return snap.exists();
+}
+
+export async function saveDeviceId(uid: string, deviceId: string): Promise<void> {
+  await update(ref(db, `users/${uid}`), { deviceId });
+}
+
+export async function shadowBanUser(targetUid: string): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), { shadowBanned: true });
+}
+
+export async function removeShadowBan(targetUid: string): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), { shadowBanned: false });
+}
+
+export async function setUserLevelXP(targetUid: string, level: number, xp: number): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), { level, xp, vip: level >= 10 });
+}
+
+export async function transferAccountData(fromUid: string, toUid: string): Promise<void> {
+  const fromUser = await getUser(fromUid);
+  const toUser = await getUser(toUid);
+  if (!fromUser || !toUser) throw new Error("User not found");
+  await update(ref(db, `users/${toUid}`), {
+    coins: (toUser.coins || 0) + (fromUser.coins || 0),
+    level: Math.max(toUser.level || 1, fromUser.level || 1),
+    xp: fromUser.xp || 0,
+    vip: (fromUser.level || 1) >= 10 || (toUser.level || 1) >= 10,
+    inventory: { ...(toUser.inventory || {}), ...(fromUser.inventory || {}) },
+    equippedFrame: fromUser.equippedFrame || toUser.equippedFrame,
+    equippedEntry: fromUser.equippedEntry || toUser.equippedEntry,
+    equippedTheme: fromUser.equippedTheme || toUser.equippedTheme,
+  });
+  await update(ref(db, `users/${fromUid}`), { coins: 0, inventory: null, equippedFrame: null, equippedEntry: null, equippedTheme: null });
+}
+
+export async function getAllUsers(): Promise<UserProfile[]> {
+  const snap = await get(ref(db, "users"));
+  if (!snap.exists()) return [];
+  const val = snap.val();
+  return Object.keys(val).map(uid => ({ ...val[uid], uid }));
+}
+
+export async function createVipUserId(customId: string, uid: string): Promise<boolean> {
+  const idRef = ref(db, `userIds/${customId}`);
+  const result = await runTransaction(idRef, (current) => {
+    if (current === null) return uid;
+    return undefined;
+  });
+  if (result.committed) {
+    const user = await getUser(uid);
+    if (user?.userId) {
+      await set(ref(db, `userIds/${user.userId}`), null);
+    }
+    await update(ref(db, `users/${uid}`), { userId: customId });
+    return true;
+  }
+  return false;
+}
+
+export async function addCustomBadge(targetUid: string, badge: { id: string; name: string; icon: string; imageUrl?: string }): Promise<void> {
+  await update(ref(db, `users/${targetUid}/customBadges/${badge.id}`), badge);
+}
+
+export async function removeCustomBadge(targetUid: string, badgeId: string): Promise<void> {
+  await set(ref(db, `users/${targetUid}/customBadges/${badgeId}`), null);
+}
+
+export async function getUserTransactions(targetUid: string): Promise<Transaction[]> {
+  const snap = await get(ref(db, `users/${targetUid}/transactions`));
+  if (!snap.exists()) return [];
+  const val = snap.val();
+  return Object.values(val) as Transaction[];
 }

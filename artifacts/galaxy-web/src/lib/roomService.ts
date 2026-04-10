@@ -161,23 +161,25 @@ export async function createRoom(
   return room;
 }
 
-export async function joinRoom(roomId: string, uid: string, name: string, avatar: string, password?: string, isOfficial?: boolean, isSuperAdmin?: boolean): Promise<{ joined: boolean; reason?: string; needsPassword?: boolean }> {
+export async function joinRoom(roomId: string, uid: string, name: string, avatar: string, password?: string, isOfficial?: boolean, isSuperAdmin?: boolean, ghostMode?: boolean): Promise<{ joined: boolean; reason?: string; needsPassword?: boolean }> {
   const roomSnap = await get(ref(db, `rooms/${roomId}`));
   if (!roomSnap.exists()) return { joined: false, reason: "Room not found" };
   const room = roomSnap.val();
-  if ((room.bannedUsers || []).includes(uid)) return { joined: false, reason: "You are banned from this room" };
-  if (room.password && room.hostId !== uid && !(room.adminIds || []).includes(uid)) {
-    if (!password) return { joined: false, reason: "This room requires a password", needsPassword: true };
-    if (password !== room.password) return { joined: false, reason: "Incorrect password" };
-  }
-  if (room.isPrivate && !room.password && room.hostId !== uid && !(room.adminIds || []).includes(uid)) return { joined: false, reason: "This room is private" };
-  if (room.enterPermission === "invite_only" && room.hostId !== uid && !(room.adminIds || []).includes(uid)) {
-    const inv = await get(ref(db, `rooms/${roomId}/invitedUsers/${uid}`));
-    if (!inv.exists()) return { joined: false, reason: "This room is invite only" };
+  if ((room.bannedUsers || []).includes(uid) && !isSuperAdmin) return { joined: false, reason: "You are banned from this room" };
+  if (!isSuperAdmin) {
+    if (room.password && room.hostId !== uid && !(room.adminIds || []).includes(uid)) {
+      if (!password) return { joined: false, reason: "This room requires a password", needsPassword: true };
+      if (password !== room.password) return { joined: false, reason: "Incorrect password" };
+    }
+    if (room.isPrivate && !room.password && room.hostId !== uid && !(room.adminIds || []).includes(uid)) return { joined: false, reason: "This room is private" };
+    if (room.enterPermission === "invite_only" && room.hostId !== uid && !(room.adminIds || []).includes(uid)) {
+      const inv = await get(ref(db, `rooms/${roomId}/invitedUsers/${uid}`));
+      if (!inv.exists()) return { joined: false, reason: "This room is invite only" };
+    }
   }
   const existing = await get(ref(db, `rooms/${roomId}/roomUsers/${uid}`));
   if (existing.exists()) return { joined: true };
-  const roomUser: RoomUser = { uid, name, avatar, role: "user", joinedAt: Date.now(), seatIndex: null, isOfficial: isOfficial || false, isSuperAdmin: isSuperAdmin || false };
+  const roomUser: RoomUser = { uid, name, avatar, role: "user", joinedAt: Date.now(), seatIndex: null, isOfficial: isOfficial || false, isSuperAdmin: isSuperAdmin || false, ghostMode: ghostMode || false } as any;
   if (room.hostId === uid) roomUser.role = "owner";
   else if ((room.adminIds || []).includes(uid)) roomUser.role = "admin";
   await update(ref(db, `rooms/${roomId}/roomUsers/${uid}`), roomUser);
@@ -416,4 +418,34 @@ export async function endRoom(roomId: string): Promise<void> {
   await sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6D1}", text: "Room has been ended by the owner", type: "system" });
   await remove(ref(db, `rooms/${roomId}`));
   await remove(ref(db, `roomMessages/${roomId}`));
+}
+
+export async function clearRoomChat(roomId: string): Promise<void> {
+  await remove(ref(db, `roomMessages/${roomId}`));
+}
+
+export async function setMaintenanceMode(enabled: boolean, message?: string): Promise<void> {
+  await set(ref(db, "appConfig/maintenance"), {
+    enabled,
+    message: message || "App is under maintenance. Please try again later.",
+    updatedAt: Date.now(),
+  });
+}
+
+export function subscribeMaintenanceMode(cb: (data: { enabled: boolean; message: string } | null) => void): () => void {
+  const r = ref(db, "appConfig/maintenance");
+  onValue(r, snap => {
+    if (!snap.exists()) { cb(null); return; }
+    cb(snap.val());
+  });
+  return () => off(r);
+}
+
+export async function setStoreOverrides(overrides: Record<string, { price?: number; disabled?: boolean }>): Promise<void> {
+  await set(ref(db, "appConfig/storeOverrides"), overrides);
+}
+
+export async function getStoreOverrides(): Promise<Record<string, { price?: number; disabled?: boolean }>> {
+  const snap = await get(ref(db, "appConfig/storeOverrides"));
+  return snap.exists() ? snap.val() : {};
 }
