@@ -1,5 +1,5 @@
 const CLOUD_NAME = "dz1bhfpkc";
-const UPLOAD_PRESET = "ml_default";
+const UPLOAD_PRESET = "Profile_pic";
 const UPLOAD_URL = "https://api.cloudinary.com/v1_1/dz1bhfpkc/image/upload";
 const AUTO_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dz1bhfpkc/auto/upload";
 
