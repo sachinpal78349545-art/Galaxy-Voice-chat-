@@ -29,9 +29,37 @@ export function getRarityColor(rarity: string): string {
   return RARITY_COLORS[rarity] || RARITY_COLORS.common;
 }
 
+export const ANIMATED_FRAME_IDS = [
+  "frame_golden_crown",
+  "frame_neon_glow",
+  "frame_fire",
+  "frame_ice_crystal",
+  "frame_angel_wings",
+  "frame_dark_aura",
+  "frame_pink_love",
+  "frame_electric",
+  "frame_galaxy",
+  "frame_diamond_royal",
+] as const;
+
+export function isAnimatedFrame(frameId: string): boolean {
+  return (ANIMATED_FRAME_IDS as readonly string[]).includes(frameId);
+}
+
 export const STORE_ITEMS: StoreItem[] = [
   { id: "frame_divine_wing", name: "Divine Wing", icon: "\u{1F451}", category: "frame", price: 500000, preview: "radial-gradient(circle, #FFD700, #4169E1, #1A0F2E)", rarity: "legendary" },
   { id: "frame_crystal_pink", name: "Crystal Pink", icon: "\u{1F338}", category: "frame", price: 250000, preview: "radial-gradient(circle, #FF69B4, #C0C0C0, #1A0F2E)", rarity: "epic" },
+
+  { id: "frame_golden_crown", name: "Golden Crown", icon: "\u{1F451}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #FFD700, #FFA500, #FF8C00, #FFD700)", rarity: "legendary" },
+  { id: "frame_neon_glow", name: "Neon Glow", icon: "\u{1F4A0}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #00ff88, #00ffff, #8a2be2, #00ff88)", rarity: "epic" },
+  { id: "frame_fire", name: "Inferno Blaze", icon: "\u{1F525}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #ff4500, #ff8c00, #ff0000, #ff4500)", rarity: "epic" },
+  { id: "frame_ice_crystal", name: "Ice Crystal", icon: "\u2744\uFE0F", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #00bfff, #e0f7fa, #4fc3f7, #00bfff)", rarity: "rare" },
+  { id: "frame_angel_wings", name: "Angel Wings", icon: "\u{1F47C}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #fff8e1, #ffe082, #ffffff, #fff8e1)", rarity: "legendary" },
+  { id: "frame_dark_aura", name: "Dark Aura", icon: "\u{1F480}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #4a0080, #1a0033, #8b00ff, #4a0080)", rarity: "epic" },
+  { id: "frame_pink_love", name: "Pink Love", icon: "\u{1F495}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #ff69b4, #ff1493, #ff85c8, #ff69b4)", rarity: "rare" },
+  { id: "frame_electric", name: "Electric Storm", icon: "\u26A1", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #00e5ff, #2979ff, #651fff, #00e5ff)", rarity: "epic" },
+  { id: "frame_galaxy", name: "Galaxy Vortex", icon: "\u{1F30C}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #6a0dad, #1e90ff, #ff00ff, #6a0dad)", rarity: "legendary" },
+  { id: "frame_diamond_royal", name: "Diamond Royal", icon: "\u{1F48E}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #b9f2ff, #e0e0e0, #80deea, #b9f2ff)", rarity: "legendary" },
 
   { id: "entry_lightning", name: "Lightning Strike", icon: "\u26A1", category: "entry", price: 300, preview: "linear-gradient(135deg, #FFD700, #FF6B35)", rarity: "common" },
   { id: "entry_stars", name: "Starfall", icon: "\u2B50", category: "entry", price: 600, preview: "linear-gradient(135deg, #6C5CE7, #A29BFE)", rarity: "rare" },
@@ -62,6 +90,23 @@ export function getPngFramePath(frameId: string): string | null {
 
 export function isPngFrame(frameId: string): boolean {
   return frameId in PNG_FRAME_MAP;
+}
+
+export const FRAME_COLORS: Record<string, { primary: string; secondary: string; tertiary: string }> = {
+  frame_golden_crown:  { primary: "#FFD700", secondary: "#FFA500", tertiary: "#FF8C00" },
+  frame_neon_glow:     { primary: "#00ff88", secondary: "#00ffff", tertiary: "#8a2be2" },
+  frame_fire:          { primary: "#ff4500", secondary: "#ff8c00", tertiary: "#ff0000" },
+  frame_ice_crystal:   { primary: "#00bfff", secondary: "#e0f7fa", tertiary: "#4fc3f7" },
+  frame_angel_wings:   { primary: "#fff8e1", secondary: "#ffe082", tertiary: "#ffffff" },
+  frame_dark_aura:     { primary: "#8b00ff", secondary: "#4a0080", tertiary: "#1a0033" },
+  frame_pink_love:     { primary: "#ff69b4", secondary: "#ff1493", tertiary: "#ff85c8" },
+  frame_electric:      { primary: "#00e5ff", secondary: "#2979ff", tertiary: "#651fff" },
+  frame_galaxy:        { primary: "#ff00ff", secondary: "#6a0dad", tertiary: "#1e90ff" },
+  frame_diamond_royal: { primary: "#b9f2ff", secondary: "#e0e0e0", tertiary: "#80deea" },
+};
+
+export function getFrameColors(frameId: string) {
+  return FRAME_COLORS[frameId] || null;
 }
 
 export async function purchaseItem(uid: string, itemId: string, currentCoins: number): Promise<boolean> {

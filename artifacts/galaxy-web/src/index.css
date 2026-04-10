@@ -1495,3 +1495,249 @@ textarea.input-field { resize: none; line-height: 1.5; }
   pointer-events: none;
   z-index: 3;
 }
+
+.af-wrapper {
+  position: relative;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease;
+  overflow: visible;
+}
+.af-wrapper:hover {
+  transform: scale(1.08);
+}
+.af-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: afSpin 3s linear infinite;
+  filter: blur(3px);
+}
+.af-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.af-img {
+  position: absolute;
+  inset: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  border-radius: 50%;
+  object-fit: cover;
+  background: #0a0515;
+  z-index: 2;
+}
+.af-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1));
+}
+.af-overlay {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@keyframes afSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.af-golden_crown .af-ring { filter: blur(4px) brightness(1.2); }
+.af-golden_crown .af-glow { animation: afPulseGold 2s ease-in-out infinite; }
+@keyframes afPulseGold {
+  0%,100% { box-shadow: 0 0 12px #FFD70099, 0 0 24px #FFA50066; }
+  50% { box-shadow: 0 0 20px #FFD700cc, 0 0 40px #FFA50099, 0 0 60px #FF8C0044; }
+}
+.af-particles-gold {
+  background: radial-gradient(1px 1px at 20% 10%, #FFD700 50%, transparent 100%),
+              radial-gradient(1px 1px at 70% 20%, #FFA500 50%, transparent 100%),
+              radial-gradient(1.5px 1.5px at 40% 80%, #FFD700 50%, transparent 100%),
+              radial-gradient(1px 1px at 80% 70%, #FF8C00 50%, transparent 100%),
+              radial-gradient(1px 1px at 10% 60%, #FFD700 50%, transparent 100%),
+              radial-gradient(1.5px 1.5px at 55% 45%, #FFA500 50%, transparent 100%);
+  animation: afParticleFloat 3s ease-in-out infinite;
+}
+
+.af-neon_glow .af-ring { filter: blur(5px) brightness(1.3); }
+.af-neon_glow .af-glow { animation: afPulseNeon 2s ease-in-out infinite; }
+@keyframes afPulseNeon {
+  0%,100% { box-shadow: 0 0 14px #00ff8899, 0 0 28px #00ffff66; }
+  50% { box-shadow: 0 0 22px #00ff88cc, 0 0 44px #00ffff99, 0 0 66px #8a2be244; }
+}
+
+.af-fire .af-ring { filter: blur(5px); animation: afSpin 2s linear infinite; }
+.af-fire .af-glow { animation: afPulseFire 1.5s ease-in-out infinite; }
+@keyframes afPulseFire {
+  0%,100% { box-shadow: 0 0 14px #ff450099, 0 0 28px #ff8c0066; }
+  50% { box-shadow: 0 0 24px #ff4500cc, 0 0 48px #ff000099, 0 0 60px #ff8c0055; }
+}
+.af-particles-fire {
+  background: radial-gradient(2px 2px at 25% 15%, #ff4500 40%, transparent 100%),
+              radial-gradient(1.5px 1.5px at 65% 10%, #ff8c00 40%, transparent 100%),
+              radial-gradient(2px 2px at 50% 85%, #ff0000 40%, transparent 100%),
+              radial-gradient(1.5px 1.5px at 85% 50%, #ff4500 40%, transparent 100%),
+              radial-gradient(1px 1px at 15% 75%, #ff8c00 40%, transparent 100%);
+  animation: afParticleRise 2s ease-in-out infinite;
+}
+
+.af-ice_crystal .af-ring { filter: blur(4px) brightness(1.1); animation: afSpin 4s linear infinite; }
+.af-ice_crystal .af-glow { animation: afPulseIce 2.5s ease-in-out infinite; }
+@keyframes afPulseIce {
+  0%,100% { box-shadow: 0 0 10px #00bfff88, 0 0 20px #4fc3f744; }
+  50% { box-shadow: 0 0 18px #00bfffbb, 0 0 36px #e0f7fa88, 0 0 50px #4fc3f744; }
+}
+
+.af-angel_wings .af-ring { filter: blur(4px) brightness(1.4); animation: afSpin 5s linear infinite; }
+.af-angel_wings .af-glow { animation: afPulseAngel 3s ease-in-out infinite; }
+@keyframes afPulseAngel {
+  0%,100% { box-shadow: 0 0 12px #fff8e188, 0 0 24px #ffe08266; }
+  50% { box-shadow: 0 0 20px #ffffffcc, 0 0 40px #ffe08299, 0 0 55px #fff8e155; }
+}
+.af-wing {
+  position: absolute;
+  width: 18px;
+  height: 28px;
+  top: 30%;
+  z-index: 3;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.af-wing-left {
+  left: -14px;
+  background: radial-gradient(ellipse at right center, rgba(255,248,225,0.5) 0%, transparent 70%);
+  transform: rotate(-15deg);
+  animation: afWingLeft 2s ease-in-out infinite;
+}
+.af-wing-right {
+  right: -14px;
+  background: radial-gradient(ellipse at left center, rgba(255,248,225,0.5) 0%, transparent 70%);
+  transform: rotate(15deg);
+  animation: afWingRight 2s ease-in-out infinite;
+}
+@keyframes afWingLeft {
+  0%,100% { transform: rotate(-15deg) translateX(0); }
+  50% { transform: rotate(-20deg) translateX(-3px); }
+}
+@keyframes afWingRight {
+  0%,100% { transform: rotate(15deg) translateX(0); }
+  50% { transform: rotate(20deg) translateX(3px); }
+}
+
+.af-dark_aura .af-ring { filter: blur(6px); animation: afSpin 3s linear infinite reverse; }
+.af-dark_aura .af-glow { animation: afPulseDark 2s ease-in-out infinite; }
+@keyframes afPulseDark {
+  0%,100% { box-shadow: 0 0 14px #8b00ff88, 0 0 28px #4a008066; }
+  50% { box-shadow: 0 0 24px #8b00ffcc, 0 0 48px #4a008099, 0 0 60px #1a003355; }
+}
+.af-smoke {
+  background: radial-gradient(circle at 30% 30%, rgba(138,0,255,0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 70%, rgba(74,0,128,0.15) 0%, transparent 50%);
+  animation: afSmokeMove 4s ease-in-out infinite;
+}
+@keyframes afSmokeMove {
+  0%,100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.af-pink_love .af-ring { filter: blur(4px); }
+.af-pink_love .af-glow { animation: afPulsePink 2s ease-in-out infinite; }
+@keyframes afPulsePink {
+  0%,100% { box-shadow: 0 0 12px #ff69b488, 0 0 24px #ff149366; }
+  50% { box-shadow: 0 0 20px #ff69b4cc, 0 0 40px #ff149399, 0 0 55px #ff85c855; }
+}
+.af-particles-hearts {
+  background: radial-gradient(2px 2px at 20% 20%, #ff69b4 40%, transparent 100%),
+              radial-gradient(1.5px 1.5px at 75% 15%, #ff1493 40%, transparent 100%),
+              radial-gradient(2px 2px at 50% 80%, #ff69b4 40%, transparent 100%),
+              radial-gradient(1.5px 1.5px at 85% 60%, #ff85c8 40%, transparent 100%),
+              radial-gradient(1px 1px at 10% 70%, #ff1493 40%, transparent 100%);
+  animation: afParticleFloat 3s ease-in-out infinite;
+}
+
+.af-electric .af-ring { filter: blur(4px) brightness(1.2); animation: afSpin 1.5s linear infinite; }
+.af-electric .af-glow { animation: afPulseElectric 1s ease-in-out infinite; }
+@keyframes afPulseElectric {
+  0%,100% { box-shadow: 0 0 10px #00e5ff88, 0 0 20px #2979ff66; }
+  50% { box-shadow: 0 0 20px #00e5ffcc, 0 0 40px #651fff99, 0 0 55px #2979ff55; }
+}
+.af-electric-arcs {
+  background: radial-gradient(1px 8px at 20% 5%, #00e5ff 30%, transparent 100%),
+              radial-gradient(1px 6px at 80% 15%, #2979ff 30%, transparent 100%),
+              radial-gradient(1px 7px at 50% 90%, #651fff 30%, transparent 100%),
+              radial-gradient(1px 5px at 10% 50%, #00e5ff 30%, transparent 100%),
+              radial-gradient(1px 6px at 90% 60%, #2979ff 30%, transparent 100%);
+  animation: afElectricFlash 0.8s steps(2) infinite;
+}
+@keyframes afElectricFlash {
+  0%,100% { opacity: 0.8; transform: rotate(0deg); }
+  50% { opacity: 0.4; transform: rotate(180deg); }
+}
+
+.af-galaxy .af-ring { filter: blur(5px); animation: afSpin 4s linear infinite; }
+.af-galaxy .af-glow { animation: afPulseGalaxy 2.5s ease-in-out infinite; }
+@keyframes afPulseGalaxy {
+  0%,100% { box-shadow: 0 0 14px #ff00ff88, 0 0 28px #6a0dad66; }
+  50% { box-shadow: 0 0 22px #ff00ffcc, 0 0 44px #1e90ff99, 0 0 60px #6a0dad55; }
+}
+.af-stars {
+  background: radial-gradient(1px 1px at 15% 15%, #fff 60%, transparent 100%),
+              radial-gradient(1.5px 1.5px at 75% 20%, #ff00ff 50%, transparent 100%),
+              radial-gradient(1px 1px at 40% 85%, #1e90ff 60%, transparent 100%),
+              radial-gradient(1.5px 1.5px at 85% 70%, #fff 50%, transparent 100%),
+              radial-gradient(1px 1px at 25% 55%, #6a0dad 60%, transparent 100%),
+              radial-gradient(1px 1px at 60% 40%, #ff00ff 50%, transparent 100%);
+  animation: afStarTwinkle 2s ease-in-out infinite;
+}
+@keyframes afStarTwinkle {
+  0%,100% { opacity: 0.6; transform: scale(1) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.05) rotate(5deg); }
+}
+
+.af-diamond_royal .af-ring { filter: blur(3px) brightness(1.3); animation: afSpin 5s linear infinite; }
+.af-diamond_royal .af-glow { animation: afPulseDiamond 2s ease-in-out infinite; }
+@keyframes afPulseDiamond {
+  0%,100% { box-shadow: 0 0 12px #b9f2ff88, 0 0 24px #e0e0e066; }
+  50% { box-shadow: 0 0 20px #b9f2ffcc, 0 0 40px #80deea99, 0 0 55px #e0e0e055; }
+}
+.af-shimmer {
+  background: linear-gradient(135deg, transparent 30%, rgba(185,242,255,0.3) 50%, transparent 70%);
+  background-size: 200% 200%;
+  animation: afShimmerMove 2s linear infinite;
+}
+@keyframes afShimmerMove {
+  0% { background-position: -100% -100%; }
+  100% { background-position: 200% 200%; }
+}
+
+@keyframes afParticleFloat {
+  0%,100% { opacity: 0.5; transform: translateY(0) scale(1); }
+  50% { opacity: 1; transform: translateY(-4px) scale(1.1); }
+}
+@keyframes afParticleRise {
+  0%,100% { opacity: 0.5; transform: translateY(2px) scale(1); }
+  50% { opacity: 1; transform: translateY(-6px) scale(1.15); }
+}
+
+.af-seat-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3;
+}
+.af-seat-wrapper .af-wrapper {
+  pointer-events: none;
+}
+.af-seat-wrapper .af-wrapper:hover {
+  transform: none;
+}

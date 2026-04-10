@@ -6,8 +6,9 @@ import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, ge
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
-import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, DEFAULT_FRAME_ID } from "../lib/storeService";
+import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, DEFAULT_FRAME_ID, isAnimatedFrame } from "../lib/storeService";
 import SuperAdminAvatar from "../components/SuperAdminAvatar";
+import FrameAvatar, { FramePreview } from "../components/frames/FrameAvatar";
 
 interface Props {
   user: UserProfile;
@@ -419,28 +420,32 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           <div style={{ position: "relative", paddingTop: isAdmin ? 16 : 0, paddingBottom: isAdmin ? 20 : 0 }}>
             {isAdmin ? (
               <SuperAdminAvatar src={user.avatar} userId={user.userId || ""} size={100} onClick={onEditProfile} />
-            ) : (
-              <>
-                {(() => {
-                  const activeFrame = user.equippedFrame || DEFAULT_FRAME_ID;
-                  if (!isPngFrame(activeFrame)) return null;
-                  const pngPath = getPngFramePath(activeFrame);
-                  return pngPath ? <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" className="png-frame-profile" /> : null;
-                })()}
-                <div style={{
-                  width: 100, height: 100, borderRadius: 50, fontSize: 50,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-                  border: "none",
-                  boxShadow: "none",
-                  cursor: "pointer", overflow: "hidden",
-                }} onClick={onEditProfile}>
-                  {user.avatar.startsWith("http") ? (
-                    <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : user.avatar}
-                </div>
-              </>
-            )}
+            ) : (() => {
+              const activeFrame = user.equippedFrame || DEFAULT_FRAME_ID;
+              if (isAnimatedFrame(activeFrame)) {
+                return <FrameAvatar frameId={activeFrame} src={user.avatar} size={100} onClick={onEditProfile} />;
+              }
+              return (
+                <>
+                  {isPngFrame(activeFrame) && (() => {
+                    const pngPath = getPngFramePath(activeFrame);
+                    return pngPath ? <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" className="png-frame-profile" /> : null;
+                  })()}
+                  <div style={{
+                    width: 100, height: 100, borderRadius: 50, fontSize: 50,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
+                    border: "none",
+                    boxShadow: "none",
+                    cursor: "pointer", overflow: "hidden",
+                  }} onClick={onEditProfile}>
+                    {user.avatar.startsWith("http") ? (
+                      <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : user.avatar}
+                  </div>
+                </>
+              );
+            })()}
             {user.online && !isAdmin && (
               <div style={{ position: "absolute", bottom: 6, right: 6, width: 16, height: 16, borderRadius: 8, background: "#00e676", border: "2.5px solid #0F0F1A", boxShadow: "0 0 8px rgba(0,230,118,0.4)" }} />
             )}
@@ -1380,11 +1385,14 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                   display: "flex", flexDirection: "column",
                 }}>
                   <div style={{
-                    height: 90, background: item.preview,
+                    height: 90, background: isAnimatedFrame(item.id) ? "rgba(15,10,30,0.9)" : item.preview,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 40, position: "relative",
                   }}>
-                    {item.category === "frame" && (() => {
+                    {item.category === "frame" && isAnimatedFrame(item.id) && (
+                      <FramePreview frameId={item.id} size={50} />
+                    )}
+                    {item.category === "frame" && !isAnimatedFrame(item.id) && (() => {
                       const pngPath = getPngFramePath(item.id);
                       return pngPath ? (
                         <div style={{ position: "relative", width: 60, height: 60 }}>
@@ -1488,13 +1496,16 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                         border: owned.equipped ? `1.5px solid ${rc}50` : "1px solid rgba(255,255,255,0.06)",
                       }}>
                         <div style={{
-                          width: 52, height: 52, borderRadius: 14, background: item.preview,
+                          width: 52, height: 52, borderRadius: isAnimatedFrame(item.id) ? "50%" : 14,
+                          background: isAnimatedFrame(item.id) ? "transparent" : item.preview,
                           display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
-                          border: `2px solid ${rc}40`,
-                          boxShadow: owned.equipped ? `0 0 16px ${rc}30` : "none",
+                          border: isAnimatedFrame(item.id) ? "none" : `2px solid ${rc}40`,
+                          boxShadow: owned.equipped && !isAnimatedFrame(item.id) ? `0 0 16px ${rc}30` : "none",
                           position: "relative", overflow: "visible",
                         }}>
-                          {isPngFrame(item.id) ? (() => {
+                          {isAnimatedFrame(item.id) ? (
+                            <FramePreview frameId={item.id} size={38} />
+                          ) : isPngFrame(item.id) ? (() => {
                             const pp = getPngFramePath(item.id);
                             return pp ? <img src={`${import.meta.env.BASE_URL}${pp}`} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : item.icon;
                           })() : item.icon}
@@ -1522,7 +1533,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                               fontSize: 12, fontWeight: 800, fontFamily: "inherit",
                               boxShadow: "0 0 12px rgba(108,92,231,0.3)",
                             }}>
-                            {storeLoading === owned.itemId ? "..." : "Equip"}
+                            {storeLoading === owned.itemId ? "..." : (isAnimatedFrame(owned.itemId) ? "Apply" : "Equip")}
                           </button>
                         )}
                       </div>

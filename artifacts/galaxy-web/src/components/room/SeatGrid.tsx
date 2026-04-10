@@ -1,8 +1,7 @@
 import React from "react";
 import { Room, RoomSeat, cleanName } from "./types";
 import { getUserRole } from "../../lib/roomService";
-import { SUPER_ADMIN_USER_ID } from "../../lib/userService";
-import { isPngFrame, getPngFramePath, DEFAULT_FRAME_ID } from "../../lib/storeService";
+import { isPngFrame, getPngFramePath, DEFAULT_FRAME_ID, isAnimatedFrame, getFrameColors } from "../../lib/storeService";
 
 interface SeatGridProps {
   room: Room;
@@ -110,13 +109,15 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   const isSpecial = isOfficial || isSuperAdmin;
   const activeFrameId = isSuperAdmin ? undefined : (frameId || (isActive ? DEFAULT_FRAME_ID : undefined));
   const hasPngFrame = activeFrameId && isPngFrame(activeFrameId);
+  const hasAnimFrame = activeFrameId && isAnimatedFrame(activeFrameId);
+  const animColors = hasAnimFrame ? getFrameColors(activeFrameId!) : null;
 
   const seatClass = [
     "seat-bubble",
-    isSuperAdmin && isActive ? "" : (hasPngFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty")),
-    isOwner && isActive && !hasPngFrame && !isSuperAdmin ? "seat-owner" : "",
+    isSuperAdmin && isActive ? "" : (hasAnimFrame ? "" : (hasPngFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty"))),
+    isOwner && isActive && !hasPngFrame && !hasAnimFrame && !isSuperAdmin ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
-    !hasPngFrame && !isSuperAdmin && isOfficial && isActive ? "seat-official" : "",
+    !hasPngFrame && !hasAnimFrame && !isSuperAdmin && isOfficial && isActive ? "seat-official" : "",
   ].filter(Boolean).join(" ");
 
   const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
@@ -133,7 +134,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
             <div className="sa-seat-crown">{"\u{1F451}"}</div>
           </>
         )}
-        {!isSuperAdmin && !hasPngFrame && isOfficial && isActive && (
+        {!isSuperAdmin && !hasPngFrame && !hasAnimFrame && isOfficial && isActive && (
           <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" className="official-phoenix-frame" />
         )}
         {pngPath && isActive && (
@@ -142,6 +143,24 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
             alt=""
             className="png-frame-seat"
           />
+        )}
+        {hasAnimFrame && animColors && isActive && (
+          <div className="af-seat-wrapper">
+            <div
+              className={`af-wrapper af-${activeFrameId!.replace("frame_", "")}`}
+              style={{ width: 66, height: 66 }}
+            >
+              <div
+                className="af-ring"
+                style={{
+                  background: `conic-gradient(${animColors.primary}, ${animColors.secondary}, ${animColors.tertiary}, ${animColors.primary})`,
+                }}
+              />
+              <div className="af-glow" style={{
+                boxShadow: `0 0 8px ${animColors.primary}99, 0 0 16px ${animColors.secondary}66`,
+              }} />
+            </div>
+          </div>
         )}
         {isSpeaking && <AudioWaveRing color={isSuperAdmin ? "gold" : isOfficial ? "blue" : "cyan"} />}
         {isSpeaking && (

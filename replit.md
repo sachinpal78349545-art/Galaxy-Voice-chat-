@@ -53,10 +53,14 @@ I prefer iterative development with a focus on delivering working features incre
     - Gift history tracking.
 - **Notification System**: In-app notifications for various events (follows, gifts, friend requests, messages, room invites, system alerts).
 - **Store & Backpack System** (`storeService.ts`):
-    - In-app store with Avatar Frames, Entry Effects, and Room Themes.
+    - In-app store with Avatar Frames (PNG + Animated), Entry Effects, and Room Themes.
     - Items have rarity tiers: Common, Rare, Epic, Legendary (color-coded).
     - Purchase with coins, equip/unequip from Backpack.
-    - Equipped frames show as glowing borders on profile avatar.
+    - **PNG Frames**: Divine Wing (`ur.1.png`) and Crystal Pink (`ur.2.png`) — image overlay frames.
+    - **Animated Frames** (10 premium, 1000 coins each): Golden Crown, Neon Glow, Inferno Blaze, Ice Crystal, Angel Wings, Dark Aura, Pink Love, Electric Storm, Galaxy Vortex, Diamond Royal — CSS animated rotating conic-gradient rings with unique glow/particle effects per frame.
+    - `FrameAvatar` component (`components/frames/FrameAvatar.tsx`) renders animated frames on profile avatar and voice room seats.
+    - `FramePreview` component shows animated previews in Store and Backpack grids.
+    - Frame colors and animation config stored in `FRAME_COLORS` map in `storeService.ts`.
     - Equipped entry effects trigger custom system messages when joining rooms.
     - User inventory stored at `users/{uid}/inventory/` with `equippedFrame`, `equippedEntry`, `equippedTheme` fields.
 - **Daily Rewards & Achievements**: System for rewarding user engagement and progress.
