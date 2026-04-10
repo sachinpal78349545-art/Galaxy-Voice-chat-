@@ -6,8 +6,7 @@ import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, ge
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
-import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, getFrameCssClass, isSvgFrame } from "../lib/storeService";
-import { DivineWingFrame, CrystalPinkFrame } from "../components/frames";
+import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, getFrameCssClass, isPngFrame, getPngFramePath } from "../lib/storeService";
 
 interface Props {
   user: UserProfile;
@@ -419,9 +418,9 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           <div style={{ position: "relative" }}>
             {(() => {
               if (!user.equippedFrame || isAdmin || user.globalRole === "official") return null;
-              if (isSvgFrame(user.equippedFrame)) {
-                const SvgComp = user.equippedFrame === "frame_divine_wing" ? DivineWingFrame : CrystalPinkFrame;
-                return <SvgComp size={130} className="svg-frame-profile" />;
+              if (isPngFrame(user.equippedFrame)) {
+                const pngPath = getPngFramePath(user.equippedFrame);
+                return pngPath ? <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" className="png-frame-profile" /> : null;
               }
               const profileFrameCss = getFrameCssClass(user.equippedFrame);
               return profileFrameCss ? <div className={`store-frame-profile ${profileFrameCss}`} /> : null;
@@ -1385,16 +1384,14 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     fontSize: 40, position: "relative",
                   }}>
                     {item.category === "frame" && (() => {
-                      if (isSvgFrame(item.id)) {
-                        const SvgComp = item.id === "frame_divine_wing" ? DivineWingFrame : CrystalPinkFrame;
-                        return (
-                          <div style={{ position: "relative", width: 56, height: 56 }}>
-                            <SvgComp size={70} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }} />
-                            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "rgba(108,92,231,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                              {item.icon}
-                            </div>
+                      if (isPngFrame(item.id)) {
+                        const pngPath = getPngFramePath(item.id);
+                        return pngPath ? (
+                          <div style={{ position: "relative", width: 60, height: 60 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(108,92,231,0.3)", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }} />
+                            <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" style={{ position: "absolute", inset: -4, width: "calc(100% + 8px)", height: "calc(100% + 8px)", objectFit: "contain", pointerEvents: "none" }} />
                           </div>
-                        );
+                        ) : null;
                       }
                       const fc = getFrameCssClass(item.id);
                       return fc ? (
@@ -1507,9 +1504,9 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                           boxShadow: owned.equipped ? `0 0 16px ${rc}30` : "none",
                           position: "relative", overflow: "visible",
                         }}>
-                          {isSvgFrame(item.id) ? (() => {
-                            const SvgComp = item.id === "frame_divine_wing" ? DivineWingFrame : CrystalPinkFrame;
-                            return <SvgComp size={52} />;
+                          {isPngFrame(item.id) ? (() => {
+                            const pp = getPngFramePath(item.id);
+                            return pp ? <img src={`${import.meta.env.BASE_URL}${pp}`} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : item.icon;
                           })() : item.icon}
                         </div>
                         <div style={{ flex: 1 }}>

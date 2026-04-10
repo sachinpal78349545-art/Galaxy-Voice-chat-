@@ -1585,20 +1585,26 @@ textarea.input-field { resize: none; line-height: 1.5; }
   z-index: 1;
 }
 
-.svg-frame-seat {
+.png-frame-seat {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 
-.svg-frame-profile {
+.png-frame-profile {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  width: 132px;
+  height: 132px;
+  object-fit: contain;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }

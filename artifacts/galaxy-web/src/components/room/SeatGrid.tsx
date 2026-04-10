@@ -2,8 +2,7 @@ import React from "react";
 import { Room, RoomSeat, cleanName } from "./types";
 import { getUserRole } from "../../lib/roomService";
 import { SUPER_ADMIN_USER_ID } from "../../lib/userService";
-import { getFrameCssClass, isSvgFrame } from "../../lib/storeService";
-import { DivineWingFrame, CrystalPinkFrame } from "../frames";
+import { getFrameCssClass, isPngFrame, getPngFramePath } from "../../lib/storeService";
 
 interface SeatGridProps {
   room: Room;
@@ -105,29 +104,24 @@ function AudioWaveRing({ color = "cyan" }: { color?: "cyan" | "gold" | "blue" })
   );
 }
 
-function SvgFrameOverlay({ frameId, size }: { frameId: string; size: number }) {
-  if (frameId === "frame_divine_wing") return <DivineWingFrame size={size} className="svg-frame-seat" />;
-  if (frameId === "frame_crystal_pink") return <CrystalPinkFrame size={size} className="svg-frame-seat" />;
-  return null;
-}
-
 function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial, isSuperAdmin, frameId, onTap }: SeatCellProps) {
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
   const isSpecial = isOfficial || isSuperAdmin;
-  const hasSvgFrame = frameId && !isSpecial && isSvgFrame(frameId);
-  const frameCss = frameId && !isSpecial && !hasSvgFrame ? getFrameCssClass(frameId) : null;
+  const hasPngFrame = frameId && !isSpecial && isPngFrame(frameId);
+  const frameCss = frameId && !isSpecial && !hasPngFrame ? getFrameCssClass(frameId) : null;
 
   const seatClass = [
     "seat-bubble",
     isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty",
-    isOwner && isActive ? "seat-owner" : "",
+    isOwner && isActive && !hasPngFrame ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
     isSpecial && isActive ? "seat-official" : "",
     isSuperAdmin && isActive ? "seat-super-admin" : "",
   ].filter(Boolean).join(" ");
 
   const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
+  const pngPath = hasPngFrame ? getPngFramePath(frameId!) : null;
 
   return (
     <div className="seat-cell" style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
@@ -141,8 +135,12 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
         {frameCss && isActive && (
           <div className={`store-frame-overlay ${frameCss}`} />
         )}
-        {hasSvgFrame && isActive && (
-          <SvgFrameOverlay frameId={frameId!} size={76} />
+        {pngPath && isActive && (
+          <img
+            src={`${import.meta.env.BASE_URL}${pngPath}`}
+            alt=""
+            className="png-frame-seat"
+          />
         )}
         {isSpeaking && <AudioWaveRing color={isSuperAdmin ? "gold" : isOfficial ? "blue" : "cyan"} />}
         {isSpeaking && (

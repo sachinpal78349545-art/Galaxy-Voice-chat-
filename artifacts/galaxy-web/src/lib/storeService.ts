@@ -64,10 +64,17 @@ const FRAME_CSS_MAP: Record<string, string> = {
   frame_diamond: "store-frame-diamond",
 };
 
-export const SVG_FRAME_IDS = new Set(["frame_divine_wing", "frame_crystal_pink"]);
+const PNG_FRAME_MAP: Record<string, string> = {
+  frame_divine_wing: "assets/ur.1.png",
+  frame_crystal_pink: "assets/ur.2.png",
+};
 
-export function isSvgFrame(frameId: string): boolean {
-  return SVG_FRAME_IDS.has(frameId);
+export function getPngFramePath(frameId: string): string | null {
+  return PNG_FRAME_MAP[frameId] || null;
+}
+
+export function isPngFrame(frameId: string): boolean {
+  return frameId in PNG_FRAME_MAP;
 }
 
 export function getFrameCssClass(frameId: string): string | null {
