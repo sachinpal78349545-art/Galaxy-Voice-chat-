@@ -1382,92 +1382,60 @@ textarea.input-field { resize: none; line-height: 1.5; }
 }
 
 
-.sa-avatar-container {
+.sa-avatar-wrapper {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 50%;
   cursor: pointer;
   transition: transform 0.25s ease;
-}
-
-.sa-avatar-container:hover {
-  transform: scale(1.05);
-}
-
-.sa-avatar-container:hover .sa-ring {
   box-shadow:
-    0 0 16px rgba(138,43,226,0.7),
-    0 0 32px rgba(65,105,225,0.5),
-    0 0 48px rgba(255,105,180,0.4);
+    0 0 15px #8a2be2,
+    0 0 25px #00cfff,
+    0 0 35px #ff00ff;
+}
+
+.sa-avatar-wrapper:hover {
+  transform: scale(1.08);
+}
+
+.sa-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 4px;
+  background: conic-gradient(
+    #8a2be2,
+    #00cfff,
+    #ff00ff,
+    #8a2be2
+  );
+  animation: saSpin 3s linear infinite;
+  filter: blur(4px);
+}
+
+.sa-avatar-img {
+  position: absolute;
+  inset: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  border-radius: 50%;
+  object-fit: cover;
+  background: black;
+  z-index: 2;
 }
 
 .sa-crown {
   position: absolute;
-  top: -14px;
+  top: -12px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 22px;
-  z-index: 6;
-  filter: drop-shadow(0 0 6px rgba(255,215,0,0.8));
-  animation: saCrownBob 2s ease-in-out infinite;
+  z-index: 3;
+  text-shadow: 0 0 10px gold;
 }
 
-@keyframes saCrownBob {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-3px); }
-}
-
-.sa-ring {
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: conic-gradient(
-    from 0deg,
-    #8B2CF5,
-    #4169E1,
-    #FF69B4,
-    #8B2CF5,
-    #4169E1,
-    #FF69B4,
-    #8B2CF5
-  );
-  animation: saRingRotate 4s linear infinite;
-  box-shadow:
-    0 0 10px rgba(138,43,226,0.6),
-    0 0 20px rgba(65,105,225,0.4),
-    0 0 30px rgba(255,105,180,0.3);
-  transition: box-shadow 0.25s ease;
-}
-
-@keyframes saRingRotate {
+@keyframes saSpin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-.sa-ring-inner {
-  border-radius: 50%;
-  overflow: hidden;
-  background: #1A0F2E;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sa-label {
-  position: absolute;
-  bottom: -18px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  color: #FFD700;
-  text-shadow: 0 0 6px rgba(255,215,0,0.6), 0 0 12px rgba(138,43,226,0.4);
-  white-space: nowrap;
-  z-index: 6;
-  font-family: 'Poppins', 'Inter', sans-serif;
 }
 
 .sa-seat-ring {
@@ -1479,20 +1447,17 @@ textarea.input-field { resize: none; line-height: 1.5; }
   align-items: center;
   justify-content: center;
   background: conic-gradient(
-    from 0deg,
-    #8B2CF5,
-    #4169E1,
-    #FF69B4,
-    #8B2CF5,
-    #4169E1,
-    #FF69B4,
-    #8B2CF5
+    #8a2be2,
+    #00cfff,
+    #ff00ff,
+    #8a2be2
   );
-  animation: saRingRotate 4s linear infinite;
+  animation: saSpin 3s linear infinite;
+  filter: blur(3px);
   box-shadow:
-    0 0 8px rgba(138,43,226,0.5),
-    0 0 16px rgba(65,105,225,0.3),
-    0 0 24px rgba(255,105,180,0.2);
+    0 0 10px #8a2be2,
+    0 0 18px #00cfff,
+    0 0 26px #ff00ff;
   pointer-events: none;
   z-index: 3;
 }
@@ -1504,8 +1469,7 @@ textarea.input-field { resize: none; line-height: 1.5; }
   transform: translateX(-50%);
   font-size: 14px;
   z-index: 6;
-  filter: drop-shadow(0 0 4px rgba(255,215,0,0.8));
-  animation: saCrownBob 2s ease-in-out infinite;
+  text-shadow: 0 0 10px gold;
 }
 
 .png-frame-seat {
