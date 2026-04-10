@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ref, onValue, off } from "firebase/database";
 import { db } from "../lib/firebase";
 import { UserProfile, isSuperAdmin } from "../lib/userService";
-import { Room, subscribeRooms } from "../lib/roomService";
+import { Room, subscribeRooms, subscribeRoom } from "../lib/roomService";
 import { getGiftLeaderboard, LeaderboardEntry } from "../lib/giftService";
 
 interface OnlineUser { uid: string; name: string; avatar: string; }
-interface Props { user: UserProfile; onJoinRoom: (room: Room) => void; }
+interface Props { user: UserProfile; onJoinRoom: (room: Room) => void; onCreateRoom?: () => void; }
 type Tab = "Hot" | "New" | "Following";
 
 const QUICK_CATEGORIES = [
@@ -22,7 +22,7 @@ const PAGE_SIZE = 8;
 
 const MEDAL_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
 
-export default function HomePage({ user, onJoinRoom }: Props) {
+export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
   const [tab, setTab] = useState<Tab>("Hot");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +32,7 @@ export default function HomePage({ user, onJoinRoom }: Props) {
   const [topGifters, setTopGifters] = useState<LeaderboardEntry[]>([]);
   const [quickFilter, setQuickFilter] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [myRoom, setMyRoom] = useState<Room | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +42,15 @@ export default function HomePage({ user, onJoinRoom }: Props) {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (user.hasRoom && user.myRoomId) {
+      const unsub = subscribeRoom(user.myRoomId, r => setMyRoom(r));
+      return unsub;
+    } else {
+      setMyRoom(null);
+    }
+  }, [user.hasRoom, user.myRoomId]);
 
   useEffect(() => {
     const usersRef = ref(db, "users");
@@ -156,6 +166,82 @@ export default function HomePage({ user, onJoinRoom }: Props) {
             </button>
           ))}
         </div>
+      </div>
+
+      <div style={{ padding: "0 16px 16px" }}>
+        {myRoom ? (
+          <div
+            onClick={() => onJoinRoom(myRoom)}
+            style={{
+              cursor: "pointer",
+              background: "linear-gradient(160deg, rgba(108,92,231,0.18), rgba(191,0,255,0.08))",
+              border: "2px solid rgba(191,0,255,0.4)",
+              borderRadius: 20, padding: "14px 16px",
+              display: "flex", alignItems: "center", gap: 14,
+              boxShadow: "0 0 20px rgba(191,0,255,0.12), inset 0 0 20px rgba(108,92,231,0.05)",
+              transition: "all 0.3s",
+              animation: "slide-up 0.3s ease",
+            }}
+          >
+            <div style={{
+              width: 52, height: 52, borderRadius: 16, flexShrink: 0, overflow: "hidden",
+              border: "2px solid rgba(191,0,255,0.5)",
+              boxShadow: "0 0 12px rgba(191,0,255,0.25)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(191,0,255,0.1))",
+              fontSize: 24,
+            }}>
+              {(myRoom.roomAvatar || user.avatar)?.startsWith?.("http")
+                ? <img src={myRoom.roomAvatar?.startsWith?.("http") ? myRoom.roomAvatar : user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : (myRoom.roomAvatar || myRoom.coverEmoji || "\u{1F3A4}")}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                <span style={{ fontSize: 14, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{myRoom.name}</span>
+                {myRoom.isLive && <span className="badge badge-live" style={{ fontSize: 9 }}><span className="live-dot"/>{Object.keys(myRoom.roomUsers || {}).length}</span>}
+              </div>
+              <p style={{ fontSize: 11, color: "rgba(191,0,255,0.6)", fontWeight: 700 }}>My Room</p>
+            </div>
+            <div style={{
+              background: "linear-gradient(135deg, #bf00ff, #6C5CE7)", borderRadius: 14,
+              padding: "8px 16px", fontSize: 12, fontWeight: 800, color: "#fff",
+              boxShadow: "0 4px 14px rgba(191,0,255,0.3)",
+            }}>Enter</div>
+          </div>
+        ) : (
+          <div
+            onClick={onCreateRoom}
+            style={{
+              cursor: "pointer",
+              background: "linear-gradient(160deg, rgba(108,92,231,0.1), rgba(191,0,255,0.05))",
+              border: "1.5px dashed rgba(191,0,255,0.35)",
+              borderRadius: 20, padding: "14px 16px",
+              display: "flex", alignItems: "center", gap: 14,
+              transition: "all 0.3s",
+              animation: "slide-up 0.3s ease",
+            }}
+          >
+            <div style={{
+              width: 52, height: 52, borderRadius: 16, flexShrink: 0, overflow: "hidden",
+              border: "1.5px dashed rgba(191,0,255,0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(191,0,255,0.06)", fontSize: 24,
+            }}>
+              {user.avatar?.startsWith?.("http")
+                ? <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.7 }} />
+                : "\u{1F3E0}"}
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 800 }}>Create Your Room</p>
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.45)", marginTop: 2 }}>Start your own voice room</p>
+            </div>
+            <div style={{
+              background: "rgba(191,0,255,0.15)", border: "1px solid rgba(191,0,255,0.3)",
+              borderRadius: 14, padding: "8px 16px", fontSize: 12, fontWeight: 800,
+              color: "#bf00ff",
+            }}>{"\uFF0B"} Create</div>
+          </div>
+        )}
       </div>
 
       {onlineUsers.length > 0 && (

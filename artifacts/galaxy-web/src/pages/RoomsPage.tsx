@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { uploadWithAppCheck } from "../lib/firebase";
 import { UserProfile } from "../lib/userService";
-import { Room, subscribeRooms, createRoom } from "../lib/roomService";
+import { Room, subscribeRooms, createRoom, subscribeRoom } from "../lib/roomService";
 import { useToast } from "../lib/toastContext";
 
 const CATEGORIES = [
@@ -30,6 +30,7 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
   const [dpFile, setDpFile] = useState<File | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
+  const [myRoom, setMyRoom] = useState<Room | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
@@ -37,6 +38,15 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
     const unsub = subscribeRooms(r => { setRooms(r); setLoading(false); });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (user.hasRoom && user.myRoomId) {
+      const unsub = subscribeRoom(user.myRoomId, r => setMyRoom(r));
+      return unsub;
+    } else {
+      setMyRoom(null);
+    }
+  }, [user.hasRoom, user.myRoomId]);
 
   const filtered = rooms.filter(r => {
     if (filter === "Hot") return r.listeners > 5;
@@ -95,6 +105,12 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
       onJoinRoom(room);
     } catch (err: any) {
       console.error("Create room error:", err);
+      if (err?.message === "ALREADY_HAS_ROOM") {
+        showToast("You already have a room! Only one room per user.", "warning");
+        setShowCreate(false);
+        resetForm();
+        return;
+      }
       showToast(err?.message || "Failed to create room. Try again.", "error");
     } finally {
       setCreating(false);
@@ -105,7 +121,11 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
     <div className="page-scroll">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "54px 16px 10px" }}>
         <h1 style={{ fontSize: 20, fontWeight: 900 }}>Rooms {"\u{1F3A4}"}</h1>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>{"\uFF0B"} Create</button>
+        {myRoom ? (
+          <button className="btn btn-sm" style={{ background: "linear-gradient(135deg, #bf00ff, #6C5CE7)", border: "none", color: "#fff", fontWeight: 800 }} onClick={() => onJoinRoom(myRoom)}>My Room {"\u203A"}</button>
+        ) : (
+          <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>{"\uFF0B"} Create</button>
+        )}
       </div>
 
       <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "0 16px" }}>

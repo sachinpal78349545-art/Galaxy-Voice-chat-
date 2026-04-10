@@ -109,6 +109,8 @@ export interface UserProfile {
   shadowBanned?: boolean;
   ghostMode?: boolean;
   customBadges?: Record<string, { id: string; name: string; icon: string; imageUrl?: string }>;
+  hasRoom?: boolean;
+  myRoomId?: string;
 }
 
 export const DEFAULT_PROFILE: Partial<UserProfile> = {

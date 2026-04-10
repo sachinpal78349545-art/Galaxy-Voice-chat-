@@ -131,6 +131,17 @@ export async function createRoom(
   userId: string, username: string, avatar: string, name: string, topic: string,
   options?: { isPrivate?: boolean; password?: string; roomAvatar?: string; micPermission?: "all" | "request" | "admin_only" }
 ): Promise<Room> {
+  const userSnap = await get(ref(db, `users/${userId}`));
+  if (userSnap.exists()) {
+    const userData = userSnap.val();
+    if (userData.hasRoom && userData.myRoomId) {
+      const existingSnap = await get(ref(db, `rooms/${userData.myRoomId}`));
+      if (existingSnap.exists()) {
+        throw new Error("ALREADY_HAS_ROOM");
+      }
+      await update(ref(db, `users/${userId}`), { hasRoom: false, myRoomId: null });
+    }
+  }
   const id = `room_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const seats: RoomSeat[] = Array.from({ length: 12 }, (_, i) => ({
     index: i,
@@ -158,6 +169,7 @@ export async function createRoom(
     roomUsers: { [userId]: ownerUser },
   };
   await set(ref(db, `rooms/${id}`), room);
+  await update(ref(db, `users/${userId}`), { hasRoom: true, myRoomId: id });
   return room;
 }
 
@@ -368,6 +380,13 @@ export async function sendRoomMessage(roomId: string, msg: Omit<RoomMessage, "id
 }
 
 export async function deleteRoom(roomId: string): Promise<void> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}`));
+  if (roomSnap.exists()) {
+    const hostId = roomSnap.val().hostId;
+    if (hostId) {
+      await update(ref(db, `users/${hostId}`), { hasRoom: false, myRoomId: null });
+    }
+  }
   await remove(ref(db, `rooms/${roomId}`));
   await remove(ref(db, `roomMessages/${roomId}`));
 }
@@ -415,6 +434,13 @@ export function setupPresence(roomId: string, uid: string): () => void {
 }
 
 export async function endRoom(roomId: string): Promise<void> {
+  const roomSnap = await get(ref(db, `rooms/${roomId}`));
+  if (roomSnap.exists()) {
+    const hostId = roomSnap.val().hostId;
+    if (hostId) {
+      await update(ref(db, `users/${hostId}`), { hasRoom: false, myRoomId: null });
+    }
+  }
   await sendRoomMessage(roomId, { userId: "system", username: "System", avatar: "\u{1F6D1}", text: "Room has been ended by the owner", type: "system" });
   await remove(ref(db, `rooms/${roomId}`));
   await remove(ref(db, `roomMessages/${roomId}`));
@@ -448,10 +474,6 @@ export async function setStoreOverrides(overrides: Record<string, { price?: numb
 export async function getStoreOverrides(): Promise<Record<string, { price?: number; disabled?: boolean }>> {
   const snap = await get(ref(db, "appConfig/storeOverrides"));
   return snap.exists() ? snap.val() : {};
-}
-
-export async function updateRoomSettings(roomId: string, settings: Partial<Room>): Promise<void> {
-  await update(ref(db, `rooms/${roomId}`), settings);
 }
 
 export async function setRoomSeatCount(roomId: string, count: number): Promise<void> {

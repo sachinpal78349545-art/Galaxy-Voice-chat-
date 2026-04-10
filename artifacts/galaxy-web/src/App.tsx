@@ -327,7 +327,7 @@ function AppInner() {
         )}
 
         <div key={pageKey} className="page-enter" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} />}
+          {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} onCreateRoom={() => changePage("rooms")} />}
           {page === "explore" && <ExplorePage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onNavigate={(p) => changePage(p as NavPage)} />}
           {page === "rooms" && <RoomsPage user={profile} onJoinRoom={joinRoom} />}
           {page === "chats" && <ChatsPage user={profile} initialChatUid={chatTargetUid} onChatActive={setChatActive} />}
