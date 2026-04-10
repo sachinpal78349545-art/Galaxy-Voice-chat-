@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { ref, onValue, off } from "firebase/database";
-import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser } from "../lib/userService";
+import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, BanDuration } from "../lib/userService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
@@ -89,6 +89,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [reportTarget, setReportTarget] = useState("");
+  const [showBanMenu, setShowBanMenu] = useState(false);
+  const [banLoading, setBanLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [privacy, setPrivacy] = useState<NonNullable<UserProfile["privacy"]>>(user.privacy || {
@@ -991,10 +993,10 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
       )}
 
       {viewingProfile && (
-        <BottomSheet onClose={() => setViewingProfile(null)}>
+        <BottomSheet onClose={() => { setViewingProfile(null); setShowBanMenu(false); }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
             <h2 style={{ fontSize: 18, fontWeight: 900 }}>Profile</h2>
-            <button onClick={() => setViewingProfile(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+            <button onClick={() => { setViewingProfile(null); setShowBanMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, paddingBottom: 16 }}>
             <div style={{ position: "relative" }}>
@@ -1058,6 +1060,127 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                 } catch { showToast("Request failed", "error"); }
               }}>{"\u{1F91D}"} Add Friend</button>
             </div>
+
+            {isAdmin && viewingProfile && !isSuperAdmin(viewingProfile) && (
+              <div style={{ width: "100%", marginTop: 12 }}>
+                <button
+                  onClick={() => setShowBanMenu(!showBanMenu)}
+                  style={{
+                    width: "100%",
+                    padding: "13px 0",
+                    borderRadius: 14,
+                    background: "linear-gradient(135deg, rgba(80,20,60,0.4), rgba(40,10,30,0.6))",
+                    border: "1px solid rgba(255,60,60,0.25)",
+                    color: "#ff6666",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                >{"\u{1F6E1}\uFE0F"} Manage User {showBanMenu ? "\u25B2" : "\u25BC"}</button>
+
+                {showBanMenu && (
+                  <div style={{
+                    marginTop: 10,
+                    background: "linear-gradient(135deg, rgba(30,10,25,0.95), rgba(20,8,35,0.98))",
+                    border: "1px solid rgba(255,60,60,0.15)",
+                    borderRadius: 16,
+                    padding: 12,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}>
+                    <p style={{ fontSize: 11, color: "rgba(255,150,150,0.5)", fontWeight: 600, textAlign: "center", marginBottom: 4 }}>
+                      {isUserBanned(viewingProfile) ? "\u{1F534} User is currently BANNED" : "\u{1F7E2} User is active"}
+                    </p>
+
+                    {([
+                      { duration: "7h" as BanDuration, label: "7 Hours Ban", desc: "Temporary restriction", icon: "\u23F0" },
+                      { duration: "24h" as BanDuration, label: "24 Hours Ban", desc: "Daily restriction", icon: "\u{1F4C5}" },
+                      { duration: "7d" as BanDuration, label: "7 Days Ban", desc: "Weekly restriction", icon: "\u{1F4C6}" },
+                      { duration: "permanent" as BanDuration, label: "Permanent ID Ban", desc: "Total access block", icon: "\u{1F6AB}" },
+                    ]).map(opt => (
+                      <button
+                        key={opt.duration}
+                        disabled={banLoading}
+                        onClick={async () => {
+                          if (!confirm(`Are you sure you want to apply "${opt.label}" to ${viewingProfile!.name}?`)) return;
+                          setBanLoading(true);
+                          try {
+                            await banUser(viewingProfile!.uid, opt.duration, user.uid);
+                            const refreshed = await getUser(viewingProfile!.uid);
+                            if (refreshed) setViewingProfile(refreshed);
+                            showToast(`${viewingProfile!.name} has been banned (${opt.label})`, "success");
+                          } catch { showToast("Ban failed", "error"); }
+                          setBanLoading(false);
+                        }}
+                        style={{
+                          padding: "11px 14px",
+                          borderRadius: 12,
+                          background: "rgba(255,40,40,0.08)",
+                          border: "1px solid rgba(255,60,60,0.15)",
+                          color: opt.duration === "permanent" ? "#ff3333" : "#ff5555",
+                          fontWeight: opt.duration === "permanent" ? 800 : 600,
+                          fontSize: 13,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          textAlign: "left",
+                          opacity: banLoading ? 0.5 : 1,
+                        }}
+                      >
+                        <span style={{ fontSize: 18 }}>{opt.icon}</span>
+                        <div>
+                          <div>{opt.label}</div>
+                          <div style={{ fontSize: 10, color: "rgba(255,150,150,0.4)", fontWeight: 400 }}>{opt.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+
+                    <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+
+                    <button
+                      disabled={banLoading || !isUserBanned(viewingProfile)}
+                      onClick={async () => {
+                        if (!confirm(`Unban ${viewingProfile!.name}? They will be able to access the app again.`)) return;
+                        setBanLoading(true);
+                        try {
+                          await unbanUser(viewingProfile!.uid);
+                          const refreshed = await getUser(viewingProfile!.uid);
+                          if (refreshed) setViewingProfile(refreshed);
+                          showToast(`${viewingProfile!.name} has been unbanned`, "success");
+                        } catch { showToast("Unban failed", "error"); }
+                        setBanLoading(false);
+                      }}
+                      style={{
+                        padding: "11px 14px",
+                        borderRadius: 12,
+                        background: "rgba(0,200,100,0.08)",
+                        border: "1px solid rgba(0,200,100,0.2)",
+                        color: isUserBanned(viewingProfile) ? "#00cc66" : "rgba(0,200,100,0.3)",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: isUserBanned(viewingProfile) ? "pointer" : "default",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        opacity: banLoading || !isUserBanned(viewingProfile) ? 0.4 : 1,
+                      }}
+                    >
+                      <span style={{ fontSize: 18 }}>{"\u2705"}</span>
+                      <div>
+                        <div>Unban User</div>
+                        <div style={{ fontSize: 10, color: "rgba(0,200,100,0.4)", fontWeight: 400 }}>Restore access</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </BottomSheet>
       )}

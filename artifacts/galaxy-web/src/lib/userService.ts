@@ -100,6 +100,10 @@ export interface UserProfile {
   equippedFrame?: string;
   equippedEntry?: string;
   equippedTheme?: string;
+  isBanned?: boolean;
+  banUntil?: number | null;
+  bannedBy?: string;
+  banReason?: string;
 }
 
 export const DEFAULT_PROFILE: Partial<UserProfile> = {
@@ -621,6 +625,56 @@ export async function removeOfficialRole(targetUid: string): Promise<void> {
 
 export async function ensureSuperAdmin(uid: string): Promise<void> {
   await update(ref(db, `users/${uid}`), { isSuperAdmin: true });
+}
+
+export type BanDuration = "7h" | "24h" | "7d" | "permanent";
+
+export async function banUser(targetUid: string, duration: BanDuration, bannedByUid: string): Promise<void> {
+  let banUntil: number | null = null;
+  const now = Date.now();
+  switch (duration) {
+    case "7h": banUntil = now + 7 * 60 * 60 * 1000; break;
+    case "24h": banUntil = now + 24 * 60 * 60 * 1000; break;
+    case "7d": banUntil = now + 7 * 24 * 60 * 60 * 1000; break;
+    case "permanent": banUntil = null; break;
+  }
+  await update(ref(db, `users/${targetUid}`), {
+    isBanned: true,
+    banUntil,
+    bannedBy: bannedByUid,
+    banReason: duration === "permanent" ? "Permanent ID Ban" : `Banned for ${duration}`,
+  });
+}
+
+export async function unbanUser(targetUid: string): Promise<void> {
+  await update(ref(db, `users/${targetUid}`), {
+    isBanned: false,
+    banUntil: null,
+    bannedBy: null,
+    banReason: null,
+  });
+}
+
+export function isUserBanned(user: UserProfile): boolean {
+  if (!user.isBanned) return false;
+  if (user.banUntil === null || user.banUntil === undefined) return true;
+  if (Date.now() < user.banUntil) return true;
+  return false;
+}
+
+export function getBanTimeRemaining(user: UserProfile): string {
+  if (!user.isBanned) return "";
+  if (user.banUntil === null || user.banUntil === undefined) return "Permanent Ban";
+  const remaining = user.banUntil - Date.now();
+  if (remaining <= 0) return "";
+  const hours = Math.floor(remaining / (1000 * 60 * 60));
+  const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+    return `${days}d ${remHours}h ${minutes}m remaining`;
+  }
+  return `${hours}h ${minutes}m remaining`;
 }
 
 export async function getUserByUserId(userId: string): Promise<UserProfile | null> {

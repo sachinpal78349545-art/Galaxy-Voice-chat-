@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { onAuthStateChanged, User as FBUser, getRedirectResult } from "firebase/auth";
+import { onAuthStateChanged, User as FBUser, getRedirectResult, signOut } from "firebase/auth";
 import { auth } from "./lib/firebase";
-import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward } from "./lib/userService";
+import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward, isUserBanned, getBanTimeRemaining } from "./lib/userService";
 import { Room } from "./lib/roomService";
 import { subscribeConversations, Conversation } from "./lib/chatService";
 import { Notification, subscribeNotifications } from "./lib/notificationService";
@@ -146,6 +146,59 @@ function AppInner() {
         <div className="stars" />
         <div className="app-container">
           <AuthPage onDone={() => {}} />
+        </div>
+      </div>
+    );
+  }
+
+  if (isUserBanned(profile)) {
+    const banRemaining = getBanTimeRemaining(profile);
+    return (
+      <div className="app-wrapper">
+        <div className="stars" />
+        <div className="app-container" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 32, textAlign: "center" }}>
+          <div style={{
+            background: "linear-gradient(135deg, rgba(40,10,20,0.95), rgba(26,15,46,0.98))",
+            border: "2px solid rgba(255,60,60,0.3)",
+            borderRadius: 24,
+            padding: "40px 28px",
+            maxWidth: 360,
+            width: "100%",
+            boxShadow: "0 0 40px rgba(255,0,0,0.15), inset 0 0 60px rgba(255,0,0,0.05)",
+          }}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>{"\u{1F6AB}"}</div>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: "#ff4444", marginBottom: 8 }}>Account Suspended</h2>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.6, marginBottom: 20 }}>
+              Your account has been suspended due to a violation of our community guidelines.
+            </p>
+            {banRemaining && (
+              <div style={{
+                background: "rgba(255,60,60,0.1)",
+                border: "1px solid rgba(255,60,60,0.2)",
+                borderRadius: 12,
+                padding: "12px 16px",
+                marginBottom: 20,
+              }}>
+                <p style={{ fontSize: 11, color: "rgba(255,150,150,0.7)", marginBottom: 4 }}>Ban Duration</p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#ff6666" }}>{banRemaining}</p>
+              </div>
+            )}
+            <button
+              className="btn"
+              onClick={() => { signOut(auth); }}
+              style={{
+                width: "100%",
+                padding: "14px 0",
+                borderRadius: 14,
+                background: "rgba(255,60,60,0.15)",
+                border: "1px solid rgba(255,60,60,0.3)",
+                color: "#ff6666",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: "pointer",
+              }}
+            >Sign Out</button>
+          </div>
         </div>
       </div>
     );

@@ -36,6 +36,7 @@ I prefer iterative development with a focus on delivering working features incre
     - Comprehensive user profiles including coins, level, achievements, transactions, blocked users, friends, friend requests, and privacy settings.
     - Mutual follow OR friendship system to gate chat access (friends can chat without gift).
     - Super Admin system with specific user IDs.
+    - **Ban/Unban System**: Super Admin (userId `306623582`) exclusive feature. Can ban users for 7 hours, 24 hours, 7 days, or permanently. Ban data stored at `users/{uid}/isBanned`, `banUntil`, `bannedBy`, `banReason`. Banned users see "Account Suspended" screen with ban duration and Sign Out button. Auto-expiry check via `isUserBanned()` (client-side time comparison). Unban restores access immediately.
 - **Room Management**:
     - 12-seat grid (4x3) with host and co-host roles.
     - Real-time room listeners, seat management, and room messages.
