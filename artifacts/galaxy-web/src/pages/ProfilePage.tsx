@@ -6,7 +6,7 @@ import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, ge
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
-import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor } from "../lib/storeService";
+import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, getFrameCssClass } from "../lib/storeService";
 
 interface Props {
   user: UserProfile;
@@ -416,17 +416,19 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <div style={{ position: "relative" }}>
+            {(() => {
+              const profileFrameCss = user.equippedFrame && !isAdmin && user.globalRole !== "official" ? getFrameCssClass(user.equippedFrame) : null;
+              return profileFrameCss ? <div className={`store-frame-profile ${profileFrameCss}`} /> : null;
+            })()}
             <div style={{
               width: 100, height: 100, borderRadius: 50, fontSize: 50,
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-              border: isAdmin ? "3px solid #FFD700" : user.globalRole === "official" ? "3px solid #FFD700" : user.equippedFrame ? `3px solid ${(() => { const fi = getStoreItem(user.equippedFrame); return fi ? getRarityColor(fi.rarity) : "rgba(108,92,231,0.5)"; })()}` : "3px solid rgba(108,92,231,0.5)",
+              border: isAdmin ? "3px solid #FFD700" : user.globalRole === "official" ? "3px solid #FFD700" : "3px solid rgba(108,92,231,0.5)",
               boxShadow: isAdmin
                 ? "0 0 20px rgba(255,215,0,0.5), 0 0 40px rgba(191,0,255,0.25), 0 0 60px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
                 : user.globalRole === "official"
                 ? "0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,215,0,0.15), 0 8px 32px rgba(0,0,0,0.3)"
-                : user.equippedFrame
-                ? `0 0 20px ${(() => { const fi = getStoreItem(user.equippedFrame); return fi ? getRarityColor(fi.rarity) + "60" : "rgba(108,92,231,0.4)"; })()}, 0 8px 32px rgba(0,0,0,0.3)`
                 : "0 0 32px rgba(108,92,231,0.4), 0 8px 32px rgba(0,0,0,0.3)",
               cursor: "pointer", overflow: "hidden",
             }} onClick={onEditProfile}>
@@ -1376,7 +1378,18 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 40, position: "relative",
                   }}>
-                    {item.icon}
+                    {item.category === "frame" && (() => {
+                      const fc = getFrameCssClass(item.id);
+                      return fc ? (
+                        <div style={{ position: "absolute", width: 56, height: 56, borderRadius: "50%" }}>
+                          <div className={`store-frame-overlay ${fc}`} style={{ inset: -6, width: "calc(100% + 12px)", height: "calc(100% + 12px)" }} />
+                          <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "rgba(108,92,231,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+                            {item.icon}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+                    {item.category !== "frame" && item.icon}
                     <span style={{
                       position: "absolute", top: 6, right: 6, fontSize: 9, fontWeight: 800,
                       padding: "2px 8px", borderRadius: 8,

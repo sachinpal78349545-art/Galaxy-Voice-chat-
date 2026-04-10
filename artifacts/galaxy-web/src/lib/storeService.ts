@@ -31,8 +31,8 @@ export function getRarityColor(rarity: string): string {
 
 export const STORE_ITEMS: StoreItem[] = [
   { id: "frame_galaxy", name: "Galaxy Ring", icon: "\u{1F30C}", category: "frame", price: 200, preview: "radial-gradient(circle, #6C5CE7, #0F0F1A)", rarity: "common" },
-  { id: "frame_fire", name: "Fire Ring", icon: "\u{1F525}", category: "frame", price: 500, preview: "radial-gradient(circle, #FF6B35, #1A0F2E)", rarity: "rare" },
-  { id: "frame_ice", name: "Ice Crystal", icon: "\u2744\uFE0F", category: "frame", price: 500, preview: "radial-gradient(circle, #00BCD4, #0F0F1A)", rarity: "rare" },
+  { id: "frame_starfall", name: "Galaxy Starfall", icon: "\u2728", category: "frame", price: 500, preview: "radial-gradient(circle, #7B68EE, #1A0F2E)", rarity: "rare" },
+  { id: "frame_solar", name: "Solar Pulse", icon: "\u2600\uFE0F", category: "frame", price: 500, preview: "radial-gradient(circle, #FFD700, #FF8C00, #1A0F2E)", rarity: "rare" },
   { id: "frame_neon", name: "Neon Pulse", icon: "\u{1F4A0}", category: "frame", price: 800, preview: "radial-gradient(circle, #00FF88, #1A0F2E)", rarity: "epic" },
   { id: "frame_dragon", name: "Dragon Aura", icon: "\u{1F409}", category: "frame", price: 1500, preview: "radial-gradient(circle, #FF1744, #FFD700, #1A0F2E)", rarity: "legendary" },
   { id: "frame_diamond", name: "Diamond Crown", icon: "\u{1F48E}", category: "frame", price: 2000, preview: "radial-gradient(circle, #E0E0E0, #64B5F6, #1A0F2E)", rarity: "legendary" },
@@ -51,6 +51,19 @@ export const STORE_ITEMS: StoreItem[] = [
 
 export function getStoreItem(itemId: string): StoreItem | undefined {
   return STORE_ITEMS.find(i => i.id === itemId);
+}
+
+const FRAME_CSS_MAP: Record<string, string> = {
+  frame_galaxy: "store-frame-galaxy",
+  frame_starfall: "store-frame-starfall",
+  frame_solar: "store-frame-solar",
+  frame_neon: "store-frame-neon",
+  frame_dragon: "store-frame-dragon",
+  frame_diamond: "store-frame-diamond",
+};
+
+export function getFrameCssClass(frameId: string): string | null {
+  return FRAME_CSS_MAP[frameId] || null;
 }
 
 export async function purchaseItem(uid: string, itemId: string, currentCoins: number): Promise<boolean> {

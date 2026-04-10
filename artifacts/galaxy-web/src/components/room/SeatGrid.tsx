@@ -2,6 +2,7 @@ import React from "react";
 import { Room, RoomSeat, cleanName } from "./types";
 import { getUserRole } from "../../lib/roomService";
 import { SUPER_ADMIN_USER_ID } from "../../lib/userService";
+import { getFrameCssClass } from "../../lib/storeService";
 
 interface SeatGridProps {
   room: Room;
@@ -14,9 +15,10 @@ interface SeatGridProps {
   isOwnerSeat?: (seat: RoomSeat) => boolean;
   officialUids?: Set<string>;
   superAdminUids?: Set<string>;
+  equippedFrames?: Record<string, string>;
 }
 
-export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids, superAdminUids }: SeatGridProps) {
+export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids, superAdminUids, equippedFrames }: SeatGridProps) {
   return (
     <div className="room-seat-area">
       <div className="room-seat-grid-8" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, padding: "6px 0", justifyItems: "center" }}>
@@ -26,6 +28,7 @@ export default function SeatGrid({ room, userUid, hasControl, speakingUids, voic
           const isSpeaking = seat.userId
             ? (voiceJoined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking)
             : false;
+          const frameId = seat.userId && equippedFrames ? equippedFrames[seat.userId] : undefined;
           return (
             <SeatCell
               key={i}
@@ -37,6 +40,7 @@ export default function SeatGrid({ room, userUid, hasControl, speakingUids, voic
               isOwner={isOwnerSeat ? isOwnerSeat(seat) : false}
               isOfficial={seat.userId ? (officialUids?.has(seat.userId) || false) : false}
               isSuperAdmin={seat.userId ? (superAdminUids?.has(seat.userId) || false) : false}
+              frameId={frameId}
               onTap={() => onSeatTap(i, seat)}
             />
           );
@@ -55,6 +59,7 @@ interface SeatCellProps {
   isOwner: boolean;
   isOfficial: boolean;
   isSuperAdmin: boolean;
+  frameId?: string;
   onTap: () => void;
 }
 
@@ -99,10 +104,11 @@ function AudioWaveRing({ color = "cyan" }: { color?: "cyan" | "gold" | "blue" })
   );
 }
 
-function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial, isSuperAdmin, onTap }: SeatCellProps) {
+function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial, isSuperAdmin, frameId, onTap }: SeatCellProps) {
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
   const isSpecial = isOfficial || isSuperAdmin;
+  const frameCss = frameId && !isSpecial ? getFrameCssClass(frameId) : null;
 
   const seatClass = [
     "seat-bubble",
@@ -123,6 +129,9 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
         )}
         {isOfficial && !isSuperAdmin && isActive && (
           <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" className="official-phoenix-frame" />
+        )}
+        {frameCss && isActive && (
+          <div className={`store-frame-overlay ${frameCss}`} />
         )}
         {isSpeaking && <AudioWaveRing color={isSuperAdmin ? "gold" : isOfficial ? "blue" : "cyan"} />}
         {isSpeaking && (

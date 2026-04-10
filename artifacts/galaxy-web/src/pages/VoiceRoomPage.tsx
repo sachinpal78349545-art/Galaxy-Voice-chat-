@@ -53,6 +53,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [isSpeakerOff, setIsSpeakerOff] = useState(false);
   const [inviteSeatIdx, setInviteSeatIdx] = useState<number | null>(null);
+  const [equippedFrames, setEquippedFrames] = useState<Record<string, string>>({});
   const [cpDpUploading, setCpDpUploading] = useState(false);
   const cpDpRef = useRef<HTMLInputElement>(null);
   const floatId = useRef(0);
@@ -105,6 +106,17 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
     const unsub2 = subscribeRoomMessages(roomId, setMessages);
     return () => { unsub1(); unsub2(); presenceCleanupRef.current?.(); };
   }, [roomId]);
+
+  useEffect(() => {
+    if (!room) return;
+    const seatUids = (room.seats || []).filter(s => s.userId).map(s => s.userId!);
+    if (seatUids.length === 0) { setEquippedFrames({}); return; }
+    const frames: Record<string, string> = {};
+    if (user.equippedFrame) frames[user.uid] = user.equippedFrame;
+    Promise.all(seatUids.filter(uid => uid !== user.uid).map(uid =>
+      getUser(uid).then(u => { if (u?.equippedFrame) frames[uid] = u.equippedFrame; }).catch(() => {})
+    )).then(() => setEquippedFrames(frames));
+  }, [room?.seats?.map(s => s.userId).join(",")]);
 
   useEffect(() => {
     if (!room || voiceInitRef.current) return;
@@ -545,6 +557,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         isOwnerSeat={(seat) => seat.userId === room.hostId}
         officialUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isOfficial).map((ru: any) => ru.uid))}
         superAdminUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isSuperAdmin).map((ru: any) => ru.uid))}
+        equippedFrames={equippedFrames}
         onSeatTap={(i, seat) => {
           if (seat.userId === user.uid) {
             setShowSeatSheet(i);
