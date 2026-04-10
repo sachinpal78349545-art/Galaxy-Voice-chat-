@@ -2,7 +2,7 @@ import React from "react";
 import { Room, RoomSeat, cleanName } from "./types";
 import { getUserRole } from "../../lib/roomService";
 import { SUPER_ADMIN_USER_ID } from "../../lib/userService";
-import { getFrameCssClass, isPngFrame, getPngFramePath } from "../../lib/storeService";
+import { isPngFrame, getPngFramePath } from "../../lib/storeService";
 
 interface SeatGridProps {
   room: Room;
@@ -109,11 +109,10 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   const isLocked = seat.isLocked;
   const isSpecial = isOfficial || isSuperAdmin;
   const hasPngFrame = frameId && !isSpecial && isPngFrame(frameId);
-  const frameCss = frameId && !isSpecial && !hasPngFrame ? getFrameCssClass(frameId) : null;
 
   const seatClass = [
     "seat-bubble",
-    isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty",
+    hasPngFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty"),
     isOwner && isActive && !hasPngFrame ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
     isSpecial && isActive ? "seat-official" : "",
@@ -131,9 +130,6 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
         )}
         {isOfficial && !isSuperAdmin && isActive && (
           <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" className="official-phoenix-frame" />
-        )}
-        {frameCss && isActive && (
-          <div className={`store-frame-overlay ${frameCss}`} />
         )}
         {pngPath && isActive && (
           <img
