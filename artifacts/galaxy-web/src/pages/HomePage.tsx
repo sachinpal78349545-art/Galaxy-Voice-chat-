@@ -99,7 +99,11 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
     return true;
   });
 
-  const trending = [...rooms].sort((a, b) => b.listeners - a.listeners).slice(0, 3);
+  const trending = [...rooms].sort((a, b) => {
+    if (a.id === "11111") return -1;
+    if (b.id === "11111") return 1;
+    return b.listeners - a.listeners;
+  }).slice(0, 3);
   const visible = filtered.slice(0, visibleCount);
 
   const handleQuickJoin = (topic: string) => {

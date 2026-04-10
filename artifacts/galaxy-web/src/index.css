@@ -907,9 +907,10 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .chat-pill {
   display: inline-flex;
   align-items: center; gap: 6px;
-  padding: 4px 12px;
+  padding: 5px 12px;
   border-radius: 20px;
-  background: none;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
   border: none;
   box-shadow: none;
   max-width: 85%;
@@ -917,14 +918,15 @@ textarea.input-field { resize: none; line-height: 1.5; }
 
 .chat-pill-system {
   display: inline-block;
-  padding: 3px 12px;
+  padding: 4px 12px;
   border-radius: 20px;
-  background: none;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
   border: none;
 }
 
 .chat-pill-welcome {
-  background: none;
+  background: rgba(139, 92, 246, 0.12);
   border: none;
   box-shadow: none;
 }

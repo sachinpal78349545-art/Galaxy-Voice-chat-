@@ -1483,7 +1483,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
 function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(5,1,18,0.75)",
+      position: "fixed", inset: 0, background: "rgba(5,1,18,0.82)", backdropFilter: "blur(5px)",
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600,
     }} onClick={onClose}>
       {children}

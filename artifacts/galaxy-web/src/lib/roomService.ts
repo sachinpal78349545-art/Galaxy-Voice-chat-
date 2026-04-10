@@ -530,11 +530,11 @@ export async function ensureOfficialRoom(hostUid: string, hostName: string, host
     isMuted: false, isLocked: false, isSpeaking: false,
   }));
   const room: Room = {
-    id: "11111", name: "New Friends Zone", topic: "Talk",
+    id: "11111", name: "New Friends Zone \u{1F91D}", topic: "Talk",
     host: hostName, hostId: hostUid, adminIds: [], coHostIds: [], bannedUsers: [],
     seats, createdAt: Date.now(), isLive: true, listeners: 0,
-    category: "Talk", coverEmoji: "\u{1F31F}",
-    roomAvatar: "\u{1F31F}", tags: ["official"],
+    category: "Talk", coverEmoji: "\u{1F91D}",
+    roomAvatar: "\u{1F91D}", tags: ["official"],
     isPrivate: false, micPermission: "all",
     roomLevel: 99, theme: "galaxy",
     roomUsers: {},

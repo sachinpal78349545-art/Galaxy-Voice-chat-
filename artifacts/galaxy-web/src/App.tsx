@@ -108,6 +108,12 @@ function AppInner() {
             showToast(`Daily reward: +${reward.coins} coins! (Day ${reward.streak} streak)`, "success", "\u{1F381}");
           }
           try {
+            if (checkSuperAdmin(p)) {
+              const { wipeDummyRooms } = await import("./lib/roomService");
+              wipeDummyRooms().catch(console.error);
+            }
+          } catch {}
+          try {
             const autoRoom = await getAutoEntryRoom();
             if (autoRoom && !activeRoom) {
               const { ref, get } = await import("firebase/database");

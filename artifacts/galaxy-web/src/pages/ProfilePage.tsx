@@ -1897,7 +1897,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           </div>
 
           <div style={{
-            display: "flex", flexWrap: "wrap", gap: 4, padding: "8px 8px",
+            display: "flex", flexWrap: "wrap", gap: 8, padding: "12px 12px",
             borderBottom: "1px solid rgba(255,255,255,0.06)",
             overflowX: "auto",
           }}>
@@ -1919,14 +1919,17 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
               ["ipTracker", "\u{1F310}", "IP Tracker"],
             ] as const).map(([id, icon, label]) => (
               <button key={id} onClick={() => setGodTab(id)} style={{
-                padding: "6px 10px", borderRadius: 10, border: "none", cursor: "pointer",
-                fontFamily: "inherit", fontSize: 10, fontWeight: 700,
+                padding: "8px 14px", borderRadius: 12, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 11, fontWeight: 700,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                minWidth: 68,
                 background: godTab === id ? "rgba(0,255,255,0.15)" : "rgba(255,255,255,0.04)",
                 color: godTab === id ? "#00ffff" : "rgba(255,255,255,0.4)",
                 border: godTab === id ? "1px solid rgba(0,255,255,0.3)" : "1px solid rgba(255,255,255,0.06)",
-                whiteSpace: "nowrap",
+                whiteSpace: "nowrap", transition: "all 0.2s",
               }}>
-                {icon} {label}
+                <span style={{ fontSize: 18 }}>{icon}</span>
+                <span>{label}</span>
               </button>
             ))}
           </div>
@@ -2863,12 +2866,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
 function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(12px)",
+      position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(5px)",
       display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400,
     }} onClick={onClose}>
       <div className="card" style={{
         width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",
-        padding: 24, animation: "slide-up 0.3s ease", maxHeight: "75vh", display: "flex", flexDirection: "column",
+        padding: 24, animation: "slide-up 0.3s ease", maxHeight: "80vh", display: "flex", flexDirection: "column",
+        overflowY: "auto",
       }} onClick={e => e.stopPropagation()}>
         {children}
       </div>
