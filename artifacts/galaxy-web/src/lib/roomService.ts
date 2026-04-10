@@ -449,3 +449,74 @@ export async function getStoreOverrides(): Promise<Record<string, { price?: numb
   const snap = await get(ref(db, "appConfig/storeOverrides"));
   return snap.exists() ? snap.val() : {};
 }
+
+export async function updateRoomSettings(roomId: string, settings: Partial<Room>): Promise<void> {
+  await update(ref(db, `rooms/${roomId}`), settings);
+}
+
+export async function setRoomSeatCount(roomId: string, count: number): Promise<void> {
+  const snap = await get(ref(db, `rooms/${roomId}/seats`));
+  const currentSeats: RoomSeat[] = snap.exists() ? snap.val() : [];
+  if (count > currentSeats.length) {
+    const newSeats = [...currentSeats];
+    for (let i = currentSeats.length; i < count; i++) {
+      newSeats.push({ index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: false, isSpeaking: false });
+    }
+    await set(ref(db, `rooms/${roomId}/seats`), newSeats);
+  } else if (count < currentSeats.length) {
+    const trimmed = currentSeats.slice(0, count);
+    await set(ref(db, `rooms/${roomId}/seats`), trimmed);
+  }
+}
+
+export async function wipeDummyRooms(): Promise<number> {
+  const snap = await get(ref(db, "rooms"));
+  if (!snap.exists()) return 0;
+  const val = snap.val();
+  let count = 0;
+  const batch: Record<string, null> = {};
+  for (const id of Object.keys(val)) {
+    const room = val[id];
+    const listeners = room.listeners || 0;
+    if (listeners === 0 && id !== "11111") {
+      batch[`rooms/${id}`] = null;
+      batch[`roomMessages/${id}`] = null;
+      count++;
+    }
+  }
+  if (Object.keys(batch).length > 0) {
+    await update(ref(db), batch);
+  }
+  return count;
+}
+
+export async function setAutoEntryRoom(roomId: string, enabled: boolean): Promise<void> {
+  await set(ref(db, "appConfig/autoEntryRoom"), enabled ? roomId : null);
+}
+
+export async function getAutoEntryRoom(): Promise<string | null> {
+  const snap = await get(ref(db, "appConfig/autoEntryRoom"));
+  return snap.exists() ? snap.val() : null;
+}
+
+export async function ensureOfficialRoom(hostUid: string, hostName: string, hostAvatar: string): Promise<Room> {
+  const snap = await get(ref(db, "rooms/11111"));
+  if (snap.exists()) return { ...snap.val(), id: "11111" };
+  const seats: RoomSeat[] = Array.from({ length: 12 }, (_, i) => ({
+    index: i, userId: i === 0 ? hostUid : null,
+    username: i === 0 ? hostName : null, avatar: i === 0 ? hostAvatar : null,
+    isMuted: false, isLocked: false, isSpeaking: false,
+  }));
+  const room: Room = {
+    id: "11111", name: "New Friends Zone", topic: "Talk",
+    host: hostName, hostId: hostUid, adminIds: [], coHostIds: [], bannedUsers: [],
+    seats, createdAt: Date.now(), isLive: true, listeners: 0,
+    category: "Talk", coverEmoji: "\u{1F31F}",
+    roomAvatar: "\u{1F31F}", tags: ["official"],
+    isPrivate: false, micPermission: "all",
+    roomLevel: 99, theme: "galaxy",
+    roomUsers: {},
+  };
+  await set(ref(db, "rooms/11111"), room);
+  return room;
+}

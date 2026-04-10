@@ -4,7 +4,7 @@ import { auth, db } from "../lib/firebase";
 import { ref, onValue, off } from "firebase/database";
 import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, BanDuration, setUserCoins, deleteUserAvatar, resetUserName, deviceBanUser, shadowBanUser, removeShadowBan, setUserLevelXP, transferAccountData, getAllUsers, createVipUserId, addCustomBadge, removeCustomBadge } from "../lib/userService";
 import { sendGlobalAlert, clearGlobalAlerts, sendMassDM } from "../lib/notificationService";
-import { setMaintenanceMode, setStoreOverrides, getStoreOverrides } from "../lib/roomService";
+import { setMaintenanceMode, setStoreOverrides, getStoreOverrides, updateRoomSettings, setRoomSeatCount, wipeDummyRooms, setAutoEntryRoom, getAutoEntryRoom, ensureOfficialRoom, ROOM_THEMES, Room } from "../lib/roomService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
@@ -116,6 +116,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [godBadgeIcon, setGodBadgeIcon] = useState("");
   const [godStoreItemId, setGodStoreItemId] = useState("");
   const [godStorePrice, setGodStorePrice] = useState("");
+  const [ormRoomName, setOrmRoomName] = useState("");
+  const [ormTheme, setOrmTheme] = useState("galaxy");
+  const [ormSeatCount, setOrmSeatCount] = useState("12");
+  const [ormOfficialOnly, setOrmOfficialOnly] = useState(false);
+  const [ormAutoEntry, setOrmAutoEntry] = useState(false);
+  const [ormLoading, setOrmLoading] = useState(false);
+  const [ormLoaded, setOrmLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [privacy, setPrivacy] = useState<NonNullable<UserProfile["privacy"]>>(user.privacy || {
@@ -134,6 +141,20 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
 
   useEffect(() => {
     if (isAdmin) ensureSuperAdmin(user.uid).catch(console.error);
+    if (isAdmin && !ormLoaded) {
+      (async () => {
+        try {
+          const room = await ensureOfficialRoom(user.uid, user.name, user.avatar);
+          setOrmRoomName(room.name || "New Friends Zone");
+          setOrmTheme(room.theme || "galaxy");
+          setOrmSeatCount(String(room.seats?.length || 12));
+          setOrmOfficialOnly(room.micPermission === "admin_only");
+          const autoRoom = await getAutoEntryRoom();
+          setOrmAutoEntry(autoRoom === "11111");
+          setOrmLoaded(true);
+        } catch (e) { console.error("ORM load error:", e); }
+      })();
+    }
   }, [isAdmin, user.uid]);
 
   useEffect(() => {
@@ -1684,6 +1705,171 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                   {"\u{1F5D1}\uFE0F"} Clear
                 </button>
               </div>
+            </div>
+
+            <div className="card" style={{ padding: 16, marginTop: 14, border: "1px solid rgba(0,255,255,0.2)" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: "#00ffff" }}>{"\u{1F3E0}"} Official Room Manager</h3>
+              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 14 }}>
+                Manage Room 11111 &bull; Official room settings
+              </p>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: "rgba(0,255,255,0.6)", fontWeight: 700, marginBottom: 6, display: "block" }}>Room Name</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input type="text" value={ormRoomName} onChange={e => setOrmRoomName(e.target.value)}
+                    placeholder="Room name..."
+                    style={{
+                      flex: 1, padding: "10px 14px", borderRadius: 12,
+                      border: "1px solid rgba(0,255,255,0.2)", background: "rgba(255,255,255,0.04)",
+                      color: "#fff", fontSize: 13, outline: "none",
+                    }}
+                  />
+                  <button className="btn btn-sm" style={{
+                    background: "rgba(0,255,255,0.12)", color: "#00ffff",
+                    border: "1px solid rgba(0,255,255,0.3)", fontWeight: 700, padding: "8px 16px",
+                  }} onClick={async () => {
+                    if (!ormRoomName.trim()) return;
+                    setOrmLoading(true);
+                    try {
+                      await updateRoomSettings("11111", { name: ormRoomName.trim() });
+                      showToast("Room name updated!", "success");
+                    } catch { showToast("Failed", "error"); }
+                    setOrmLoading(false);
+                  }} disabled={ormLoading}>
+                    {ormLoading ? "..." : "\u2714"}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: "rgba(0,255,255,0.6)", fontWeight: 700, marginBottom: 6, display: "block" }}>Background Theme</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {ROOM_THEMES.map(t => (
+                    <button key={t.id} onClick={async () => {
+                      setOrmTheme(t.id);
+                      setOrmLoading(true);
+                      try {
+                        await updateRoomSettings("11111", { theme: t.id });
+                        showToast(`Theme set to ${t.name}`, "success");
+                      } catch { showToast("Failed", "error"); }
+                      setOrmLoading(false);
+                    }} style={{
+                      padding: "6px 14px", borderRadius: 10, cursor: "pointer",
+                      fontFamily: "inherit", fontSize: 11, fontWeight: 700,
+                      background: ormTheme === t.id ? "rgba(0,255,255,0.15)" : "rgba(255,255,255,0.04)",
+                      color: ormTheme === t.id ? "#00ffff" : "rgba(255,255,255,0.4)",
+                      border: ormTheme === t.id ? "1px solid rgba(0,255,255,0.3)" : "1px solid rgba(255,255,255,0.08)",
+                    }}>
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: "rgba(0,255,255,0.6)", fontWeight: 700, marginBottom: 6, display: "block" }}>Seat Limit</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[8, 10, 12, 16, 20].map(n => (
+                    <button key={n} onClick={async () => {
+                      setOrmSeatCount(String(n));
+                      setOrmLoading(true);
+                      try {
+                        await setRoomSeatCount("11111", n);
+                        showToast(`Seats set to ${n}`, "success");
+                      } catch { showToast("Failed", "error"); }
+                      setOrmLoading(false);
+                    }} style={{
+                      flex: 1, padding: "8px 0", borderRadius: 10, cursor: "pointer",
+                      fontFamily: "inherit", fontSize: 13, fontWeight: 800,
+                      background: ormSeatCount === String(n) ? "rgba(0,255,255,0.15)" : "rgba(255,255,255,0.04)",
+                      color: ormSeatCount === String(n) ? "#00ffff" : "rgba(255,255,255,0.4)",
+                      border: ormSeatCount === String(n) ? "1px solid rgba(0,255,255,0.3)" : "1px solid rgba(255,255,255,0.08)",
+                    }}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 14px", borderRadius: 12, marginBottom: 10,
+                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+              }}>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700 }}>{"\u{1F512}"} Official Only (Lock Mic)</p>
+                  <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Only admins can use mic</p>
+                </div>
+                <button onClick={async () => {
+                  const newVal = !ormOfficialOnly;
+                  setOrmOfficialOnly(newVal);
+                  setOrmLoading(true);
+                  try {
+                    await updateRoomSettings("11111", { micPermission: newVal ? "admin_only" : "all" });
+                    showToast(newVal ? "Mic locked to admins" : "Mic open for all", "success");
+                  } catch { showToast("Failed", "error"); }
+                  setOrmLoading(false);
+                }} style={{
+                  width: 48, height: 28, borderRadius: 14, border: "none", cursor: "pointer",
+                  background: ormOfficialOnly ? "#00ffff" : "rgba(255,255,255,0.12)",
+                  position: "relative", transition: "background 0.2s",
+                }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 11, background: "#fff",
+                    position: "absolute", top: 3,
+                    left: ormOfficialOnly ? 23 : 3,
+                    transition: "left 0.2s",
+                  }} />
+                </button>
+              </div>
+
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 14px", borderRadius: 12, marginBottom: 14,
+                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+              }}>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700 }}>{"\u{1F680}"} Auto-Entry</p>
+                  <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>New users auto-join this room</p>
+                </div>
+                <button onClick={async () => {
+                  const newVal = !ormAutoEntry;
+                  setOrmAutoEntry(newVal);
+                  setOrmLoading(true);
+                  try {
+                    await setAutoEntryRoom("11111", newVal);
+                    showToast(newVal ? "Auto-entry ON" : "Auto-entry OFF", "success");
+                  } catch { showToast("Failed", "error"); }
+                  setOrmLoading(false);
+                }} style={{
+                  width: 48, height: 28, borderRadius: 14, border: "none", cursor: "pointer",
+                  background: ormAutoEntry ? "#00ffff" : "rgba(255,255,255,0.12)",
+                  position: "relative", transition: "background 0.2s",
+                }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 11, background: "#fff",
+                    position: "absolute", top: 3,
+                    left: ormAutoEntry ? 23 : 3,
+                    transition: "left 0.2s",
+                  }} />
+                </button>
+              </div>
+
+              <button className="btn btn-full" style={{
+                padding: "12px 0",
+                background: "rgba(255,60,60,0.12)", border: "1px solid rgba(255,60,60,0.25)",
+                color: "#ff5555", fontWeight: 800,
+              }} onClick={async () => {
+                if (!confirm("Delete ALL empty rooms (0 listeners) except Room 11111?")) return;
+                setOrmLoading(true);
+                try {
+                  const count = await wipeDummyRooms();
+                  showToast(`Wiped ${count} dummy rooms!`, "success");
+                } catch { showToast("Failed to wipe rooms", "error"); }
+                setOrmLoading(false);
+              }} disabled={ormLoading}>
+                {ormLoading ? "Wiping..." : "\u{1F5D1}\uFE0F Wipe Test Rooms"}
+              </button>
             </div>
           </div>
         </BottomSheet>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, User as FBUser, getRedirectResult, signOut } from "firebase/auth";
 import { auth } from "./lib/firebase";
 import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward, isUserBanned, getBanTimeRemaining } from "./lib/userService";
-import { Room, subscribeMaintenanceMode } from "./lib/roomService";
+import { Room, subscribeMaintenanceMode, getAutoEntryRoom } from "./lib/roomService";
 import { subscribeConversations, Conversation } from "./lib/chatService";
 import { Notification, subscribeNotifications, GlobalAlert, subscribeGlobalAlerts } from "./lib/notificationService";
 import { isSuperAdmin as checkSuperAdmin } from "./lib/userService";
@@ -107,6 +107,19 @@ function AppInner() {
           if (reward) {
             showToast(`Daily reward: +${reward.coins} coins! (Day ${reward.streak} streak)`, "success", "\u{1F381}");
           }
+          try {
+            const autoRoom = await getAutoEntryRoom();
+            if (autoRoom && !activeRoom) {
+              const { ref, get } = await import("firebase/database");
+              const { db } = await import("./lib/firebase");
+              const roomSnap = await get(ref(db, `rooms/${autoRoom}`));
+              if (roomSnap.exists()) {
+                const room = { ...roomSnap.val(), id: autoRoom } as Room;
+                setActiveRoom(room);
+                changePage("rooms");
+              }
+            }
+          } catch {}
         } catch (err) {
           console.error("Init error:", err);
           showToast("Connection error. Some features may be limited.", "error");

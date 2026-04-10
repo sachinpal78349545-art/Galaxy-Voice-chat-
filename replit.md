@@ -58,6 +58,14 @@ I prefer iterative development with a focus on delivering working features incre
       13. **Anti-Screenshot**: Toggle CSS watermark overlay to deter screenshots.
       14. **Vanish Chat**: Clear all messages in any room by Room ID.
       15. **IP Tracker**: View user's device ID, user agent, last login, and account creation date.
+    - **Official Room Manager** (inside Admin Panel, SA-only):
+      - Manages Room 11111 ("New Friends Zone") — an always-live official room created via `ensureOfficialRoom()`.
+      - **Room Name**: Editable live via `updateRoomSettings()`.
+      - **Background Theme**: Select from ROOM_THEMES (Galaxy, Ocean, Sunset, Forest, Crimson, Midnight).
+      - **Seat Limit**: Set to 8/10/12/16/20 via `setRoomSeatCount()` (dynamically adds/trims seat array).
+      - **Lock Room (Official Only)**: Toggle `micPermission` between "all" and "admin_only".
+      - **Auto-Entry**: Toggle `appConfig/autoEntryRoom` — new users auto-join Room 11111 on login.
+      - **Wipe Test Rooms**: Delete all rooms with 0 listeners (except Room 11111) via `wipeDummyRooms()`.
 - **Room Management**:
     - 12-seat grid (4x3) with host and co-host roles.
     - Real-time room listeners, seat management, and room messages.
