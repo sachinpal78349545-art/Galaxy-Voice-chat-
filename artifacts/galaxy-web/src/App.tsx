@@ -29,7 +29,33 @@ const NAV = [
   { id: "mine", icon: "\u{1F464}", label: "Mine" },
 ] as const;
 
-function AppContent() {
+function SplashScreen({ onDone }: { onDone: () => void }) {
+  const [fadeOut, setFadeOut] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setFadeOut(true), 2200);
+    const t2 = setTimeout(() => onDone(), 2800);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [onDone]);
+
+  return (
+    <div className={`splash-screen${fadeOut ? " splash-fade-out" : ""}`}>
+      <div className="stars" />
+      <div className="splash-content">
+        <div className="splash-logo-ring">
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Galaxy Voice Chat" className="splash-logo" />
+        </div>
+        <h1 className="splash-title">Galaxy Voice Chat</h1>
+        <p className="splash-tagline">Find your voice, find your galaxy</p>
+        <div className="splash-loader">
+          <div className="splash-loader-bar" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AppInner() {
   const [fbUser, setFbUser] = useState<FBUser | null | undefined>(undefined);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [page, setPage] = useState<NavPage>("home");
@@ -283,6 +309,16 @@ function ChatBadge({ uid }: { uid: string }) {
       fontSize: 8, fontWeight: 800, padding: "0 3px", border: "1.5px solid #0F0F1A",
     }}>{count > 9 ? "9+" : count}</span>
   );
+}
+
+function AppContent() {
+  const [splashDone, setSplashDone] = useState(false);
+
+  if (!splashDone) {
+    return <SplashScreen onDone={() => setSplashDone(true)} />;
+  }
+
+  return <AppInner />;
 }
 
 export default function App() {
