@@ -1989,7 +1989,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                         </p>
                       </div>
                     </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: (godUser.isBanned || godUser.deviceBanned || godUser.shadowBanned) ? 10 : 0 }}>
                       {godUser.isBanned && (
                         <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)", color: "#ff5555" }}>{"\u{1F534}"} BANNED</span>
                       )}
@@ -2003,6 +2003,37 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                         <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "rgba(0,230,118,0.1)", border: "1px solid rgba(0,230,118,0.25)", color: "#00e676" }}>{"\u{1F7E2}"} ACTIVE</span>
                       )}
                     </div>
+
+                    {(godUser.isBanned || godUser.deviceBanned || godUser.shadowBanned) && (
+                      <button className="btn btn-full" style={{
+                        padding: "13px 0", fontSize: 14, fontWeight: 800,
+                        background: "rgba(0,230,118,0.15)",
+                        border: "2px solid rgba(0,230,118,0.4)",
+                        color: "#00e676",
+                        borderRadius: 12,
+                        cursor: "pointer",
+                      }} onClick={async () => {
+                        if (!confirm(`Remove ALL bans from ${godUser.name}? (ID ban, Device ban, Shadow ban — sab hata denge)`)) return;
+                        setGodLoading(true);
+                        try {
+                          const { update: fbUpdate, ref: fbRef } = await import("firebase/database");
+                          const { db: fbDb } = await import("../lib/firebase");
+                          await fbUpdate(fbRef(fbDb, `users/${godUser.uid}`), {
+                            isBanned: false,
+                            banUntil: null,
+                            bannedBy: null,
+                            banReason: null,
+                            deviceBanned: false,
+                            shadowBanned: false,
+                          });
+                          showToast(`${godUser.name} — sab bans hata diye!`, "success");
+                          setGodUser({ ...godUser, isBanned: false, banUntil: null, deviceBanned: false, shadowBanned: false });
+                        } catch { showToast("Unban failed", "error"); }
+                        setGodLoading(false);
+                      }} disabled={godLoading}>
+                        {"\u2705"} Remove All Bans
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
