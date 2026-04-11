@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ref, onValue, off } from "firebase/database";
+import { ref, onValue, off, query, orderByChild, equalTo, limitToFirst } from "firebase/database";
 import { db } from "../lib/firebase";
 import { UserProfile, isSuperAdmin } from "../lib/userService";
 import { Room, subscribeRooms, subscribeRoom } from "../lib/roomService";
@@ -53,20 +53,20 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
   }, [user.hasRoom, user.myRoomId]);
 
   useEffect(() => {
-    const usersRef = ref(db, "users");
-    const handler = onValue(usersRef, snap => {
+    const onlineRef = query(ref(db, "users"), orderByChild("online"), equalTo(true), limitToFirst(21));
+    const handler = onValue(onlineRef, snap => {
       if (!snap.exists()) { setOnlineUsers([]); return; }
       const val = snap.val();
       const online: OnlineUser[] = [];
       Object.keys(val).forEach(uid => {
-        const u = val[uid];
-        if (u.online && uid !== user.uid) {
+        if (uid !== user.uid) {
+          const u = val[uid];
           online.push({ uid, name: u.name || "User", avatar: u.avatar || "\u{1F464}" });
         }
       });
       setOnlineUsers(online.slice(0, 20));
     });
-    return () => off(usersRef);
+    return () => off(onlineRef);
   }, [user.uid]);
 
   useEffect(() => {

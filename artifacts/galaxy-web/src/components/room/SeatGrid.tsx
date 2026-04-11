@@ -26,7 +26,7 @@ export default function SeatGrid({ room, userUid, hasControl, speakingUids, voic
           const lockedByDefault = [7].includes(i);
           const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: lockedByDefault, isSpeaking: false };
           const isSpeaking = seat.userId
-            ? (voiceJoined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : seat.isSpeaking)
+            ? (voiceJoined ? speakingUids.has(Math.abs(hashCode(seat.userId)) % 1000000) : speakingUids.has(i))
             : false;
           const frameId = seat.userId && equippedFrames ? equippedFrames[seat.userId] : undefined;
           const isGhost = seat.userId ? (ghostUids?.has(seat.userId) || false) : false;

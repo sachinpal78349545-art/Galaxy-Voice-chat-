@@ -185,14 +185,13 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
   useEffect(() => {
     if (!room || voiceService.joined) return;
     const t = setInterval(() => {
-      setRoom(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          seats: prev.seats.map(s =>
-            s.userId && !s.isMuted ? { ...s, isSpeaking: Math.random() > 0.45 } : { ...s, isSpeaking: false }
-          ),
-        };
+      setSpeakingUids(prev => {
+        const next = new Set<number>();
+        room.seats.forEach((s, i) => {
+          if (s.userId && !s.isMuted && Math.random() > 0.45) next.add(i);
+        });
+        if (prev.size === next.size && [...prev].every(v => next.has(v))) return prev;
+        return next;
       });
     }, 2000);
     return () => clearInterval(t);
