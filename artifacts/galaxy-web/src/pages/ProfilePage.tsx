@@ -1972,7 +1972,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     padding: 12, borderRadius: 14, marginBottom: 12,
                     background: "rgba(0,255,255,0.04)", border: "1px solid rgba(0,255,255,0.12)",
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                       <div style={{
                         width: 36, height: 36, borderRadius: 18, fontSize: 18,
                         background: "rgba(108,92,231,0.12)", border: "2px solid rgba(0,255,255,0.3)",
@@ -1986,10 +1986,22 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                         <p style={{ fontSize: 13, fontWeight: 700 }}>{godUser.name}</p>
                         <p style={{ fontSize: 10, color: "rgba(162,155,254,0.5)", fontFamily: "monospace" }}>
                           ID: {godUser.userId} | Lv.{godUser.level || 1} | {"\u{1F48E}"}{(godUser.coins || 0).toLocaleString()}
-                          {godUser.shadowBanned && <span style={{ color: "#ff5555", marginLeft: 6 }}>[SHADOW BANNED]</span>}
-                          {godUser.deviceBanned && <span style={{ color: "#ff3333", marginLeft: 6 }}>[DEVICE BANNED]</span>}
                         </p>
                       </div>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {godUser.isBanned && (
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)", color: "#ff5555" }}>{"\u{1F534}"} BANNED</span>
+                      )}
+                      {godUser.deviceBanned && (
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)", color: "#ff3333" }}>{"\u{1F4F1}"} DEVICE BANNED</span>
+                      )}
+                      {godUser.shadowBanned && (
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "rgba(191,0,255,0.15)", border: "1px solid rgba(191,0,255,0.3)", color: "#bf00ff" }}>{"\u{1F47B}"} SHADOW BANNED</span>
+                      )}
+                      {!godUser.isBanned && !godUser.deviceBanned && !godUser.shadowBanned && (
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "rgba(0,230,118,0.1)", border: "1px solid rgba(0,230,118,0.25)", color: "#00e676" }}>{"\u{1F7E2}"} ACTIVE</span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2002,53 +2014,114 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                 <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
                   Permanently ban this user's device. They cannot create new accounts on the same device.
                 </p>
-                <button className="btn btn-full" style={{
-                  padding: "12px 0", background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)",
-                  color: "#ff5555", fontWeight: 800,
-                }} onClick={async () => {
-                  if (!confirm(`Device ban ${godUser.name}? This bans their device permanently.`)) return;
-                  setGodLoading(true);
-                  try {
-                    await deviceBanUser(godUser.uid, user.uid);
-                    showToast(`${godUser.name} device banned!`, "success");
-                    setGodUser({ ...godUser, deviceBanned: true, isBanned: true });
-                  } catch { showToast("Failed to device ban", "error"); }
-                  setGodLoading(false);
-                }} disabled={godLoading || godUser.deviceBanned}>
-                  {godUser.deviceBanned ? "\u2705 Already Device Banned" : "\u{1F6AB} Device Ban"}
-                </button>
+
+                {godUser.isBanned && (
+                  <div style={{
+                    padding: 10, borderRadius: 12, marginBottom: 12, textAlign: "center",
+                    background: "rgba(255,60,60,0.08)", border: "1px solid rgba(255,60,60,0.2)",
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#ff5555" }}>{"\u{1F534}"} User is currently BANNED</span>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn" style={{
+                    flex: 1, padding: "12px 0",
+                    background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)",
+                    color: "#ff5555", fontWeight: 800,
+                  }} onClick={async () => {
+                    if (!confirm(`Device ban ${godUser.name}? This bans their device permanently.`)) return;
+                    setGodLoading(true);
+                    try {
+                      await deviceBanUser(godUser.uid, user.uid);
+                      showToast(`${godUser.name} device banned!`, "success");
+                      setGodUser({ ...godUser, deviceBanned: true, isBanned: true });
+                    } catch { showToast("Failed to device ban", "error"); }
+                    setGodLoading(false);
+                  }} disabled={godLoading || godUser.deviceBanned}>
+                    {godUser.deviceBanned ? "\u{1F534} Already Device Banned" : "\u{1F6AB} Device Ban"}
+                  </button>
+
+                  {(godUser.deviceBanned || godUser.isBanned) && (
+                    <button className="btn" style={{
+                      flex: 1, padding: "12px 0",
+                      background: "rgba(0,230,118,0.12)", border: "1px solid rgba(0,230,118,0.3)",
+                      color: "#00e676", fontWeight: 800,
+                    }} onClick={async () => {
+                      if (!confirm(`Remove device ban and unban ${godUser.name}? They will be able to access the app again.`)) return;
+                      setGodLoading(true);
+                      try {
+                        await unbanUser(godUser.uid, user.uid);
+                        const { update: fbUpdate } = await import("firebase/database");
+                        const { ref: fbRef } = await import("firebase/database");
+                        const { db: fbDb } = await import("../lib/firebase");
+                        await fbUpdate(fbRef(fbDb, `users/${godUser.uid}`), { deviceBanned: false });
+                        showToast(`${godUser.name} fully unbanned!`, "success");
+                        setGodUser({ ...godUser, deviceBanned: false, isBanned: false });
+                      } catch { showToast("Failed to unban", "error"); }
+                      setGodLoading(false);
+                    }} disabled={godLoading}>
+                      {"\u2705"} Remove Device Ban
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
             {godTab === "shadowBan" && godUser && (
-              <div className="card" style={{ padding: 16, border: "1px solid rgba(191,0,255,0.2)" }}>
+              <div className="card" style={{ padding: 16, border: `1px solid ${godUser.shadowBanned ? "rgba(0,230,118,0.2)" : "rgba(191,0,255,0.2)"}` }}>
                 <h3 style={{ fontSize: 14, fontWeight: 800, color: "#bf00ff", marginBottom: 8 }}>{"\u{1F47B}"} Shadow Ban</h3>
                 <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 12 }}>
                   User can still use the app but their messages are hidden from others. They won't know they're banned.
                 </p>
+
+                {godUser.shadowBanned && (
+                  <div style={{
+                    padding: 10, borderRadius: 12, marginBottom: 12, textAlign: "center",
+                    background: "rgba(191,0,255,0.08)", border: "1px solid rgba(191,0,255,0.2)",
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#ff5555" }}>{"\u{1F534}"} User is SHADOW BANNED</span>
+                  </div>
+                )}
+
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn" style={{
-                    flex: 1, padding: "12px 0",
-                    background: godUser.shadowBanned ? "rgba(0,230,118,0.12)" : "rgba(191,0,255,0.15)",
-                    border: godUser.shadowBanned ? "1px solid rgba(0,230,118,0.3)" : "1px solid rgba(191,0,255,0.3)",
-                    color: godUser.shadowBanned ? "#00e676" : "#bf00ff", fontWeight: 800,
-                  }} onClick={async () => {
-                    setGodLoading(true);
-                    try {
-                      if (godUser.shadowBanned) {
-                        await removeShadowBan(godUser.uid, user.uid);
-                        showToast(`Shadow ban removed from ${godUser.name}`, "success");
-                        setGodUser({ ...godUser, shadowBanned: false });
-                      } else {
+                  {!godUser.shadowBanned && (
+                    <button className="btn" style={{
+                      flex: 1, padding: "12px 0",
+                      background: "rgba(191,0,255,0.15)",
+                      border: "1px solid rgba(191,0,255,0.3)",
+                      color: "#bf00ff", fontWeight: 800,
+                    }} onClick={async () => {
+                      setGodLoading(true);
+                      try {
                         await shadowBanUser(godUser.uid, user.uid);
                         showToast(`${godUser.name} shadow banned!`, "success");
                         setGodUser({ ...godUser, shadowBanned: true });
-                      }
-                    } catch { showToast("Failed", "error"); }
-                    setGodLoading(false);
-                  }} disabled={godLoading}>
-                    {godUser.shadowBanned ? "\u2705 Remove Shadow Ban" : "\u{1F47B} Apply Shadow Ban"}
-                  </button>
+                      } catch { showToast("Failed", "error"); }
+                      setGodLoading(false);
+                    }} disabled={godLoading}>
+                      {"\u{1F47B}"} Apply Shadow Ban
+                    </button>
+                  )}
+
+                  {godUser.shadowBanned && (
+                    <button className="btn" style={{
+                      flex: 1, padding: "14px 0",
+                      background: "rgba(0,230,118,0.15)",
+                      border: "2px solid rgba(0,230,118,0.4)",
+                      color: "#00e676", fontWeight: 800, fontSize: 14,
+                    }} onClick={async () => {
+                      setGodLoading(true);
+                      try {
+                        await removeShadowBan(godUser.uid, user.uid);
+                        showToast(`Shadow ban removed from ${godUser.name}`, "success");
+                        setGodUser({ ...godUser, shadowBanned: false });
+                      } catch { showToast("Failed", "error"); }
+                      setGodLoading(false);
+                    }} disabled={godLoading}>
+                      {"\u2705"} Lift Shadow Ban
+                    </button>
+                  )}
                 </div>
               </div>
             )}
