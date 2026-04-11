@@ -3,6 +3,8 @@
 ## Overview
 Galaxy Voice Chat is a dual-platform project comprising `Galaxy Mobile` (React Native/Expo) and `Galaxy Web` (React/Vite). Both applications share a single Firebase project (`chalotalk-67106`). The project aims to provide a rich, interactive voice chat experience with a strong emphasis on real-time communication, social features, and a distinctive visual design.
 
+**Serving Path:** The web app is served at the root `/` (both development and production). The APK build also uses `BASE_PATH=/` via the `build:android` script.
+
 **Key Capabilities:**
 - Real-time voice chat powered by Agora RTC.
 - Comprehensive social features including user profiles, following, friend requests, "Moments" grid feed, and "Explore" vertical feed with video auto-play.

@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/galaxy-web/"
+previewPath = "/"
 title = "Galaxy Voice Chat Web"
 version = "1.0.0"
 id = "artifacts/galaxy-web"
@@ -11,7 +11,7 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/galaxy-web/" ]
+paths = [ "/" ]
 localPort = 24090
 
 [services.development]
@@ -28,4 +28,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "24090"
-BASE_PATH = "/galaxy-web/"
+BASE_PATH = "/"
