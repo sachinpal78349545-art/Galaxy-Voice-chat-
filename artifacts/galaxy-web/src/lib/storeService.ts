@@ -2,8 +2,9 @@ import { ref, get, update, runTransaction } from "firebase/database";
 import { db } from "./firebase";
 import { addTransaction } from "./userService";
 
-const frameUr1 = "/ur.1.png";
-const frameUr2 = "/ur.2.png";
+const basePath = import.meta.env.BASE_URL || "/";
+const frameUr1 = `${basePath}ur.1.png`;
+const frameUr2 = `${basePath}ur.2.png`;
 
 export interface StoreItem {
   id: string;
