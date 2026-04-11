@@ -1204,7 +1204,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     </p>
 
                     {([
-                      { duration: "7h" as BanDuration, label: "7 Hours Ban", desc: "Temporary restriction", icon: "\u23F0" },
+                      { duration: "4h" as BanDuration, label: "4 Hours Ban", desc: "Temporary restriction", icon: "\u23F0" },
                       { duration: "24h" as BanDuration, label: "24 Hours Ban", desc: "Daily restriction", icon: "\u{1F4C5}" },
                       { duration: "7d" as BanDuration, label: "7 Days Ban", desc: "Weekly restriction", icon: "\u{1F4C6}" },
                       { duration: "permanent" as BanDuration, label: "Permanent ID Ban", desc: "Total access block", icon: "\u{1F6AB}" },
@@ -1255,7 +1255,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                         if (!confirm(`Unban ${viewingProfile!.name}? They will be able to access the app again.`)) return;
                         setBanLoading(true);
                         try {
-                          await unbanUser(viewingProfile!.uid);
+                          await unbanUser(viewingProfile!.uid, user.uid);
                           const refreshed = await getUser(viewingProfile!.uid);
                           if (refreshed) setViewingProfile(refreshed);
                           showToast(`${viewingProfile!.name} has been unbanned`, "success");
@@ -2036,11 +2036,11 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     setGodLoading(true);
                     try {
                       if (godUser.shadowBanned) {
-                        await removeShadowBan(godUser.uid);
+                        await removeShadowBan(godUser.uid, user.uid);
                         showToast(`Shadow ban removed from ${godUser.name}`, "success");
                         setGodUser({ ...godUser, shadowBanned: false });
                       } else {
-                        await shadowBanUser(godUser.uid);
+                        await shadowBanUser(godUser.uid, user.uid);
                         showToast(`${godUser.name} shadow banned!`, "success");
                         setGodUser({ ...godUser, shadowBanned: true });
                       }

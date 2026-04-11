@@ -620,7 +620,7 @@ export function canChatSync(profileA: UserProfile, profileB: UserProfile): boole
 }
 
 export function isSuperAdmin(user: UserProfile): boolean {
-  return user.userId === SUPER_ADMIN_USER_ID || user.isSuperAdmin === true;
+  return user.userId === SUPER_ADMIN_USER_ID;
 }
 
 export function isOfficialOrAdmin(user: UserProfile): boolean {
@@ -645,13 +645,17 @@ export async function ensureSuperAdmin(uid: string): Promise<void> {
   await update(ref(db, `users/${uid}`), { isSuperAdmin: true });
 }
 
-export type BanDuration = "7h" | "24h" | "7d" | "permanent";
+export type BanDuration = "4h" | "24h" | "7d" | "permanent";
 
 export async function banUser(targetUid: string, duration: BanDuration, bannedByUid: string): Promise<void> {
+  const caller = await getUser(bannedByUid);
+  if (!caller || caller.userId !== SUPER_ADMIN_USER_ID) {
+    throw new Error("Unauthorized: only Super Admin can ban users");
+  }
   let banUntil: number | null = null;
   const now = Date.now();
   switch (duration) {
-    case "7h": banUntil = now + 7 * 60 * 60 * 1000; break;
+    case "4h": banUntil = now + 4 * 60 * 60 * 1000; break;
     case "24h": banUntil = now + 24 * 60 * 60 * 1000; break;
     case "7d": banUntil = now + 7 * 24 * 60 * 60 * 1000; break;
     case "permanent": banUntil = null; break;
@@ -664,7 +668,13 @@ export async function banUser(targetUid: string, duration: BanDuration, bannedBy
   });
 }
 
-export async function unbanUser(targetUid: string): Promise<void> {
+export async function unbanUser(targetUid: string, callerUid?: string): Promise<void> {
+  if (callerUid) {
+    const caller = await getUser(callerUid);
+    if (!caller || caller.userId !== SUPER_ADMIN_USER_ID) {
+      throw new Error("Unauthorized: only Super Admin can unban users");
+    }
+  }
   await update(ref(db, `users/${targetUid}`), {
     isBanned: false,
     banUntil: null,
@@ -718,6 +728,10 @@ export async function getUserByUserId(userId: string): Promise<UserProfile | nul
 }
 
 export async function deviceBanUser(targetUid: string, bannedByUid: string): Promise<void> {
+  const caller = await getUser(bannedByUid);
+  if (!caller || caller.userId !== SUPER_ADMIN_USER_ID) {
+    throw new Error("Unauthorized: only Super Admin can device ban users");
+  }
   await update(ref(db, `users/${targetUid}`), {
     isBanned: true,
     banUntil: null,
@@ -744,11 +758,23 @@ export async function saveDeviceId(uid: string, deviceId: string): Promise<void>
   await update(ref(db, `users/${uid}`), { deviceId });
 }
 
-export async function shadowBanUser(targetUid: string): Promise<void> {
+export async function shadowBanUser(targetUid: string, callerUid?: string): Promise<void> {
+  if (callerUid) {
+    const caller = await getUser(callerUid);
+    if (!caller || caller.userId !== SUPER_ADMIN_USER_ID) {
+      throw new Error("Unauthorized: only Super Admin can shadow ban users");
+    }
+  }
   await update(ref(db, `users/${targetUid}`), { shadowBanned: true });
 }
 
-export async function removeShadowBan(targetUid: string): Promise<void> {
+export async function removeShadowBan(targetUid: string, callerUid?: string): Promise<void> {
+  if (callerUid) {
+    const caller = await getUser(callerUid);
+    if (!caller || caller.userId !== SUPER_ADMIN_USER_ID) {
+      throw new Error("Unauthorized: only Super Admin can remove shadow bans");
+    }
+  }
   await update(ref(db, `users/${targetUid}`), { shadowBanned: false });
 }
 
