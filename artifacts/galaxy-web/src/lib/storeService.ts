@@ -2,8 +2,8 @@ import { ref, get, update, runTransaction } from "firebase/database";
 import { db } from "./firebase";
 import { addTransaction } from "./userService";
 
-import frameUr1 from "/ur.1.png?url";
-import frameUr2 from "/ur.2.png?url";
+const frameUr1 = "/ur.1.png";
+const frameUr2 = "/ur.2.png";
 
 export interface StoreItem {
   id: string;

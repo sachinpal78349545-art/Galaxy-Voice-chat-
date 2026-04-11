@@ -4,10 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.galaxy.voice',
   appName: 'Galaxy Voice Chat',
   webDir: 'dist/public',
-  server: {
-    androidScheme: 'https',
-    hostname: 'localhost',
-  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
@@ -22,7 +18,6 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: true,
-    webContentsDebuggingEnabled: false,
   },
 };
 
