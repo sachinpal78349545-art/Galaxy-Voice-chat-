@@ -143,7 +143,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
         )}
         {pngPath && isActive && (
           <img
-            src={`${import.meta.env.BASE_URL}${pngPath}`}
+            src={pngPath}
             alt=""
             className="png-frame-seat"
           />

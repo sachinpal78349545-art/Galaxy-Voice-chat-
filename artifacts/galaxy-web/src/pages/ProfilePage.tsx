@@ -477,7 +477,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                 <>
                   {isPngFrame(activeFrame) && (() => {
                     const pngPath = getPngFramePath(activeFrame);
-                    return pngPath ? <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" className="png-frame-profile" /> : null;
+                    return pngPath ? <img src={pngPath} alt="" className="png-frame-profile" /> : null;
                   })()}
                   <div style={{
                     width: 100, height: 100, borderRadius: 50, fontSize: 50,
@@ -2668,7 +2668,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                       return pngPath ? (
                         <div style={{ position: "relative", width: 60, height: 60 }}>
                           <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(108,92,231,0.3)", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }} />
-                          <img src={`${import.meta.env.BASE_URL}${pngPath}`} alt="" style={{ position: "absolute", inset: -4, width: "calc(100% + 8px)", height: "calc(100% + 8px)", objectFit: "contain", pointerEvents: "none" }} />
+                          <img src={pngPath} alt="" style={{ position: "absolute", inset: -4, width: "calc(100% + 8px)", height: "calc(100% + 8px)", objectFit: "contain", pointerEvents: "none" }} />
                         </div>
                       ) : null;
                     })()}
@@ -2778,7 +2778,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                             <FramePreview frameId={item.id} size={38} />
                           ) : isPngFrame(item.id) ? (() => {
                             const pp = getPngFramePath(item.id);
-                            return pp ? <img src={`${import.meta.env.BASE_URL}${pp}`} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : item.icon;
+                            return pp ? <img src={pp} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : item.icon;
                           })() : item.icon}
                         </div>
                         <div style={{ flex: 1 }}>

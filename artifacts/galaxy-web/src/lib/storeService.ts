@@ -2,6 +2,9 @@ import { ref, get, update, runTransaction } from "firebase/database";
 import { db } from "./firebase";
 import { addTransaction } from "./userService";
 
+import frameUr1 from "/ur.1.png?url";
+import frameUr2 from "/ur.2.png?url";
+
 export interface StoreItem {
   id: string;
   name: string;
@@ -78,8 +81,8 @@ export function getStoreItem(itemId: string): StoreItem | undefined {
 }
 
 const PNG_FRAME_MAP: Record<string, string> = {
-  frame_divine_wing: "assets/ur.1.png",
-  frame_crystal_pink: "assets/ur.2.png",
+  frame_divine_wing: frameUr1,
+  frame_crystal_pink: frameUr2,
 };
 
 export const DEFAULT_FRAME_ID = "frame_divine_wing";
