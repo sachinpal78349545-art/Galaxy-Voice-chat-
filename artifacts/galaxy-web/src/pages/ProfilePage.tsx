@@ -488,240 +488,382 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
     }
   };
 
+  const MENU_GROUPS = [
+    {
+      title: "My Stuff",
+      items: [
+        { icon: "\u{1F6CD}\uFE0F", label: "Store", action: "store", desc: "Frames, effects & themes" },
+        { icon: "\u{1F392}", label: "Backpack", action: "backpack", desc: "Equipped items" },
+        { icon: "\u{1F4B0}", label: "My Wallet", action: "wallet", desc: `${user.coins.toLocaleString()} coins` },
+        { icon: "\u{1F46A}", label: "Family", action: "family", desc: "Join or create" },
+      ],
+    },
+    {
+      title: "Social",
+      items: [
+        { icon: "\u{1F91D}", label: "Friend Requests", action: "friendRequests", desc: friendRequests.length > 0 ? `${friendRequests.length} pending` : "No pending", badge: friendRequests.length || 0 },
+        { icon: "\u{1F465}", label: "Friends List", action: "friendsList", desc: `${user.friends || 0} friends` },
+        { icon: "\u{1F50D}", label: "Find Users", action: "search", desc: "Search by ID or name" },
+      ],
+    },
+    {
+      title: "Rewards",
+      items: [
+        { icon: "\u2705", label: "Daily Tasks", action: "dailyTasks", desc: "Earn bonus coins" },
+        { icon: "\u{1F381}", label: "Daily Reward", action: "daily", desc: "Claim free coins" },
+        { icon: "\u{1F3C6}", label: "Achievements", action: "achievements", desc: `${unlockedCount}/${achievements.length} unlocked` },
+      ],
+    },
+    {
+      title: "Settings",
+      items: [
+        { icon: "\u270F\uFE0F", label: "Edit Profile", action: "edit", desc: "Name, avatar & bio" },
+        { icon: "\u{1F30D}", label: "Language", action: "language", desc: getCurrentLanguage().toUpperCase() },
+        { icon: "\u{1F512}", label: "Privacy & Settings", action: "privacy", desc: "Control who sees you" },
+        { icon: "\u{1F6AB}", label: "Blocked Users", action: "blocked", desc: `${(user.blockedList || []).length} blocked` },
+      ],
+    },
+    {
+      title: "Support",
+      items: [
+        { icon: "\u{1F4AC}", label: "Send Feedback", action: "feedback", desc: "Help us improve" },
+        { icon: "\u2753", label: "Help Center", action: "help", desc: "FAQs & guides" },
+        { icon: "\u26A0\uFE0F", label: "Report a Problem", action: "report", desc: "Report bugs or issues" },
+      ],
+    },
+  ];
+
   return (
     <div className="page-scroll no-screenshot">
       <div style={{
-        padding: "52px 16px 24px",
-        background: "linear-gradient(180deg, rgba(108,92,231,0.14) 0%, rgba(108,92,231,0.02) 60%, transparent 100%)",
+        position: "relative",
+        minHeight: 280,
+        background: "linear-gradient(180deg, rgba(108,92,231,0.22) 0%, rgba(62,35,160,0.12) 40%, rgba(15,5,30,0.95) 100%)",
+        overflow: "hidden",
       }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-          <div style={{ position: "relative", paddingTop: isAdmin ? 16 : 0, paddingBottom: isAdmin ? 20 : 0 }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "radial-gradient(ellipse 120% 60% at 50% 0%, rgba(108,92,231,0.18) 0%, transparent 70%)",
+        }} />
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, height: 120,
+          background: `url("data:image/svg+xml,%3Csvg width='400' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3CradialGradient id='a'%3E%3Cstop offset='0' stop-color='%236C5CE7' stop-opacity='.15'/%3E%3Cstop offset='1' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='200' cy='60' r='120' fill='url(%23a)'/%3E%3C/svg%3E") center/cover no-repeat`,
+          opacity: 0.6,
+        }} />
+
+        <div style={{ position: "relative", zIndex: 2, padding: "56px 16px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div style={{ position: "relative", marginBottom: 12 }}>
             {isAdmin ? (
-              <SuperAdminAvatar src={user.avatar} userId={user.userId || ""} size={100} onClick={onEditProfile} />
+              <SuperAdminAvatar src={user.avatar} userId={user.userId || ""} size={110} onClick={onEditProfile} />
             ) : (() => {
               const activeFrame = user.equippedFrame || DEFAULT_FRAME_ID;
               if (isAnimatedFrame(activeFrame)) {
-                return <FrameAvatar frameId={activeFrame} src={user.avatar} size={100} onClick={onEditProfile} />;
+                return <FrameAvatar frameId={activeFrame} src={user.avatar} size={110} onClick={onEditProfile} />;
               }
               return (
-                <>
+                <div style={{ position: "relative" }}>
                   {isPngFrame(activeFrame) && (() => {
                     const pngPath = getPngFramePath(activeFrame);
                     return pngPath ? <img src={pngPath} alt="" className="png-frame-profile" /> : null;
                   })()}
                   <div style={{
-                    width: 100, height: 100, borderRadius: 50, fontSize: 50,
+                    width: 110, height: 110, borderRadius: 55, fontSize: 52,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "linear-gradient(135deg, rgba(108,92,231,0.25), rgba(108,92,231,0.1))",
-                    border: "none",
-                    boxShadow: "none",
+                    background: "linear-gradient(135deg, rgba(108,92,231,0.3), rgba(108,92,231,0.1))",
+                    border: "3px solid rgba(108,92,231,0.35)",
+                    boxShadow: "0 4px 24px rgba(108,92,231,0.25), 0 0 0 4px rgba(108,92,231,0.08)",
                     cursor: "pointer", overflow: "hidden",
                   }} onClick={onEditProfile}>
                     {user.avatar?.startsWith?.("http") ? (
                       <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
                     ) : (user.avatar && user.avatar.length <= 4 ? user.avatar : "\u{1F464}")}
                   </div>
-                </>
+                </div>
               );
             })()}
             {user.online && !isAdmin && (
-              <div style={{ position: "absolute", bottom: 6, right: 6, width: 16, height: 16, borderRadius: 8, background: "#00e676", border: "2.5px solid #0F0F1A", boxShadow: "0 0 8px rgba(0,230,118,0.4)" }} />
+              <div style={{ position: "absolute", bottom: 8, right: 8, width: 18, height: 18, borderRadius: 9, background: "#00e676", border: "3px solid #0F0F1A", boxShadow: "0 0 10px rgba(0,230,118,0.5)" }} />
             )}
             {!isAdmin && (
               <div style={{
-                position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14,
-                background: "linear-gradient(135deg, #6C5CE7, #8B7CF6)", border: "2px solid #0F0F1A", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
-                boxShadow: "0 2px 8px rgba(108,92,231,0.4)",
+                position: "absolute", bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16,
+                background: "linear-gradient(135deg, #6C5CE7, #8B7CF6)", border: "2.5px solid #0F0F1A", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+                boxShadow: "0 2px 10px rgba(108,92,231,0.5)",
               }} onClick={onEditProfile}>{"\u270F\uFE0F"}</div>
             )}
           </div>
 
-          <div style={{ textAlign: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
-              <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.name}</h2>
-              {user.vip && <span className="badge badge-vip">{"\u{1F451}"} VIP</span>}
+          <div style={{ textAlign: "center", marginBottom: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 }}>
+              <h2 style={{ fontSize: 24, fontWeight: 900, letterSpacing: -0.5 }}>{user.name}</h2>
+              {user.vip && <span className="badge badge-vip" style={{ fontSize: 10, padding: "3px 8px" }}>{"\u{1F451}"} VIP</span>}
               {isAdmin ? (
-                <span className="super-admin-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>
-                  {"\u{1F451}"} SUPER ADMIN
-                </span>
+                <span className="super-admin-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>{"\u{1F451}"} SUPER ADMIN</span>
               ) : user.globalRole === "official" ? (
-                <span className="official-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>
-                  {"\u{1F6E1}\uFE0F"} OFFICIAL
-                </span>
+                <span className="official-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>{"\u{1F6E1}\uFE0F"} OFFICIAL</span>
               ) : null}
             </div>
-            <p style={{ fontSize: 13, color: "rgba(162,155,254,0.5)", marginBottom: 4, fontFamily: "monospace", letterSpacing: 1 }}>
-              ID: {user.userId || "N/A"}
-            </p>
-            <p style={{ fontSize: 10, color: "rgba(162,155,254,0.25)", marginBottom: 8, fontFamily: "monospace" }}>
-              UID: {user.uid.slice(0, 14).toUpperCase()}
-            </p>
-            <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 12, color: "rgba(162,155,254,0.55)", fontFamily: "monospace", letterSpacing: 1.5, background: "rgba(108,92,231,0.08)", padding: "3px 10px", borderRadius: 20 }}>
+                ID: {user.userId || "N/A"}
+              </span>
               {isAdmin ? (
-                <>
-                  <div className="super-admin-tag-wrapper">
-                    <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_v2.png`} alt="Super Admin" className="super-admin-tag" style={{ height: 28 }} />
-                    <div className="super-admin-particles" />
-                  </div>
-                  <span className="founder-badge">{"\u{1F451}"} Founder</span>
-                </>
+                <div className="super-admin-tag-wrapper" style={{ display: "inline-flex" }}>
+                  <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_v2.png`} alt="Super Admin" className="super-admin-tag" style={{ height: 24 }} />
+                  <div className="super-admin-particles" />
+                </div>
               ) : (user.globalRole === "official") ? (
-                <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 22, filter: "drop-shadow(0 0 6px rgba(0,206,201,0.5)) drop-shadow(0 0 12px rgba(9,132,227,0.3))" }} />
-              ) : (
-                <span className="badge badge-accent" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u2B50"} Lv.{user.level}</span>
-              )}
-              <span className="badge badge-gold" style={{ fontSize: 11, padding: "4px 12px" }}>{"\u{1F3C6}"} {unlockedCount}/{achievements.length}</span>
+                <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 20, filter: "drop-shadow(0 0 6px rgba(0,206,201,0.5))" }} />
+              ) : null}
             </div>
+            {user.bio && (
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, maxWidth: 280, margin: "0 auto 8px", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{user.bio}</p>
+            )}
           </div>
 
-          <div style={{ width: "100%", marginTop: 4 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 6 }}>
-              <span>Level {user.level}</span><span>{user.xp.toLocaleString()}/{(user.level * 1000).toLocaleString()} XP</span>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6, marginBottom: 14,
+          }}>
+            {isAdmin ? (
+              <span className="founder-badge" style={{ fontSize: 10 }}>{"\u{1F451}"} Founder</span>
+            ) : (
+              <span style={{
+                fontSize: 10, fontWeight: 800, padding: "4px 14px", borderRadius: 20,
+                background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(139,124,246,0.1))",
+                border: "1px solid rgba(108,92,231,0.3)", color: "#A29BFE",
+              }}>{"\u2B50"} Level {user.level}</span>
+            )}
+            <span style={{
+              fontSize: 10, fontWeight: 800, padding: "4px 14px", borderRadius: 20,
+              background: "linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05))",
+              border: "1px solid rgba(255,215,0,0.25)", color: "#FFD700",
+            }}>{"\u{1F3C6}"} {unlockedCount}/{achievements.length}</span>
+          </div>
+
+          <div style={{ width: "100%", maxWidth: 320, marginBottom: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "rgba(162,155,254,0.4)", marginBottom: 5 }}>
+              <span>Lv.{user.level}</span><span>{user.xp.toLocaleString()}/{(user.level * 1000).toLocaleString()} XP</span>
             </div>
-            <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)" }}>
+            <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
               <div style={{
                 height: "100%", borderRadius: 3, width: `${xpPct}%`,
-                background: "linear-gradient(90deg,#6C5CE7,#A29BFE,#8B7CF6)",
-                boxShadow: "0 0 10px rgba(108,92,231,0.5)", transition: "width 0.6s ease",
+                background: "linear-gradient(90deg, #6C5CE7, #A29BFE, #c084fc)",
+                boxShadow: "0 0 12px rgba(108,92,231,0.5)", transition: "width 0.6s ease",
               }} />
             </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 14, marginTop: 8, width: "100%", justifyContent: "center", flexWrap: "wrap" }}>
-            {[
-              { label: "Followers", val: (user.followers || 0).toLocaleString(), action: () => { setShowFollowersList(true); loadFollowers(); } },
-              { label: "Following", val: (user.following || 0).toLocaleString(), action: () => { setShowFollowingList(true); loadFollowing(); } },
-              { label: "Friends", val: (user.friends || 0).toLocaleString(), action: () => { setShowFriendsList(true); loadFriends(); } },
-              { label: "Moments", val: (momentCount).toLocaleString(), icon: "\u{1F4F8}" },
-              { label: "Gifts", val: (user.totalEarnings || 0).toLocaleString(), icon: "\u{1F381}" },
-              { label: "Coins", val: user.coins.toLocaleString(), icon: "\u{1F48E}", action: () => setShowWallet(true) },
-            ].map(s => (
-              <div key={s.label} onClick={"action" in s && s.action ? s.action as () => void : undefined} style={{ textAlign: "center", minWidth: 52, cursor: "action" in s && s.action ? "pointer" : "default" }}>
-                <p style={{ fontSize: 16, fontWeight: 900, lineHeight: 1 }}>{"icon" in s && s.icon ? `${s.icon} ` : ""}{s.val}</p>
-                <p style={{ fontSize: 9, color: "rgba(162,155,254,0.45)", marginTop: 4 }}>{s.label}</p>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
-      <div style={{ padding: "0 14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div className="card card-glow" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px" }}>
-          <div style={{ fontSize: 28 }}>{"\u{1F48E}"}</div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", marginBottom: 2 }}>Coin Balance</p>
-            <p style={{ fontSize: 22, fontWeight: 900 }}>{user.coins.toLocaleString()}</p>
-          </div>
-          <button className="btn btn-gold btn-sm" onClick={() => setShowWallet(true)}>
-            {"\uFF0B"} Recharge
-          </button>
-        </div>
-
-        {friendRequests.length > 0 && (
-          <div className="card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", cursor: "pointer", border: "1px solid rgba(108,92,231,0.3)" }} onClick={() => setShowFriendRequests(true)}>
-            <div style={{ fontSize: 28 }}>{"\u{1F91D}"}</div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 700 }}>Friend Requests</p>
-              <p style={{ fontSize: 11, color: "rgba(162,155,254,0.45)" }}>{friendRequests.length} pending</p>
+      <div style={{
+        margin: "-32px 12px 0", position: "relative", zIndex: 10,
+        background: "rgba(20,12,40,0.85)", backdropFilter: "blur(20px)",
+        borderRadius: 20, border: "1px solid rgba(108,92,231,0.15)",
+        padding: "18px 12px", boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+      }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4 }}>
+          {[
+            { label: "Followers", val: (user.followers || 0).toLocaleString(), action: () => { setShowFollowersList(true); loadFollowers(); } },
+            { label: "Following", val: (user.following || 0).toLocaleString(), action: () => { setShowFollowingList(true); loadFollowing(); } },
+            { label: "Friends", val: (user.friends || 0).toLocaleString(), action: () => { setShowFriendsList(true); loadFriends(); } },
+            { label: "Moments", val: (momentCount).toLocaleString() },
+          ].map(s => (
+            <div key={s.label} onClick={"action" in s && s.action ? s.action as () => void : undefined}
+              style={{
+                textAlign: "center", padding: "8px 4px", cursor: "action" in s && s.action ? "pointer" : "default",
+                borderRadius: 12, transition: "background 0.15s",
+              }}
+              onMouseEnter={e => { if ("action" in s && s.action) e.currentTarget.style.background = "rgba(108,92,231,0.08)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1, color: "#fff" }}>{s.val}</p>
+              <p style={{ fontSize: 9, color: "rgba(162,155,254,0.5)", marginTop: 5, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</p>
             </div>
-            <span className="badge badge-accent">{friendRequests.length}</span>
-          </div>
-        )}
-
-        {user.bio && (
-          <div className="card" style={{ padding: "14px 16px" }}>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6 }}>{user.bio}</p>
-          </div>
-        )}
-
-        <div className="card card-glow" style={{ padding: "6px 8px" }}>
-          {MENU_ITEMS.map((item, i) => (
-            <React.Fragment key={item.label}>
-              <button
-                onClick={() => handleMenu(item.action)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 14,
-                  width: "100%", padding: "13px 10px", background: "none", border: "none",
-                  cursor: "pointer", borderRadius: 12, fontFamily: "inherit", transition: "background 0.15s",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "none")}
-              >
-                <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
-                <span style={{ flex: 1, fontSize: 14, color: "rgba(255,255,255,0.8)", textAlign: "left", fontWeight: 600 }}>{item.label}</span>
-                {item.action === "friendRequests" && friendRequests.length > 0 && (
-                  <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: "#6C5CE7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, padding: "0 4px" }}>{friendRequests.length}</span>
-                )}
-                <span style={{ color: "rgba(162,155,254,0.3)", fontSize: 14 }}>{"\u203A"}</span>
-              </button>
-              {i < MENU_ITEMS.length - 1 && <div className="divider" />}
-            </React.Fragment>
           ))}
         </div>
 
+        <div style={{ height: 1, background: "rgba(108,92,231,0.1)", margin: "12px 0" }} />
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-primary" style={{ flex: 1, fontSize: 12, padding: "10px 0", borderRadius: 14, fontWeight: 700 }}
+            onClick={onEditProfile}>
+            {"\u270F\uFE0F"} Edit Profile
+          </button>
+          <button style={{
+            flex: 1, fontSize: 12, padding: "10px 0", borderRadius: 14, fontWeight: 700,
+            background: "linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,215,0,0.06))",
+            border: "1px solid rgba(255,215,0,0.25)", color: "#FFD700", cursor: "pointer", fontFamily: "inherit",
+          }} onClick={() => setShowWallet(true)}>
+            {"\u{1F48E}"} {user.coins.toLocaleString()}
+          </button>
+          <button style={{
+            width: 44, height: 40, borderRadius: 14, border: "1px solid rgba(108,92,231,0.2)",
+            background: "rgba(108,92,231,0.08)", cursor: "pointer", fontSize: 16,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }} onClick={() => handleMenu("store")}>
+            {"\u{1F6CD}\uFE0F"}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ padding: "16px 12px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {friendRequests.length > 0 && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 16,
+            background: "linear-gradient(135deg, rgba(108,92,231,0.12), rgba(108,92,231,0.04))",
+            border: "1px solid rgba(108,92,231,0.2)", cursor: "pointer",
+          }} onClick={() => setShowFriendRequests(true)}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(108,92,231,0.15)", fontSize: 20,
+            }}>{"\u{1F91D}"}</div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700 }}>Friend Requests</p>
+              <p style={{ fontSize: 10, color: "rgba(162,155,254,0.45)" }}>{friendRequests.length} pending</p>
+            </div>
+            <span style={{
+              minWidth: 22, height: 22, borderRadius: 11, background: "#6C5CE7",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 10, fontWeight: 800, padding: "0 6px",
+            }}>{friendRequests.length}</span>
+          </div>
+        )}
+
+        {MENU_GROUPS.map((group) => (
+          <div key={group.title}>
+            <p style={{ fontSize: 10, fontWeight: 800, color: "rgba(162,155,254,0.35)", textTransform: "uppercase", letterSpacing: 1.5, padding: "0 4px", marginBottom: 8 }}>{group.title}</p>
+            <div style={{
+              borderRadius: 18, overflow: "hidden",
+              background: "rgba(20,12,40,0.6)", backdropFilter: "blur(10px)",
+              border: "1px solid rgba(108,92,231,0.08)",
+            }}>
+              {group.items.map((item, i) => (
+                <React.Fragment key={item.label}>
+                  <button
+                    onClick={() => handleMenu(item.action)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      width: "100%", padding: "13px 14px", background: "none", border: "none",
+                      cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(108,92,231,0.06)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                  >
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 10,
+                      background: "rgba(108,92,231,0.08)",
+                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0,
+                    }}>{item.icon}</div>
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{item.label}</p>
+                      <p style={{ fontSize: 10, color: "rgba(162,155,254,0.35)", marginTop: 1 }}>{item.desc}</p>
+                    </div>
+                    {"badge" in item && (item as any).badge > 0 && (
+                      <span style={{
+                        minWidth: 20, height: 20, borderRadius: 10, background: "#6C5CE7",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 9, fontWeight: 800, padding: "0 5px",
+                      }}>{(item as any).badge}</span>
+                    )}
+                    <span style={{ color: "rgba(162,155,254,0.2)", fontSize: 16, fontWeight: 300 }}>{"\u203A"}</span>
+                  </button>
+                  {i < group.items.length - 1 && (
+                    <div style={{ height: 1, background: "rgba(108,92,231,0.06)", marginLeft: 62 }} />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        ))}
+
         {(user.globalRole === "official" || isAdmin) && (
-          <button
-            className="btn btn-full"
-            style={{
-              padding: "14px 0", fontSize: 15, fontWeight: 800,
-              background: "linear-gradient(135deg, rgba(0,255,255,0.08), rgba(191,0,255,0.08))",
-              border: "1.5px solid rgba(0,255,255,0.3)",
-              color: "#00ffff",
-            }}
-            onClick={() => setShowOfficialRules(true)}
-          >
-            {"\u{1F4DC}"} Official Guidelines
-          </button>
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,215,0,0.4)", textTransform: "uppercase", letterSpacing: 1.5, padding: "0 4px", marginBottom: 8 }}>Administration</p>
+            <div style={{
+              borderRadius: 18, overflow: "hidden",
+              background: "rgba(20,12,40,0.6)", backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,215,0,0.08)",
+            }}>
+              {(user.globalRole === "official" || isAdmin) && (
+                <button onClick={() => setShowOfficialRules(true)} style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  width: "100%", padding: "13px 14px", background: "none", border: "none",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(0,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F4DC}"}</div>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <p style={{ fontSize: 14, color: "#00ffff", fontWeight: 600 }}>Official Guidelines</p>
+                    <p style={{ fontSize: 10, color: "rgba(0,255,255,0.3)", marginTop: 1 }}>Rules & policies</p>
+                  </div>
+                  <span style={{ color: "rgba(0,255,255,0.2)", fontSize: 16 }}>{"\u203A"}</span>
+                </button>
+              )}
+              {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
+              {isAdmin && (
+                <button onClick={() => handleMenu("admin")} style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  width: "100%", padding: "13px 14px", background: "none", border: "none",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,215,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F6E1}\uFE0F"}</div>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <p style={{ fontSize: 14, color: "#FFD700", fontWeight: 600 }}>Admin Panel</p>
+                    <p style={{ fontSize: 10, color: "rgba(255,215,0,0.3)", marginTop: 1 }}>Manage users & rooms</p>
+                  </div>
+                  <span style={{ color: "rgba(255,215,0,0.2)", fontSize: 16 }}>{"\u203A"}</span>
+                </button>
+              )}
+              {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
+              {isAdmin && (
+                <button onClick={() => setShowGodMode(true)} style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  width: "100%", padding: "13px 14px", background: "none", border: "none",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, rgba(191,0,255,0.15), rgba(0,255,255,0.08))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u26A1"}</div>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}><span style={{ color: "#bf00ff" }}>God</span> <span style={{ color: "#00ffff" }}>Mode</span></p>
+                    <p style={{ fontSize: 10, color: "rgba(191,0,255,0.3)", marginTop: 1 }}>Full control panel</p>
+                  </div>
+                  <span style={{ color: "rgba(191,0,255,0.2)", fontSize: 16 }}>{"\u203A"}</span>
+                </button>
+              )}
+              {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
+              {isAdmin && (
+                <button onClick={() => handleMenu("reportQueue")} style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  width: "100%", padding: "13px 14px", background: "none", border: "none",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,150,50,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F4CB}"}</div>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <p style={{ fontSize: 14, color: "#FFA726", fontWeight: 600 }}>Report Queue</p>
+                    <p style={{ fontSize: 10, color: "rgba(255,150,50,0.3)", marginTop: 1 }}>Review user reports</p>
+                  </div>
+                  <span style={{ color: "rgba(255,150,50,0.2)", fontSize: 16 }}>{"\u203A"}</span>
+                </button>
+              )}
+            </div>
+          </div>
         )}
 
-        {isAdmin && (
-          <button
-            className="btn btn-full"
-            style={{
-              padding: "14px 0", fontSize: 15, fontWeight: 800,
-              background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05))",
-              border: "1.5px solid rgba(255,215,0,0.4)",
-              color: "#FFD700",
-            }}
-            onClick={() => handleMenu("admin")}
-          >
-            {"\u{1F6E1}\uFE0F"} Admin Panel
-          </button>
-        )}
-        {isAdmin && (
-          <button
-            className="btn btn-full"
-            style={{
-              padding: "14px 0", fontSize: 15, fontWeight: 800,
-              background: "linear-gradient(135deg, rgba(191,0,255,0.3), rgba(0,255,255,0.1))",
-              border: "1.5px solid rgba(191,0,255,0.5)",
-              color: "#00ffff",
-              textShadow: "0 0 8px rgba(0,255,255,0.5)",
-            }}
-            onClick={() => setShowGodMode(true)}
-          >
-            {"\u26A1"} God Mode Control Panel
-          </button>
-        )}
-        {isAdmin && (
-          <button
-            className="btn btn-full"
-            style={{
-              padding: "14px 0", fontSize: 15, fontWeight: 800,
-              background: "linear-gradient(135deg, rgba(255,100,50,0.15), rgba(255,200,0,0.08))",
-              border: "1.5px solid rgba(255,150,50,0.4)",
-              color: "#FFA726",
-            }}
-            onClick={() => handleMenu("reportQueue")}
-          >
-            {"\u{1F4CB}"} Report Queue
-          </button>
-        )}
-
-        <button className="btn btn-danger btn-full" style={{ padding: "14px 0", fontSize: 15 }} onClick={handleLogout}>
+        <button onClick={handleLogout} style={{
+          width: "100%", padding: "14px 0", fontSize: 14, fontWeight: 700,
+          borderRadius: 16, border: "1px solid rgba(255,100,130,0.15)",
+          background: "rgba(255,100,130,0.06)", color: "rgba(255,100,130,0.7)",
+          cursor: "pointer", fontFamily: "inherit", marginTop: 4,
+          transition: "background 0.15s",
+        }}
+          onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,100,130,0.12)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,100,130,0.06)")}
+        >
           {"\u{1F6AA}"} Log Out
         </button>
+
+        <p style={{ textAlign: "center", fontSize: 9, color: "rgba(162,155,254,0.2)", padding: "8px 0 24px" }}>
+          Galaxy Voice Chat v2.0 {"\u00B7"} UID: {user.uid.slice(0, 10).toUpperCase()}
+        </p>
       </div>
 
       {showWallet && (
