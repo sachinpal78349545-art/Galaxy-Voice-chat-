@@ -27,7 +27,8 @@ export default function SearchPage({ user, onMessage, onBack }: Props) {
     setSearched(true);
     try {
       const userRes = await searchUsers(q);
-      setResults(userRes.filter(u => u.uid !== user.uid));
+      const blockedList = user.blockedList || [];
+      setResults(userRes.filter(u => u.uid !== user.uid && !blockedList.includes(u.uid)));
 
       const allRooms = await fetchRooms();
       const filtered = allRooms.filter(rm =>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ref, onValue, off, get, set, push, remove, update } from "firebase/database";
 import { db, uploadWithAppCheck } from "../lib/firebase";
-import { UserProfile, isSuperAdmin, SUPER_ADMIN_USER_ID } from "../lib/userService";
+import { UserProfile, isSuperAdmin, SUPER_ADMIN_USER_ID, isBlocked } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 
 interface Comment {
@@ -124,7 +124,9 @@ export default function ExplorePage({ user, onMessage, onNavigate }: Props) {
         commentCount: val[k].commentCount || 0,
       }));
       list.sort((a, b) => b.createdAt - a.createdAt);
-      setPosts(list);
+      const blockedList = user.blockedList || [];
+      const filtered = blockedList.length > 0 ? list.filter(p => !blockedList.includes(p.uid)) : list;
+      setPosts(filtered);
       setLoading(false);
     });
     return () => off(r);
@@ -139,7 +141,9 @@ export default function ExplorePage({ user, onMessage, onNavigate }: Props) {
       const val = snap.val();
       const list: Comment[] = Object.keys(val).map(k => ({ ...val[k], id: k }));
       list.sort((a, b) => a.createdAt - b.createdAt);
-      setComments(list);
+      const blockedList = user.blockedList || [];
+      const filteredComments = blockedList.length > 0 ? list.filter(c => !blockedList.includes(c.uid)) : list;
+      setComments(filteredComments);
       setCommentsLoading(false);
     });
     return () => off(r);

@@ -512,6 +512,53 @@ export async function wipeDummyRooms(): Promise<number> {
   return count;
 }
 
+export async function joinWaitlist(roomId: string, uid: string, name: string, avatar: string): Promise<number> {
+  const wRef = ref(db, `roomWaitlist/${roomId}`);
+  const snap = await get(wRef);
+  const list: Array<{ uid: string; name: string; avatar: string; joinedAt: number }> = snap.exists() ? Object.values(snap.val()) : [];
+
+  if (list.find(w => w.uid === uid)) {
+    return list.findIndex(w => w.uid === uid) + 1;
+  }
+
+  const entry = { uid, name, avatar, joinedAt: Date.now() };
+  const newRef = push(ref(db, `roomWaitlist/${roomId}`));
+  await set(newRef, entry);
+  return list.length + 1;
+}
+
+export async function leaveWaitlist(roomId: string, uid: string): Promise<void> {
+  const snap = await get(ref(db, `roomWaitlist/${roomId}`));
+  if (!snap.exists()) return;
+  const val = snap.val();
+  for (const key of Object.keys(val)) {
+    if (val[key].uid === uid) {
+      await remove(ref(db, `roomWaitlist/${roomId}/${key}`));
+      break;
+    }
+  }
+}
+
+export function subscribeWaitlist(roomId: string, cb: (list: Array<{ uid: string; name: string; avatar: string; joinedAt: number }>) => void): () => void {
+  const r = ref(db, `roomWaitlist/${roomId}`);
+  onValue(r, snap => {
+    if (!snap.exists()) { cb([]); return; }
+    const val = snap.val();
+    const list = Object.values(val) as Array<{ uid: string; name: string; avatar: string; joinedAt: number }>;
+    list.sort((a: any, b: any) => a.joinedAt - b.joinedAt);
+    cb(list);
+  });
+  return () => off(r);
+}
+
+export async function admitFromWaitlist(roomId: string, uid: string): Promise<void> {
+  await leaveWaitlist(roomId, uid);
+}
+
+export async function clearWaitlist(roomId: string): Promise<void> {
+  await remove(ref(db, `roomWaitlist/${roomId}`));
+}
+
 export async function setAutoEntryRoom(roomId: string, enabled: boolean): Promise<void> {
   await set(ref(db, "appConfig/autoEntryRoom"), enabled ? roomId : null);
 }

@@ -53,6 +53,56 @@ export interface LeaderboardEntry {
   totalCoins: number;
 }
 
+export interface MysteryBoxReward {
+  emoji: string;
+  name: string;
+  coins: number;
+  rarity: "common" | "rare" | "epic" | "legendary";
+}
+
+const MYSTERY_BOX_POOL: MysteryBoxReward[] = [
+  { emoji: "🌟", name: "Stardust", coins: 10, rarity: "common" },
+  { emoji: "💫", name: "Sparkle", coins: 25, rarity: "common" },
+  { emoji: "✨", name: "Glitter", coins: 50, rarity: "common" },
+  { emoji: "🎵", name: "Music Note", coins: 75, rarity: "common" },
+  { emoji: "🌙", name: "Moon", coins: 100, rarity: "rare" },
+  { emoji: "🔮", name: "Crystal Ball", coins: 200, rarity: "rare" },
+  { emoji: "🦋", name: "Butterfly", coins: 300, rarity: "rare" },
+  { emoji: "🌈", name: "Rainbow", coins: 500, rarity: "epic" },
+  { emoji: "👑", name: "Crown", coins: 750, rarity: "epic" },
+  { emoji: "🐉", name: "Dragon", coins: 1000, rarity: "epic" },
+  { emoji: "💎", name: "Diamond", coins: 2000, rarity: "legendary" },
+  { emoji: "🏆", name: "Trophy", coins: 3000, rarity: "legendary" },
+  { emoji: "🔱", name: "Trident", coins: 5000, rarity: "legendary" },
+];
+
+const RARITY_WEIGHTS: Record<string, number> = {
+  common: 50,
+  rare: 30,
+  epic: 15,
+  legendary: 5,
+};
+
+export const MYSTERY_BOX_COST = 100;
+
+export function openMysteryBox(): MysteryBoxReward {
+  const totalWeight = Object.values(RARITY_WEIGHTS).reduce((a, b) => a + b, 0);
+  let rand = Math.random() * totalWeight;
+
+  let selectedRarity = "common";
+  for (const [rarity, weight] of Object.entries(RARITY_WEIGHTS)) {
+    rand -= weight;
+    if (rand <= 0) { selectedRarity = rarity; break; }
+  }
+
+  const pool = MYSTERY_BOX_POOL.filter(r => r.rarity === selectedRarity);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+export function getMysteryBoxPool(): MysteryBoxReward[] {
+  return MYSTERY_BOX_POOL;
+}
+
 export async function getGiftLeaderboard(period: LeaderboardPeriod, type: "senders" | "receivers" = "senders"): Promise<LeaderboardEntry[]> {
   const snap = await get(ref(db, "gifts"));
   if (!snap.exists()) return [];

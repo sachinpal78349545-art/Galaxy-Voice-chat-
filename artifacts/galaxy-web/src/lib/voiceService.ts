@@ -309,10 +309,110 @@ class VoiceService {
     }
   }
 
+  private _voiceEffect: VoiceEffect = "normal";
+  private audioContext: AudioContext | null = null;
+  private effectNodes: AudioNode[] = [];
+
   get muted() { return this._muted; }
   get ready() { return this._ready; }
   get joined() { return this._joined; }
   get micEnabled() { return this._micEnabled; }
+  get voiceEffect() { return this._voiceEffect; }
+
+  async setVoiceEffect(effect: VoiceEffect): Promise<void> {
+    this._voiceEffect = effect;
+    if (!this.localTrack || !this._micEnabled) return;
+
+    try {
+      this.cleanupEffectNodes();
+
+      if (effect === "normal") return;
+
+      if (!this.audioContext) {
+        this.audioContext = new AudioContext();
+      }
+      const ctx = this.audioContext;
+
+      const mediaStream = (this.localTrack as any)._mediaStreamTrack;
+      if (!mediaStream) return;
+
+      const source = ctx.createMediaStreamSource(new MediaStream([mediaStream]));
+      const destination = ctx.createMediaStreamDestination();
+
+      switch (effect) {
+        case "deep": {
+          const biquad = ctx.createBiquadFilter();
+          biquad.type = "lowshelf";
+          biquad.frequency.value = 200;
+          biquad.gain.value = 15;
+          const compressor = ctx.createDynamicsCompressor();
+          source.connect(biquad).connect(compressor).connect(destination);
+          this.effectNodes.push(biquad, compressor);
+          break;
+        }
+        case "high": {
+          const biquad = ctx.createBiquadFilter();
+          biquad.type = "highshelf";
+          biquad.frequency.value = 3000;
+          biquad.gain.value = 15;
+          source.connect(biquad).connect(destination);
+          this.effectNodes.push(biquad);
+          break;
+        }
+        case "robot": {
+          const osc = ctx.createOscillator();
+          osc.frequency.value = 50;
+          osc.type = "sawtooth";
+          const gainNode = ctx.createGain();
+          gainNode.gain.value = 0.5;
+          osc.connect(gainNode);
+          const merger = ctx.createChannelMerger(2);
+          source.connect(merger, 0, 0);
+          gainNode.connect(merger, 0, 1);
+          merger.connect(destination);
+          osc.start();
+          this.effectNodes.push(osc as any, gainNode, merger);
+          break;
+        }
+        case "echo": {
+          const delay = ctx.createDelay(1.0);
+          delay.delayTime.value = 0.3;
+          const feedback = ctx.createGain();
+          feedback.gain.value = 0.4;
+          const dry = ctx.createGain();
+          dry.gain.value = 1.0;
+          source.connect(dry).connect(destination);
+          source.connect(delay);
+          delay.connect(feedback);
+          feedback.connect(delay);
+          delay.connect(destination);
+          this.effectNodes.push(delay, feedback, dry);
+          break;
+        }
+      }
+
+      console.log(`[Agora] Voice effect set to: ${effect}`);
+    } catch (e) {
+      console.warn("[Agora] Voice effect error:", e);
+    }
+  }
+
+  private cleanupEffectNodes() {
+    for (const node of this.effectNodes) {
+      try { (node as any).disconnect?.(); } catch {}
+      try { (node as any).stop?.(); } catch {}
+    }
+    this.effectNodes = [];
+  }
 }
+
+export type VoiceEffect = "normal" | "deep" | "high" | "robot" | "echo";
+export const VOICE_EFFECTS: { id: VoiceEffect; label: string; icon: string }[] = [
+  { id: "normal", label: "Normal", icon: "🎤" },
+  { id: "deep", label: "Deep", icon: "🔊" },
+  { id: "high", label: "High", icon: "🎵" },
+  { id: "robot", label: "Robot", icon: "🤖" },
+  { id: "echo", label: "Echo", icon: "🔁" },
+];
 
 export const voiceService = new VoiceService();

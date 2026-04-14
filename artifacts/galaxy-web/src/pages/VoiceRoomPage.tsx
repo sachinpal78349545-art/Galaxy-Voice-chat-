@@ -14,8 +14,12 @@ import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser, i
 import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } from "../lib/giftService";
 import { sendNotification } from "../lib/notificationService";
 import { getOrCreateConversation } from "../lib/chatService";
-import { voiceService } from "../lib/voiceService";
+import { voiceService, VOICE_EFFECTS, VoiceEffect } from "../lib/voiceService";
 import { useToast } from "../lib/toastContext";
+import { musicService } from "../lib/musicService";
+import { openMysteryBox, MYSTERY_BOX_COST, MysteryBoxReward } from "../lib/giftService";
+import { subscribeWaitlist, joinWaitlist, leaveWaitlist, admitFromWaitlist } from "../lib/roomService";
+import { PKBattle, PKInvite, subscribePKBattle, subscribePKInvites, sendPKInvite, respondPKInvite, addPKScore, endPKBattle, getPKDurations } from "../lib/pkBattleService";
 import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, ClassicLudo, CarromGame, TruthDareWheel, cleanName, hashCode } from "../components/room";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; onMessage?: (uid: string) => void; }
@@ -56,6 +60,21 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
   const [equippedFrames, setEquippedFrames] = useState<Record<string, string>>({});
   const [cpDpUploading, setCpDpUploading] = useState(false);
   const cpDpRef = useRef<HTMLInputElement>(null);
+  const [showVoiceEffects, setShowVoiceEffects] = useState(false);
+  const [currentEffect, setCurrentEffect] = useState<VoiceEffect>("normal");
+  const [showMusicPlayer, setShowMusicPlayer] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [musicTrack, setMusicTrack] = useState<string | null>(null);
+  const [musicCategory, setMusicCategory] = useState("All");
+  const [showMysteryBox, setShowMysteryBox] = useState(false);
+  const [mysteryResult, setMysteryResult] = useState<MysteryBoxReward | null>(null);
+  const [mysteryOpening, setMysteryOpening] = useState(false);
+  const [waitlist, setWaitlist] = useState<Array<{ uid: string; name: string; avatar: string; joinedAt: number }>>([]);
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const [pkBattle, setPkBattle] = useState<PKBattle | null>(null);
+  const [pkInvites, setPkInvites] = useState<PKInvite[]>([]);
+  const [showPKPanel, setShowPKPanel] = useState(false);
+  const [pkTimer, setPkTimer] = useState("");
   const floatId = useRef(0);
   const msgEnd = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
@@ -198,6 +217,50 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
   }, [room?.id]);
 
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  useEffect(() => {
+    const unsub = subscribeWaitlist(roomId, setWaitlist);
+    return unsub;
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!room) return undefined;
+    const isHost = room.hostId === user.uid || isSuperAdmin(user);
+    if (!isHost) return undefined;
+    const unsub = subscribePKInvites(roomId, room.hostId, setPkInvites);
+    return unsub;
+  }, [roomId, room?.hostId]);
+
+  useEffect(() => {
+    if (!(room as any)?.pkBattleId) { setPkBattle(null); return undefined; }
+    const unsub = subscribePKBattle((room as any).pkBattleId, setPkBattle);
+    return unsub;
+  }, [(room as any)?.pkBattleId]);
+
+  useEffect(() => {
+    if (!pkBattle || pkBattle.status !== "active") { setPkTimer(""); return undefined; }
+    const t = setInterval(() => {
+      const remaining = pkBattle.endsAt - Date.now();
+      if (remaining <= 0) {
+        setPkTimer("ENDED");
+        endPKBattle(pkBattle.id).catch(console.error);
+        clearInterval(t);
+        return;
+      }
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining / 1000) % 60);
+      setPkTimer(`${mins}:${String(secs).padStart(2, "0")}`);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [pkBattle?.id, pkBattle?.status]);
+
+  useEffect(() => {
+    const unsub = musicService.onChange(() => {
+      setMusicPlaying(musicService.isPlaying());
+      setMusicTrack(musicService.getCurrentTrack()?.id || null);
+    });
+    return () => { unsub(); musicService.cleanup(); };
+  }, []);
 
   const isRealOwner = room?.hostId === user.uid;
   const userIsOfficial = isOfficialOrAdmin(user);
@@ -576,6 +639,24 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
           }
         }}
       />
+
+      {!isOnSeat && room.seats.every(s => s.userId || s.isLocked) && (
+        <div style={{ padding: "6px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+          {waitlist.some(w => w.uid === user.uid) ? (
+            <button className="btn btn-ghost btn-full" style={{ fontSize: 12, padding: "8px 0" }}
+              onClick={async () => {
+                await leaveWaitlist(roomId, user.uid);
+                showToast("Left waitlist", "info");
+              }}>⏳ Leave Queue (#{waitlist.findIndex(w => w.uid === user.uid) + 1})</button>
+          ) : (
+            <button className="btn btn-primary btn-full" style={{ fontSize: 12, padding: "8px 0" }}
+              onClick={async () => {
+                const pos = await joinWaitlist(roomId, user.uid, user.name, user.avatar);
+                showToast(`Joined queue at position #${pos}`, "success");
+              }}>⏳ Join Waitlist ({waitlist.length} waiting)</button>
+          )}
+        </div>
+      )}
 
       <ChatSection messages={messages} userId={user.uid} msgEndRef={msgEnd} />
 
@@ -1472,6 +1553,323 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                   }
                 }}>Submit Report</button>
             </div>
+          </div>
+        </Overlay>
+      )}
+
+      {pkBattle && pkBattle.status === "active" && (
+        <div style={{
+          position: "fixed", top: 60, left: "50%", transform: "translateX(-50%)",
+          zIndex: 500, width: "90%", maxWidth: 380,
+          background: "linear-gradient(135deg, rgba(255,50,50,0.15), rgba(255,200,0,0.1))",
+          border: "1.5px solid rgba(255,100,50,0.4)", borderRadius: 16, padding: "10px 16px",
+          backdropFilter: "blur(10px)",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 900, color: "#FF6B35" }}>⚔️ PK BATTLE</span>
+            <span style={{ fontSize: 14, fontWeight: 900, color: "#FFD700", fontFamily: "monospace" }}>{pkTimer}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginBottom: 2 }}>{pkBattle.room1Name}</p>
+              <p style={{ fontSize: 18, fontWeight: 900, color: "#FF6B35" }}>{pkBattle.room1Score.toLocaleString()}</p>
+            </div>
+            <span style={{ fontSize: 20, color: "rgba(255,255,255,0.3)" }}>⚡</span>
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginBottom: 2 }}>{pkBattle.room2Name}</p>
+              <p style={{ fontSize: 18, fontWeight: 900, color: "#4FC3F7" }}>{pkBattle.room2Score.toLocaleString()}</p>
+            </div>
+          </div>
+          <div style={{ marginTop: 6, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+            <div style={{
+              height: "100%", borderRadius: 2, transition: "width 0.5s ease",
+              width: `${pkBattle.room1Score + pkBattle.room2Score > 0 ? (pkBattle.room1Score / (pkBattle.room1Score + pkBattle.room2Score)) * 100 : 50}%`,
+              background: "linear-gradient(90deg, #FF6B35, #FFD700)",
+            }} />
+          </div>
+        </div>
+      )}
+
+      {pkInvites.length > 0 && isOwner && (
+        <div style={{ position: "fixed", top: 120, right: 12, zIndex: 500 }}>
+          {pkInvites.map(inv => (
+            <div key={inv.id} className="card" style={{ padding: 12, marginBottom: 8, width: 220, animation: "popIn 0.2s ease" }}>
+              <p style={{ fontSize: 11, fontWeight: 700, marginBottom: 6 }}>⚔️ PK Challenge from <span style={{ color: "#FFD700" }}>{inv.fromRoomName}</span></p>
+              <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)", marginBottom: 8 }}>Duration: {inv.duration / 60000} min</p>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button className="btn btn-primary btn-sm" style={{ flex: 1, fontSize: 10 }}
+                  onClick={async () => {
+                    await respondPKInvite(inv.id, true, room?.name || "", user.avatar);
+                    showToast("PK Battle started!", "success");
+                  }}>Accept</button>
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 10 }}
+                  onClick={async () => {
+                    await respondPKInvite(inv.id, false, "", "");
+                    showToast("PK declined", "info");
+                  }}>Decline</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isOwner && !pkBattle && (
+        <button onClick={() => setShowPKPanel(!showPKPanel)} style={{
+          position: "fixed", top: 70, right: 12, zIndex: 450,
+          width: 36, height: 36, borderRadius: 18, border: "1px solid rgba(255,100,50,0.3)",
+          background: "rgba(255,100,50,0.1)", cursor: "pointer", fontSize: 16,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>⚔️</button>
+      )}
+
+      {showPKPanel && isOwner && (
+        <Overlay onClose={() => setShowPKPanel(false)}>
+          <div className="card" style={{ width: 300, padding: 20, animation: "popIn 0.2s ease" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 900, textAlign: "center", marginBottom: 12 }}>⚔️ Start PK Battle</h3>
+            <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", textAlign: "center", marginBottom: 16 }}>Challenge another room to a gift battle!</p>
+            <p style={{ fontSize: 10, color: "rgba(162,155,254,0.3)", marginBottom: 8, textAlign: "center" }}>Pick a duration to send a PK challenge to a random active room:</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+              {getPKDurations().map(d => (
+                <button key={d.value} className="btn btn-primary btn-sm" style={{ fontSize: 11 }}
+                  onClick={async () => {
+                    try {
+                      const { fetchRooms: fetchAllRooms } = await import("../lib/roomService");
+                      const allRooms = await fetchAllRooms();
+                      const otherRooms = allRooms.filter((r: any) => r.id !== roomId && r.isLive);
+                      if (otherRooms.length === 0) {
+                        showToast("No other active rooms to challenge!", "warning");
+                        return;
+                      }
+                      const target = otherRooms[Math.floor(Math.random() * otherRooms.length)];
+                      await sendPKInvite(roomId, room?.name || "Room", user.uid, user.name || "Host", target.id, target.hostId, d.value);
+                      showToast(`PK challenge sent to ${target.name}! (${d.label})`, "success");
+                    } catch {
+                      showToast("Failed to send PK invite", "error");
+                    }
+                    setShowPKPanel(false);
+                  }}>{d.label}</button>
+              ))}
+            </div>
+          </div>
+        </Overlay>
+      )}
+
+      <div style={{ position: "fixed", bottom: 160, right: 12, zIndex: 450, display: "flex", flexDirection: "column", gap: 8 }}>
+        {isOnSeat && (
+          <button onClick={() => setShowVoiceEffects(!showVoiceEffects)} style={{
+            width: 40, height: 40, borderRadius: 20,
+            background: currentEffect !== "normal" ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.06)",
+            border: currentEffect !== "normal" ? "1.5px solid rgba(108,92,231,0.4)" : "1px solid rgba(255,255,255,0.1)",
+            cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center",
+          }} title="Voice Effects">🎭</button>
+        )}
+        {isOwner && (
+          <button onClick={() => setShowMusicPlayer(!showMusicPlayer)} style={{
+            width: 40, height: 40, borderRadius: 20,
+            background: musicPlaying ? "rgba(0,230,118,0.15)" : "rgba(255,255,255,0.06)",
+            border: musicPlaying ? "1.5px solid rgba(0,230,118,0.3)" : "1px solid rgba(255,255,255,0.1)",
+            cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center",
+          }} title="Music">🎵</button>
+        )}
+        <button onClick={() => setShowMysteryBox(true)} style={{
+          width: 40, height: 40, borderRadius: 20,
+          background: "rgba(255,215,0,0.08)", border: "1px solid rgba(255,215,0,0.2)",
+          cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center",
+        }} title="Mystery Box">🎁</button>
+        {waitlist.length > 0 && hasControl && (
+          <button onClick={() => setShowWaitlist(!showWaitlist)} style={{
+            width: 40, height: 40, borderRadius: 20, position: "relative",
+            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+            cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center",
+          }} title="Waitlist">
+            ⏳
+            <span style={{
+              position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8,
+              background: "#6C5CE7", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{waitlist.length}</span>
+          </button>
+        )}
+      </div>
+
+      {showVoiceEffects && (
+        <div style={{
+          position: "fixed", bottom: 220, right: 60, zIndex: 500,
+          background: "rgba(26,15,46,0.95)", border: "1px solid rgba(108,92,231,0.25)",
+          borderRadius: 16, padding: 12, backdropFilter: "blur(10px)", width: 200,
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 800, color: "rgba(162,155,254,0.6)", marginBottom: 8, textAlign: "center" }}>🎭 Voice Effects</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {VOICE_EFFECTS.map(eff => (
+              <button key={eff.id} onClick={async () => {
+                setCurrentEffect(eff.id);
+                await voiceService.setVoiceEffect(eff.id);
+                showToast(`Voice: ${eff.label}`, "info", eff.icon);
+                setShowVoiceEffects(false);
+              }} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 12px", borderRadius: 10, border: "none", cursor: "pointer",
+                background: currentEffect === eff.id ? "rgba(108,92,231,0.15)" : "transparent",
+                color: currentEffect === eff.id ? "#A29BFE" : "rgba(255,255,255,0.6)",
+                fontSize: 13, fontWeight: 600, fontFamily: "inherit",
+              }}>
+                <span style={{ fontSize: 18 }}>{eff.icon}</span>
+                {eff.label}
+                {currentEffect === eff.id && <span style={{ marginLeft: "auto", fontSize: 12 }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showMusicPlayer && (
+        <div style={{
+          position: "fixed", bottom: 220, right: 60, zIndex: 500,
+          background: "rgba(26,15,46,0.95)", border: "1px solid rgba(108,92,231,0.25)",
+          borderRadius: 16, padding: 14, backdropFilter: "blur(10px)", width: 260,
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 800, color: "rgba(162,155,254,0.6)", marginBottom: 8, textAlign: "center" }}>🎵 Background Music</p>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10, justifyContent: "center" }}>
+            {musicService.getCategories().map(cat => (
+              <button key={cat} onClick={() => setMusicCategory(cat)} style={{
+                padding: "3px 10px", borderRadius: 12, fontSize: 9, fontWeight: 700, border: "none", cursor: "pointer",
+                background: musicCategory === cat ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.04)",
+                color: musicCategory === cat ? "#A29BFE" : "rgba(162,155,254,0.4)",
+              }}>{cat}</button>
+            ))}
+          </div>
+          <div style={{ maxHeight: 200, overflowY: "auto" }}>
+            {musicService.getByCategory(musicCategory).map(track => (
+              <button key={track.id} onClick={() => {
+                if (musicTrack === track.id && musicPlaying) { musicService.pause(); }
+                else if (musicTrack === track.id) { musicService.resume(); }
+                else { musicService.play(track.id); }
+              }} style={{
+                display: "flex", alignItems: "center", gap: 10, width: "100%",
+                padding: "8px 10px", borderRadius: 10, border: "none", cursor: "pointer",
+                background: musicTrack === track.id ? "rgba(0,230,118,0.08)" : "transparent",
+                fontFamily: "inherit", marginBottom: 2,
+              }}>
+                <span style={{ fontSize: 16 }}>{track.icon}</span>
+                <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: musicTrack === track.id ? "#00e676" : "rgba(255,255,255,0.6)", textAlign: "left" }}>{track.name}</span>
+                {musicTrack === track.id && <span style={{ fontSize: 12, color: "#00e676" }}>{musicPlaying ? "⏸" : "▶"}</span>}
+              </button>
+            ))}
+          </div>
+          {musicPlaying && (
+            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Vol</span>
+              <input type="range" min={0} max={100} value={musicService.getVolume() * 100}
+                onChange={e => musicService.setVolume(Number(e.target.value) / 100)}
+                style={{ flex: 1, height: 4 }} />
+              <button onClick={() => musicService.stop()} style={{
+                padding: "3px 10px", borderRadius: 8, fontSize: 10, fontWeight: 700,
+                background: "rgba(255,100,130,0.1)", border: "1px solid rgba(255,100,130,0.2)",
+                color: "rgba(255,100,130,0.7)", cursor: "pointer",
+              }}>Stop</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showMysteryBox && (
+        <Overlay onClose={() => { setShowMysteryBox(false); setMysteryResult(null); }}>
+          <div className="card" style={{ width: 300, padding: 24, animation: "popIn 0.2s ease", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 8 }}>🎁 Mystery Box</h3>
+            <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", marginBottom: 16 }}>
+              Cost: <span style={{ color: "#FFD700", fontWeight: 700 }}>{MYSTERY_BOX_COST} coins</span> • Win up to <span style={{ color: "#FFD700", fontWeight: 700 }}>5,000 coins!</span>
+            </p>
+            {mysteryResult ? (
+              <div style={{ animation: "popIn 0.3s ease" }}>
+                <div style={{
+                  width: 80, height: 80, borderRadius: 40, margin: "0 auto 12px",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40,
+                  background: mysteryResult.rarity === "legendary" ? "rgba(255,215,0,0.15)" :
+                    mysteryResult.rarity === "epic" ? "rgba(171,71,188,0.15)" :
+                    mysteryResult.rarity === "rare" ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)",
+                  border: `2px solid ${mysteryResult.rarity === "legendary" ? "rgba(255,215,0,0.4)" :
+                    mysteryResult.rarity === "epic" ? "rgba(171,71,188,0.4)" :
+                    mysteryResult.rarity === "rare" ? "rgba(79,195,247,0.4)" : "rgba(255,255,255,0.1)"}`,
+                  boxShadow: `0 0 20px ${mysteryResult.rarity === "legendary" ? "rgba(255,215,0,0.2)" : "transparent"}`,
+                }}>
+                  {mysteryResult.emoji}
+                </div>
+                <p style={{ fontSize: 16, fontWeight: 900, marginBottom: 4 }}>{mysteryResult.name}</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#FFD700" }}>+{mysteryResult.coins} coins!</p>
+                <p style={{
+                  fontSize: 10, fontWeight: 800, textTransform: "uppercase", marginTop: 4,
+                  color: mysteryResult.rarity === "legendary" ? "#FFD700" :
+                    mysteryResult.rarity === "epic" ? "#AB47BC" :
+                    mysteryResult.rarity === "rare" ? "#4FC3F7" : "#8B8B8B",
+                }}>{mysteryResult.rarity}</p>
+                <button className="btn btn-primary btn-full" style={{ marginTop: 16, fontSize: 13 }}
+                  onClick={() => setMysteryResult(null)}>Open Another</button>
+              </div>
+            ) : (
+              <div>
+                <div style={{
+                  width: 80, height: 80, borderRadius: 40, margin: "0 auto 16px",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40,
+                  background: "linear-gradient(135deg, rgba(255,215,0,0.1), rgba(108,92,231,0.1))",
+                  border: "2px solid rgba(255,215,0,0.3)",
+                  animation: mysteryOpening ? "pulse 0.5s ease infinite" : "none",
+                }}>
+                  {mysteryOpening ? "✨" : "🎁"}
+                </div>
+                <button className="btn btn-gold btn-full" style={{ fontSize: 14, fontWeight: 800 }}
+                  disabled={mysteryOpening || user.coins < MYSTERY_BOX_COST}
+                  onClick={async () => {
+                    if (user.coins < MYSTERY_BOX_COST) { showToast("Not enough coins!", "error"); return; }
+                    setMysteryOpening(true);
+                    try {
+                      const { addCoins } = await import("../lib/userService");
+                      await addCoins(user.uid, -MYSTERY_BOX_COST);
+                      const reward = openMysteryBox();
+                      await new Promise(r => setTimeout(r, 1500));
+                      setMysteryResult(reward);
+                      if (reward.coins > 0) {
+                        await addCoins(user.uid, reward.coins);
+                      }
+                      showToast(`Won ${reward.name}: +${reward.coins} coins!`, "success", reward.emoji);
+                    } catch {
+                      showToast("Failed to open box", "error");
+                    }
+                    setMysteryOpening(false);
+                  }}>
+                  {mysteryOpening ? "Opening..." : `Open Box (${MYSTERY_BOX_COST} 💰)`}
+                </button>
+                {user.coins < MYSTERY_BOX_COST && (
+                  <p style={{ fontSize: 10, color: "rgba(255,100,130,0.6)", marginTop: 8 }}>Need {MYSTERY_BOX_COST - user.coins} more coins</p>
+                )}
+              </div>
+            )}
+          </div>
+        </Overlay>
+      )}
+
+      {showWaitlist && hasControl && (
+        <Overlay onClose={() => setShowWaitlist(false)}>
+          <div className="card" style={{ width: 300, padding: 20, animation: "popIn 0.2s ease", maxHeight: "60vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 900, textAlign: "center", marginBottom: 12 }}>⏳ Waitlist ({waitlist.length})</h3>
+            {waitlist.length === 0 ? (
+              <p style={{ textAlign: "center", fontSize: 13, color: "rgba(162,155,254,0.4)", padding: 16 }}>No one waiting</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {waitlist.map((w, i) => (
+                  <div key={w.uid} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 12, background: "rgba(255,255,255,0.03)" }}>
+                    <span style={{ fontSize: 12, fontWeight: 900, color: "rgba(162,155,254,0.4)", width: 20 }}>#{i + 1}</span>
+                    <div style={{ width: 28, height: 28, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: "rgba(108,92,231,0.12)" }}>
+                      {w.avatar?.length <= 2 ? w.avatar : "👤"}
+                    </div>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{w.name}</span>
+                    <button className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: "4px 10px" }}
+                      onClick={async () => {
+                        await admitFromWaitlist(roomId, w.uid);
+                        showToast(`${w.name} admitted`, "success");
+                      }}>Admit</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Overlay>
       )}

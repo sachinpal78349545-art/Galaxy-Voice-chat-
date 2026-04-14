@@ -95,6 +95,17 @@ I prefer iterative development with a focus on delivering working features incre
     - Frame colors and animation config stored in `FRAME_COLORS` map in `storeService.ts`.
     - Equipped entry effects trigger custom system messages when joining rooms.
     - User inventory stored at `users/{uid}/inventory/` with `equippedFrame`, `equippedEntry`, `equippedTheme` fields.
+- **i18n System** (`i18n.ts`): 4-language translation system (English, Arabic, Hindi, Urdu) with RTL support for Arabic/Urdu. Language stored in `localStorage.galaxy_lang`.
+- **Report System** (`reportService.ts`): User-submitted reports with admin review queue. Categories: harassment, spam, inappropriate content, fake profile, underage, scam, hate speech. Admin can approve/reject/dismiss. Accessible from Profile page (admin only).
+- **Family/Agency System** (`familyService.ts`): Create/join families, transfer leadership, remove members. Families stored at `families/{id}`, member's `familyId` stored at `users/{uid}/familyId`.
+- **PK Battle System** (`pkBattleService.ts`): Room-vs-room gift battles with timed duration (3/5/10/15/30 min). PK invite flow, real-time score tracking, auto-end on timer. Active PK battles show overlay banner in voice rooms. Host can initiate PK challenges to other active rooms.
+- **Mystery Box** (`giftService.ts`): 100-coin mystery box with weighted rarity (common 50%, rare 30%, epic 15%, legendary 5%). Win up to 5,000 coins. Animated opening UI in voice rooms.
+- **Room Waitlist** (`roomService.ts`): Queue system for full rooms. Users can join/leave waitlist. Admins can admit users from waitlist. Waitlist stored at `roomWaitlist/{roomId}/{key}`.
+- **Background Music** (`musicService.ts`): 10 background music tracks across categories (Chill, Jazz, Ambient, Piano, Acoustic, EDM, R&B, Arabic, Indian, Nature). Room hosts can play/pause/stop music with volume control.
+- **Voice Effects** (`voiceService.ts`): 5 effects (Normal, Deep, High, Robot, Echo) using AudioContext Web API. Accessible to seated users in voice rooms.
+- **Blocked User Filtering**: Blocked users' posts and comments hidden in Explore page. Blocked users filtered from search results.
+- **Agora Token Server** (`server.mjs`): POST `/api/agora-token` endpoint for secure token generation. Returns null token in demo mode (no certificate).
+- **Recharge/Payment API** (`server.mjs`): GET `/api/recharge-packages` and POST `/api/recharge` endpoints for coin purchases.
 - **Daily Rewards & Achievements**: System for rewarding user engagement and progress.
 - **Support System**: Integrated feedback form and help center articles.
 - **Toast Notifications**: Global system for user feedback (success/error/info/warning).

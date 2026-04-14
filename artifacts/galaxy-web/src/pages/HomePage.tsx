@@ -10,12 +10,16 @@ interface Props { user: UserProfile; onJoinRoom: (room: Room) => void; onCreateR
 type Tab = "Hot" | "New" | "Following";
 
 const QUICK_CATEGORIES = [
+  { emoji: "\u{1F525}", label: "All", topic: "" },
   { emoji: "\u{1F3B5}", label: "Music", topic: "Music" },
   { emoji: "\u{1F4AC}", label: "Chat", topic: "Chill" },
   { emoji: "\u{1F3AE}", label: "Gaming", topic: "Gaming" },
   { emoji: "\u{1F602}", label: "Comedy", topic: "Comedy" },
   { emoji: "\u{1F4DA}", label: "Study", topic: "Study" },
   { emoji: "\u{1F5E3}", label: "Debate", topic: "Debate" },
+  { emoji: "\u2694\uFE0F", label: "PK", topic: "__pk__" },
+  { emoji: "\u{1F3A4}", label: "Karaoke", topic: "Karaoke" },
+  { emoji: "\u{1F4B0}", label: "Crypto", topic: "Crypto" },
 ];
 
 const PAGE_SIZE = 8;
@@ -47,9 +51,9 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
     if (user.hasRoom && user.myRoomId) {
       const unsub = subscribeRoom(user.myRoomId, r => setMyRoom(r));
       return unsub;
-    } else {
-      setMyRoom(null);
     }
+    setMyRoom(null);
+    return undefined;
   }, [user.hasRoom, user.myRoomId]);
 
   useEffect(() => {
@@ -92,7 +96,11 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
       if (!matchName && !matchTag && !matchTopic) return false;
     }
     if (quickFilter) {
-      if (r.topic !== quickFilter) return false;
+      if (quickFilter === "__pk__") {
+        if (!(r as any).pkBattleId) return false;
+      } else {
+        if (r.topic !== quickFilter) return false;
+      }
     }
     if (tab === "Hot") return r.listeners > 5;
     if (tab === "New") return Date.now() - r.createdAt < 7200000;
@@ -107,6 +115,14 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
   const visible = filtered.slice(0, visibleCount);
 
   const handleQuickJoin = (topic: string) => {
+    if (topic === "") {
+      setQuickFilter(null);
+      return;
+    }
+    if (topic === "__pk__") {
+      setQuickFilter(quickFilter === "__pk__" ? null : "__pk__");
+      return;
+    }
     const match = rooms.find(r => r.topic === topic && r.isLive);
     if (match) {
       onJoinRoom(match);

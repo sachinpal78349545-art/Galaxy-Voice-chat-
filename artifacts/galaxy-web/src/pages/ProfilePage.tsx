@@ -11,6 +11,9 @@ import { useToast } from "../lib/toastContext";
 import { STORE_ITEMS, StoreItem, OwnedItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, DEFAULT_FRAME_ID, isAnimatedFrame } from "../lib/storeService";
 import SuperAdminAvatar from "../components/SuperAdminAvatar";
 import FrameAvatar, { FramePreview } from "../components/frames/FrameAvatar";
+import { Language, LANGUAGE_OPTIONS, getCurrentLanguage, setLanguage, isRTL, t } from "../lib/i18n";
+import { Family, createFamily, joinFamily, leaveFamily, getUserFamily, getAllFamilies, searchFamilies, getFamilyIcons, getFamilyLeaderboard, updateFamilySettings, promoteMember, kickMember, transferLeadership, deleteFamily, addFamilyContribution } from "../lib/familyService";
+import { Report, submitReport, getReportQueue, reviewReport, getReportStats, REPORT_CATEGORIES } from "../lib/reportService";
 
 interface Props {
   user: UserProfile;
@@ -25,11 +28,13 @@ const MENU_ITEMS = [
   { icon: "\u{1F6CD}\uFE0F", label: "Store", action: "store" },
   { icon: "\u{1F392}", label: "Backpack", action: "backpack" },
   { icon: "\u{1F4B0}", label: "My Wallet", action: "wallet" },
+  { icon: "\u{1F46A}", label: "Family", action: "family" },
   { icon: "\u2705", label: "Daily Tasks", action: "dailyTasks" },
   { icon: "\u{1F381}", label: "Daily Reward", action: "daily" },
   { icon: "\u{1F91D}", label: "Friend Requests", action: "friendRequests" },
   { icon: "\u{1F465}", label: "Friends List", action: "friendsList" },
   { icon: "\u{1F3C6}", label: "Achievements", action: "achievements" },
+  { icon: "\u{1F30D}", label: "Language", action: "language" },
   { icon: "\u{1F512}", label: "Privacy & Settings", action: "privacy" },
   { icon: "\u{1F6AB}", label: "Blocked Users", action: "blocked" },
   { icon: "\u{1F50D}", label: "Find Users", action: "search" },
@@ -123,6 +128,19 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [ormAutoEntry, setOrmAutoEntry] = useState(false);
   const [ormLoading, setOrmLoading] = useState(false);
   const [ormLoaded, setOrmLoaded] = useState(false);
+  const [showFamily, setShowFamily] = useState(false);
+  const [myFamily, setMyFamily] = useState<Family | null>(null);
+  const [allFamilies, setAllFamilies] = useState<Family[]>([]);
+  const [familyLoading, setFamilyLoading] = useState(false);
+  const [showCreateFamily, setShowCreateFamily] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState("");
+  const [newFamilyIcon, setNewFamilyIcon] = useState("👑");
+  const [newFamilyDesc, setNewFamilyDesc] = useState("");
+  const [showLanguage, setShowLanguage] = useState(false);
+  const [currentLang, setCurrentLang] = useState<Language>(getCurrentLanguage());
+  const [showReportQueue, setShowReportQueue] = useState(false);
+  const [reportQueue, setReportQueue] = useState<Report[]>([]);
+  const [reportQueueFilter, setReportQueueFilter] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [privacy, setPrivacy] = useState<NonNullable<UserProfile["privacy"]>>(user.privacy || {
@@ -456,6 +474,18 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
     if (action === "feedback") setShowFeedback(true);
     if (action === "help") setShowHelp(true);
     if (action === "admin") { setShowAdminPanel(true); setAdminPromoteId(""); setAdminLookupResult(null); }
+    if (action === "family") {
+      setShowFamily(true);
+      setFamilyLoading(true);
+      getUserFamily(user.uid).then(f => setMyFamily(f)).catch(() => {});
+      getAllFamilies().then(f => setAllFamilies(f.sort((a, b) => b.weeklyGifts - a.weeklyGifts))).catch(() => {});
+      setFamilyLoading(false);
+    }
+    if (action === "language") setShowLanguage(true);
+    if (action === "reportQueue") {
+      setShowReportQueue(true);
+      getReportQueue(reportQueueFilter).then(setReportQueue).catch(() => {});
+    }
   };
 
   return (
@@ -672,6 +702,20 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             onClick={() => setShowGodMode(true)}
           >
             {"\u26A1"} God Mode Control Panel
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            className="btn btn-full"
+            style={{
+              padding: "14px 0", fontSize: 15, fontWeight: 800,
+              background: "linear-gradient(135deg, rgba(255,100,50,0.15), rgba(255,200,0,0.08))",
+              border: "1.5px solid rgba(255,150,50,0.4)",
+              color: "#FFA726",
+            }}
+            onClick={() => handleMenu("reportQueue")}
+          >
+            {"\u{1F4CB}"} Report Queue
           </button>
         )}
 
@@ -3127,6 +3171,205 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                 Always act with integrity and fairness.
               </p>
             </div>
+          </div>
+        </BottomSheet>
+      )}
+
+      {showFamily && (
+        <BottomSheet onClose={() => { setShowFamily(false); setShowCreateFamily(false); }}>
+          <h3 style={{ fontSize: 18, fontWeight: 900, textAlign: "center", marginBottom: 16 }}>👪 Family</h3>
+          {myFamily ? (
+            <div>
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <span style={{ fontSize: 40 }}>{myFamily.icon}</span>
+                <h4 style={{ fontSize: 16, fontWeight: 800, marginTop: 8 }}>{myFamily.name}</h4>
+                <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)" }}>Level {myFamily.level} • {myFamily.memberCount}/{myFamily.maxMembers} members</p>
+                <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)", marginTop: 4 }}>{myFamily.description}</p>
+              </div>
+              {myFamily.announcement && (
+                <div style={{ padding: "10px 14px", borderRadius: 12, background: "rgba(108,92,231,0.08)", border: "1px solid rgba(108,92,231,0.15)", marginBottom: 12 }}>
+                  <p style={{ fontSize: 12, color: "rgba(162,155,254,0.7)" }}>📢 {myFamily.announcement}</p>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                <div style={{ flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 12, background: "rgba(255,215,0,0.06)", border: "1px solid rgba(255,215,0,0.15)" }}>
+                  <p style={{ fontSize: 16, fontWeight: 900, color: "#FFD700" }}>{myFamily.totalGifts.toLocaleString()}</p>
+                  <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Total Gifts</p>
+                </div>
+                <div style={{ flex: 1, textAlign: "center", padding: "10px 0", borderRadius: 12, background: "rgba(108,92,231,0.06)", border: "1px solid rgba(108,92,231,0.15)" }}>
+                  <p style={{ fontSize: 16, fontWeight: 900, color: "#A29BFE" }}>{myFamily.weeklyGifts.toLocaleString()}</p>
+                  <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>This Week</p>
+                </div>
+              </div>
+              <h5 style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, color: "rgba(255,255,255,0.7)" }}>Members</h5>
+              <div style={{ maxHeight: 200, overflowY: "auto" }}>
+                {Object.values(myFamily.members || {}).sort((a: any, b: any) => {
+                  const order: Record<string, number> = { leader: 0, elder: 1, member: 2 };
+                  return (order[a.role] || 2) - (order[b.role] || 2);
+                }).map((m: any) => (
+                  <div key={m.uid} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, background: "rgba(108,92,231,0.12)" }}>
+                      {m.avatar?.length <= 2 ? m.avatar : "👤"}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700 }}>{m.name}</p>
+                      <p style={{ fontSize: 10, color: m.role === "leader" ? "#FFD700" : m.role === "elder" ? "#A29BFE" : "rgba(162,155,254,0.4)" }}>
+                        {m.role === "leader" ? "👑 Leader" : m.role === "elder" ? "⭐ Elder" : "Member"} • {m.contribution.toLocaleString()} coins
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {myFamily.leaderId !== user.uid && (
+                <button className="btn btn-danger btn-full" style={{ marginTop: 16, fontSize: 13 }}
+                  onClick={async () => {
+                    try {
+                      await leaveFamily(myFamily.id, user.uid);
+                      setMyFamily(null);
+                      showToast("Left family", "info");
+                    } catch (e: any) { showToast(e.message, "error"); }
+                  }}>Leave Family</button>
+              )}
+            </div>
+          ) : showCreateFamily ? (
+            <div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12, justifyContent: "center" }}>
+                {getFamilyIcons().map(icon => (
+                  <button key={icon} onClick={() => setNewFamilyIcon(icon)} style={{
+                    fontSize: 24, width: 44, height: 44, borderRadius: 12, border: newFamilyIcon === icon ? "2px solid #6C5CE7" : "1px solid rgba(255,255,255,0.08)",
+                    background: newFamilyIcon === icon ? "rgba(108,92,231,0.15)" : "rgba(255,255,255,0.03)", cursor: "pointer",
+                  }}>{icon}</button>
+                ))}
+              </div>
+              <input className="input-field" placeholder="Family Name" value={newFamilyName} onChange={e => setNewFamilyName(e.target.value)} style={{ marginBottom: 8 }} />
+              <textarea className="input-field" placeholder="Description (optional)" value={newFamilyDesc} onChange={e => setNewFamilyDesc(e.target.value)} rows={2} style={{ marginBottom: 12 }} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-ghost btn-full" onClick={() => setShowCreateFamily(false)}>Cancel</button>
+                <button className="btn btn-primary btn-full" disabled={!newFamilyName.trim()}
+                  onClick={async () => {
+                    try {
+                      setFamilyLoading(true);
+                      await createFamily(user.uid, user.name, user.avatar, newFamilyName.trim(), newFamilyIcon, newFamilyDesc.trim());
+                      const f = await getUserFamily(user.uid);
+                      setMyFamily(f);
+                      setShowCreateFamily(false);
+                      showToast("Family created!", "success");
+                    } catch (e: any) { showToast(e.message, "error"); }
+                    setFamilyLoading(false);
+                  }}>Create</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <button className="btn btn-primary btn-full" style={{ marginBottom: 16 }} onClick={() => setShowCreateFamily(true)}>
+                ✨ Create Family
+              </button>
+              <h5 style={{ fontSize: 13, fontWeight: 800, marginBottom: 8, color: "rgba(255,255,255,0.6)" }}>Top Families</h5>
+              <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                {allFamilies.slice(0, 20).map((f, i) => (
+                  <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <span style={{ fontSize: 12, fontWeight: 900, color: i < 3 ? "#FFD700" : "rgba(162,155,254,0.4)", width: 20 }}>#{i + 1}</span>
+                    <span style={{ fontSize: 22 }}>{f.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700 }}>{f.name}</p>
+                      <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>Lv.{f.level} • {f.memberCount} members • {f.weeklyGifts.toLocaleString()} weekly</p>
+                    </div>
+                    {f.isRecruiting && (
+                      <button className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: "4px 10px" }}
+                        onClick={async () => {
+                          try {
+                            await joinFamily(f.id, user.uid, user.name, user.avatar, user.level);
+                            const mf = await getUserFamily(user.uid);
+                            setMyFamily(mf);
+                            showToast(`Joined ${f.name}!`, "success");
+                          } catch (e: any) { showToast(e.message, "error"); }
+                        }}>Join</button>
+                    )}
+                  </div>
+                ))}
+                {allFamilies.length === 0 && <p style={{ textAlign: "center", fontSize: 13, color: "rgba(162,155,254,0.4)", padding: 24 }}>No families yet. Be the first!</p>}
+              </div>
+            </div>
+          )}
+        </BottomSheet>
+      )}
+
+      {showLanguage && (
+        <BottomSheet onClose={() => setShowLanguage(false)}>
+          <h3 style={{ fontSize: 18, fontWeight: 900, textAlign: "center", marginBottom: 16 }}>🌍 Language</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {LANGUAGE_OPTIONS.map(lang => (
+              <button key={lang.code} onClick={() => {
+                setLanguage(lang.code);
+                setCurrentLang(lang.code);
+                document.documentElement.dir = (lang.code === "ar" || lang.code === "ur") ? "rtl" : "ltr";
+                showToast(`Language changed to ${lang.nativeName}`, "success");
+              }} style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "14px 16px", borderRadius: 14, border: currentLang === lang.code ? "1.5px solid #6C5CE7" : "1px solid rgba(255,255,255,0.06)",
+                background: currentLang === lang.code ? "rgba(108,92,231,0.12)" : "rgba(255,255,255,0.02)",
+                cursor: "pointer", fontFamily: "inherit",
+              }}>
+                <span style={{ fontSize: 24 }}>{lang.flag}</span>
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: currentLang === lang.code ? "#A29BFE" : "rgba(255,255,255,0.8)" }}>{lang.nativeName}</p>
+                  <p style={{ fontSize: 11, color: "rgba(162,155,254,0.4)" }}>{lang.name}</p>
+                </div>
+                {currentLang === lang.code && <span style={{ color: "#6C5CE7", fontSize: 18 }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </BottomSheet>
+      )}
+
+      {showReportQueue && isAdmin && (
+        <BottomSheet onClose={() => setShowReportQueue(false)}>
+          <h3 style={{ fontSize: 18, fontWeight: 900, textAlign: "center", marginBottom: 12 }}>📋 Report Queue</h3>
+          <div style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto" }}>
+            {["pending", "action_taken", "dismissed"].map(s => (
+              <button key={s} onClick={() => {
+                setReportQueueFilter(s);
+                getReportQueue(s).then(setReportQueue).catch(() => {});
+              }} style={{
+                padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", whiteSpace: "nowrap",
+                background: reportQueueFilter === s ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.04)",
+                color: reportQueueFilter === s ? "#A29BFE" : "rgba(162,155,254,0.5)",
+              }}>{s === "pending" ? "⏳ Pending" : s === "action_taken" ? "✅ Actioned" : "❌ Dismissed"}</button>
+            ))}
+          </div>
+          <div style={{ maxHeight: 400, overflowY: "auto" }}>
+            {reportQueue.map(r => (
+              <div key={r.id} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,100,130,0.8)" }}>vs {r.reportedName}</span>
+                  <span style={{ fontSize: 10, color: "rgba(162,155,254,0.3)" }}>{new Date(r.timestamp).toLocaleDateString()}</span>
+                </div>
+                <p style={{ fontSize: 12, color: "rgba(162,155,254,0.6)", marginBottom: 4 }}>
+                  <strong>By:</strong> {r.reporterName} • <strong>Category:</strong> {r.category}
+                </p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>{r.reason} — {r.details || "No details"}</p>
+                {r.status === "pending" && (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button className="btn btn-danger btn-sm" style={{ flex: 1, fontSize: 10 }}
+                      onClick={async () => {
+                        await reviewReport(r.id, user.uid, "action_taken", "Reviewed by admin", "warned");
+                        getReportQueue(reportQueueFilter).then(setReportQueue).catch(() => {});
+                        showToast("Action taken", "success");
+                      }}>⚡ Action</button>
+                    <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 10 }}
+                      onClick={async () => {
+                        await reviewReport(r.id, user.uid, "dismissed", "Dismissed by admin");
+                        getReportQueue(reportQueueFilter).then(setReportQueue).catch(() => {});
+                        showToast("Report dismissed", "info");
+                      }}>✖ Dismiss</button>
+                  </div>
+                )}
+                {r.status !== "pending" && r.reviewNote && (
+                  <p style={{ fontSize: 10, color: "rgba(0,255,200,0.5)", fontStyle: "italic" }}>📝 {r.reviewNote}</p>
+                )}
+              </div>
+            ))}
+            {reportQueue.length === 0 && <p style={{ textAlign: "center", fontSize: 13, color: "rgba(162,155,254,0.4)", padding: 24 }}>No reports in this category</p>}
           </div>
         </BottomSheet>
       )}
