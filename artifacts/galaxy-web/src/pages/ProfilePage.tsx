@@ -1061,12 +1061,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, paddingBottom: 16 }}>
             <div style={{ position: "relative" }}>
-              <div style={{
+              <div className={viewingProfile.vip ? "vip-glow-border" : ""} style={{
                 width: 80, height: 80, borderRadius: 40, fontSize: 40,
                 background: isSuperAdmin(viewingProfile) ? "rgba(255,215,0,0.12)" : "rgba(108,92,231,0.15)",
-                border: isSuperAdmin(viewingProfile) ? "3px solid rgba(255,215,0,0.5)" : "3px solid rgba(108,92,231,0.3)",
+                border: isSuperAdmin(viewingProfile) ? "3px solid rgba(255,215,0,0.5)" : viewingProfile.vip ? undefined : "3px solid rgba(108,92,231,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
-                boxShadow: isSuperAdmin(viewingProfile) ? "0 0 20px rgba(255,215,0,0.3)" : "0 0 15px rgba(108,92,231,0.2)",
+                boxShadow: isSuperAdmin(viewingProfile) ? "0 0 20px rgba(255,215,0,0.3)" : viewingProfile.vip ? undefined : "0 0 15px rgba(108,92,231,0.2)",
+                transition: "all 0.3s ease",
               }}>
                 {viewingProfile.avatar?.startsWith("http")
                   ? <img src={viewingProfile.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 40 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
@@ -1252,7 +1253,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     <button
                       disabled={banLoading || !isUserBanned(viewingProfile)}
                       onClick={async () => {
-                        if (!confirm(`Unban ${viewingProfile!.name}? They will be able to access the app again.`)) return;
+                        if (!confirm(`Remove ban from ${viewingProfile!.name}? They will be able to access the app again.`)) return;
                         setBanLoading(true);
                         try {
                           await unbanUser(viewingProfile!.uid, user.uid);
@@ -1279,10 +1280,176 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                     >
                       <span style={{ fontSize: 18 }}>{"\u2705"}</span>
                       <div>
-                        <div>Unban User</div>
+                        <div>Remove Ban</div>
                         <div style={{ fontSize: 10, color: "rgba(0,200,100,0.4)", fontWeight: 400 }}>Restore access</div>
                       </div>
                     </button>
+
+                    <button
+                      disabled={banLoading}
+                      onClick={async () => {
+                        if (!confirm(`Device ban ${viewingProfile!.name}? Their device will be permanently blocked.`)) return;
+                        setBanLoading(true);
+                        try {
+                          await deviceBanUser(viewingProfile!.uid, user.uid);
+                          const refreshed = await getUser(viewingProfile!.uid);
+                          if (refreshed) setViewingProfile(refreshed);
+                          showToast(`${viewingProfile!.name} device banned!`, "success");
+                        } catch { showToast("Device ban failed", "error"); }
+                        setBanLoading(false);
+                      }}
+                      style={{
+                        padding: "11px 14px",
+                        borderRadius: 12,
+                        background: viewingProfile.deviceBanned ? "rgba(255,60,60,0.04)" : "rgba(255,60,60,0.08)",
+                        border: "1px solid rgba(255,60,60,0.15)",
+                        color: viewingProfile.deviceBanned ? "rgba(255,60,60,0.35)" : "#ff5555",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: viewingProfile.deviceBanned ? "default" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        opacity: banLoading || viewingProfile.deviceBanned ? 0.4 : 1,
+                      }}
+                    >
+                      <span style={{ fontSize: 18 }}>{"\u{1F4F1}"}</span>
+                      <div>
+                        <div>{viewingProfile.deviceBanned ? "Already Device Banned" : "Device Ban"}</div>
+                        <div style={{ fontSize: 10, color: "rgba(255,150,150,0.4)", fontWeight: 400 }}>Block device permanently</div>
+                      </div>
+                    </button>
+
+                    {viewingProfile.deviceBanned && (
+                      <button
+                        disabled={banLoading}
+                        onClick={async () => {
+                          if (!confirm(`Remove device ban from ${viewingProfile!.name}?`)) return;
+                          setBanLoading(true);
+                          try {
+                            await unbanUser(viewingProfile!.uid, user.uid);
+                            const { update: fbUpdate, ref: fbRef } = await import("firebase/database");
+                            const { db: fbDb } = await import("../lib/firebase");
+                            await fbUpdate(fbRef(fbDb, `users/${viewingProfile!.uid}`), { deviceBanned: false });
+                            const refreshed = await getUser(viewingProfile!.uid);
+                            if (refreshed) setViewingProfile(refreshed);
+                            showToast(`${viewingProfile!.name} device ban removed!`, "success");
+                          } catch { showToast("Failed to remove device ban", "error"); }
+                          setBanLoading(false);
+                        }}
+                        style={{
+                          padding: "11px 14px",
+                          borderRadius: 12,
+                          background: "rgba(0,200,100,0.08)",
+                          border: "1px solid rgba(0,200,100,0.2)",
+                          color: "#00cc66",
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          opacity: banLoading ? 0.4 : 1,
+                        }}
+                      >
+                        <span style={{ fontSize: 18 }}>{"\u2705"}</span>
+                        <div>
+                          <div>Remove Device Ban</div>
+                          <div style={{ fontSize: 10, color: "rgba(0,200,100,0.4)", fontWeight: 400 }}>Unblock device</div>
+                        </div>
+                      </button>
+                    )}
+
+                    <div style={{ height: 1, background: "rgba(191,0,255,0.1)", margin: "4px 0" }} />
+
+                    <button
+                      disabled={banLoading || viewingProfile.shadowBanned}
+                      onClick={async () => {
+                        if (!confirm(`Shadow ban ${viewingProfile!.name}? They can still use the app but messages will be hidden.`)) return;
+                        setBanLoading(true);
+                        try {
+                          await shadowBanUser(viewingProfile!.uid, user.uid);
+                          const refreshed = await getUser(viewingProfile!.uid);
+                          if (refreshed) setViewingProfile(refreshed);
+                          showToast(`${viewingProfile!.name} shadow banned!`, "success");
+                        } catch { showToast("Shadow ban failed", "error"); }
+                        setBanLoading(false);
+                      }}
+                      style={{
+                        padding: "11px 14px",
+                        borderRadius: 12,
+                        background: viewingProfile.shadowBanned ? "rgba(191,0,255,0.04)" : "rgba(191,0,255,0.08)",
+                        border: "1px solid rgba(191,0,255,0.15)",
+                        color: viewingProfile.shadowBanned ? "rgba(191,0,255,0.35)" : "#bf00ff",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: viewingProfile.shadowBanned ? "default" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        opacity: banLoading || viewingProfile.shadowBanned ? 0.4 : 1,
+                      }}
+                    >
+                      <span style={{ fontSize: 18 }}>{"\u{1F47B}"}</span>
+                      <div>
+                        <div>{viewingProfile.shadowBanned ? "Already Shadow Banned" : "Shadow Ban"}</div>
+                        <div style={{ fontSize: 10, color: "rgba(191,0,255,0.4)", fontWeight: 400 }}>Hide messages silently</div>
+                      </div>
+                    </button>
+
+                    {viewingProfile.shadowBanned && (
+                      <button
+                        disabled={banLoading}
+                        onClick={async () => {
+                          if (!confirm(`Lift shadow ban from ${viewingProfile!.name}?`)) return;
+                          setBanLoading(true);
+                          try {
+                            await removeShadowBan(viewingProfile!.uid, user.uid);
+                            const refreshed = await getUser(viewingProfile!.uid);
+                            if (refreshed) setViewingProfile(refreshed);
+                            showToast(`Shadow ban lifted from ${viewingProfile!.name}`, "success");
+                          } catch { showToast("Failed to lift shadow ban", "error"); }
+                          setBanLoading(false);
+                        }}
+                        style={{
+                          padding: "11px 14px",
+                          borderRadius: 12,
+                          background: "rgba(0,200,100,0.08)",
+                          border: "1px solid rgba(0,200,100,0.2)",
+                          color: "#00cc66",
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          opacity: banLoading ? 0.4 : 1,
+                        }}
+                      >
+                        <span style={{ fontSize: 18 }}>{"\u2705"}</span>
+                        <div>
+                          <div>Lift Shadow Ban</div>
+                          <div style={{ fontSize: 10, color: "rgba(0,200,100,0.4)", fontWeight: 400 }}>Restore message visibility</div>
+                        </div>
+                      </button>
+                    )}
+
+                    <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                      {viewingProfile.isBanned && (
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 8, background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)", color: "#ff5555" }}>{"\u{1F534}"} BANNED</span>
+                      )}
+                      {viewingProfile.deviceBanned && (
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 8, background: "rgba(255,60,60,0.15)", border: "1px solid rgba(255,60,60,0.3)", color: "#ff3333" }}>{"\u{1F4F1}"} DEVICE BANNED</span>
+                      )}
+                      {viewingProfile.shadowBanned && (
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 8, background: "rgba(191,0,255,0.15)", border: "1px solid rgba(191,0,255,0.3)", color: "#bf00ff" }}>{"\u{1F47B}"} SHADOW BANNED</span>
+                      )}
+                      {!viewingProfile.isBanned && !viewingProfile.deviceBanned && !viewingProfile.shadowBanned && (
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 8, background: "rgba(0,230,118,0.1)", border: "1px solid rgba(0,230,118,0.25)", color: "#00e676" }}>{"\u{1F7E2}"} ACTIVE</span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

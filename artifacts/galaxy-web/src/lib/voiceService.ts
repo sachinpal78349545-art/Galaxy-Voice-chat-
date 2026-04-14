@@ -23,9 +23,18 @@ class VoiceService {
   private remoteCb: RemoteUserCb | null = null;
   private volumeInterval: ReturnType<typeof setInterval> | null = null;
   private remoteVolumes: Map<number, number> = new Map();
+  private _channel: string | null = null;
+  private _uid: number | null = null;
+  private _token: string | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
 
   async init(): Promise<boolean> {
     try {
+      if (this.client) {
+        this.client.removeAllListeners();
+      }
       this.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       this._ready = true;
       this.setupEventHandlers();
@@ -40,14 +49,18 @@ class VoiceService {
     if (!this.client) return;
     this.client.on("user-published", async (user: IAgoraRTCRemoteUser, mediaType: string) => {
       if (mediaType === "audio") {
-        await this.client!.subscribe(user, "audio");
-        const remoteTrack = user.audioTrack;
-        if (remoteTrack) {
-          remoteTrack.play();
-          const vol = this._speakerOff ? 0 : (this.remoteVolumes.get(Number(user.uid)) ?? 100);
-          remoteTrack.setVolume(vol);
+        try {
+          await this.client!.subscribe(user, "audio");
+          const remoteTrack = user.audioTrack;
+          if (remoteTrack) {
+            remoteTrack.play();
+            const vol = this._speakerOff ? 0 : (this.remoteVolumes.get(Number(user.uid)) ?? 100);
+            remoteTrack.setVolume(vol);
+          }
+          this.remoteCb?.(Number(user.uid), true);
+        } catch (e) {
+          console.warn("[Agora] subscribe error:", e);
         }
-        this.remoteCb?.(Number(user.uid), true);
       }
     });
     this.client.on("user-unpublished", (user: IAgoraRTCRemoteUser, mediaType: string) => {
@@ -61,6 +74,56 @@ class VoiceService {
     this.client.on("user-left", (user: IAgoraRTCRemoteUser) => {
       this.remoteCb?.(Number(user.uid), false);
     });
+    this.client.on("connection-state-change", (curState: string, prevState: string) => {
+      console.log(`[Agora] Connection: ${prevState} -> ${curState}`);
+      if (curState === "DISCONNECTED" && prevState === "CONNECTED" && this._channel) {
+        this.handleReconnect();
+      }
+      if (curState === "CONNECTED") {
+        this.reconnectAttempts = 0;
+        this.clearReconnectTimer();
+      }
+    });
+    this.client.on("exception", (evt: { code: number; msg: string }) => {
+      console.warn(`[Agora] Exception: ${evt.code} - ${evt.msg}`);
+    });
+    this.client.on("network-quality", (stats: { uplinkNetworkQuality: number; downlinkNetworkQuality: number }) => {
+      if (stats.downlinkNetworkQuality >= 4 || stats.uplinkNetworkQuality >= 4) {
+        console.warn("[Agora] Poor network quality detected");
+      }
+    });
+  }
+
+  private handleReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error("[Agora] Max reconnect attempts reached");
+      return;
+    }
+    this.clearReconnectTimer();
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 15000);
+    this.reconnectAttempts++;
+    console.log(`[Agora] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    this.reconnectTimer = setTimeout(async () => {
+      if (!this._channel || !this._uid) return;
+      try {
+        await this.init();
+        await this.join(this._channel, this._uid, this._token);
+        if (this._micEnabled) {
+          await this.enableMic();
+        }
+        console.log("[Agora] Reconnected successfully");
+      } catch (e) {
+        console.error("[Agora] Reconnect failed:", e);
+        this.handleReconnect();
+      }
+    }, delay);
+  }
+
+  private clearReconnectTimer() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
   }
 
   async join(channel: string, uid: number, token: string | null = null): Promise<void> {
@@ -68,6 +131,9 @@ class VoiceService {
       console.log(`[Agora] Not ready, demo mode for channel "${channel}"`);
       return;
     }
+    this._channel = channel;
+    this._uid = uid;
+    this._token = token;
     try {
       await this.client.join(APP_ID, channel, token, uid);
       this._joined = true;
@@ -75,8 +141,22 @@ class VoiceService {
       this._micEnabled = false;
       this.startVolumeMonitor();
       console.log(`[Agora] Joined channel as listener: ${channel}`);
-    } catch (e) {
+    } catch (e: any) {
       console.error("[Agora] join error:", e);
+      if (e?.code === "OPERATION_ABORTED" || e?.code === "WS_ABORT") {
+        console.log("[Agora] Retrying join...");
+        await new Promise(r => setTimeout(r, 1500));
+        try {
+          await this.client.join(APP_ID, channel, token, uid);
+          this._joined = true;
+          this._muted = true;
+          this._micEnabled = false;
+          this.startVolumeMonitor();
+          console.log(`[Agora] Joined on retry: ${channel}`);
+        } catch (e2) {
+          console.error("[Agora] join retry failed:", e2);
+        }
+      }
     }
   }
 
@@ -86,15 +166,21 @@ class VoiceService {
       return false;
     }
     if (this._micEnabled && this.localTrack) {
-      await this.localTrack.setMuted(false);
-      this._muted = false;
-      return true;
+      try {
+        await this.localTrack.setMuted(false);
+        this._muted = false;
+        return true;
+      } catch (e) {
+        console.warn("[Agora] unmute error, recreating track:", e);
+        await this.cleanupLocalTrack();
+      }
     }
     try {
       this.localTrack = await AgoraRTC.createMicrophoneAudioTrack({
         AEC: true,
         ANS: true,
         AGC: true,
+        encoderConfig: "speech_standard",
       });
       await this.client.publish([this.localTrack]);
       this._micEnabled = true;
@@ -103,31 +189,36 @@ class VoiceService {
       return true;
     } catch (e) {
       console.error("[Agora] enableMic error:", e);
+      await this.cleanupLocalTrack();
       return false;
     }
   }
 
-  async disableMic(): Promise<void> {
+  private async cleanupLocalTrack() {
     if (this.localTrack) {
       try {
         if (this.client && this._joined) {
           await this.client.unpublish([this.localTrack]);
         }
-      } catch (e) {
-        console.warn("[Agora] unpublish error:", e);
-      }
-      this.localTrack.stop();
-      this.localTrack.close();
+      } catch {}
+      try { this.localTrack.stop(); } catch {}
+      try { this.localTrack.close(); } catch {}
       this.localTrack = null;
     }
     this._micEnabled = false;
     this._muted = true;
+  }
+
+  async disableMic(): Promise<void> {
+    await this.cleanupLocalTrack();
     console.log("[Agora] Mic disabled and unpublished");
   }
 
   async leave(): Promise<void> {
+    this.clearReconnectTimer();
+    this.reconnectAttempts = 0;
     this.stopVolumeMonitor();
-    await this.disableMic();
+    await this.cleanupLocalTrack();
     if (this.client && this._joined) {
       try {
         await this.client.leave();
@@ -138,12 +229,19 @@ class VoiceService {
     this._joined = false;
     this._muted = true;
     this._micEnabled = false;
+    this._channel = null;
+    this._uid = null;
+    this._token = null;
   }
 
   async setMuted(muted: boolean): Promise<void> {
     this._muted = muted;
     if (this.localTrack) {
-      await this.localTrack.setMuted(muted);
+      try {
+        await this.localTrack.setMuted(muted);
+      } catch (e) {
+        console.warn("[Agora] setMuted error:", e);
+      }
     }
   }
 
@@ -152,7 +250,9 @@ class VoiceService {
     if (this.client && this._joined) {
       for (const user of this.client.remoteUsers) {
         if (user.audioTrack) {
-          user.audioTrack.setVolume(off ? 0 : (this.remoteVolumes.get(Number(user.uid)) ?? 100));
+          try {
+            user.audioTrack.setVolume(off ? 0 : (this.remoteVolumes.get(Number(user.uid)) ?? 100));
+          } catch {}
         }
       }
     }
@@ -167,7 +267,9 @@ class VoiceService {
       const users = this.client.remoteUsers;
       const user = users.find(u => Number(u.uid) === uid);
       if (user?.audioTrack) {
-        user.audioTrack.setVolume(volume);
+        try {
+          user.audioTrack.setVolume(volume);
+        } catch {}
       }
     }
   }
@@ -183,15 +285,19 @@ class VoiceService {
     this.stopVolumeMonitor();
     this.volumeInterval = setInterval(() => {
       if (!this.client || !this._joined) return;
-      if (this.localTrack && !this._muted && this._micEnabled) {
-        const vol = this.localTrack.getVolumeLevel();
-        this.speakerCb?.(0, vol * 100);
-      }
-      for (const user of this.client.remoteUsers) {
-        if (user.audioTrack) {
-          const vol = user.audioTrack.getVolumeLevel();
-          this.speakerCb?.(Number(user.uid), vol * 100);
+      try {
+        if (this.localTrack && !this._muted && this._micEnabled) {
+          const vol = this.localTrack.getVolumeLevel();
+          this.speakerCb?.(0, vol * 100);
         }
+        for (const user of this.client.remoteUsers) {
+          if (user.audioTrack) {
+            const vol = user.audioTrack.getVolumeLevel();
+            this.speakerCb?.(Number(user.uid), vol * 100);
+          }
+        }
+      } catch (e) {
+        console.warn("[Agora] Volume monitor error:", e);
       }
     }, 200);
   }

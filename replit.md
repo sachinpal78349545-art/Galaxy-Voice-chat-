@@ -31,14 +31,14 @@ I prefer iterative development with a focus on delivering working features incre
 - **Frameworks**: React + Vite + TypeScript for Web, React Native (Expo) for Mobile.
 - **State Management**: Firebase Realtime Database for all core data, ensuring real-time synchronization across clients.
 - **Authentication**: Firebase Email/Password, Google Auth, Phone OTP (demo), and Guest (anonymous) login.
-- **Voice Communication**: Agora Web SDK (`agora-rtc-sdk-ng`) for Galaxy Web, `react-native-agora` for Galaxy Mobile, featuring AEC (echo cancellation), ANS (noise suppression), and AGC (automatic gain control).
+- **Voice Communication**: Agora Web SDK (`agora-rtc-sdk-ng`) for Galaxy Web, `react-native-agora` for Galaxy Mobile, featuring AEC (echo cancellation), ANS (noise suppression), AGC (automatic gain control), speech_standard encoder config, auto-reconnect with exponential backoff (up to 5 attempts), connection state monitoring, network quality detection, and graceful track cleanup.
 - **User Management**:
     - Unique 9-digit `userId` generated and reserved atomically via Firebase transactions.
     - Online presence tracking using Firebase `onDisconnect`.
     - Comprehensive user profiles including coins, level, achievements, transactions, blocked users, friends, friend requests, and privacy settings.
     - Mutual follow OR friendship system to gate chat access (friends can chat without gift).
     - Super Admin system with specific user IDs.
-    - **Ban/Unban System**: Super Admin (userId `306623582`) exclusive feature. Can ban users for 7 hours, 24 hours, 7 days, or permanently. Ban data stored at `users/{uid}/isBanned`, `banUntil`, `bannedBy`, `banReason`. Banned users see "Account Suspended" screen with ban duration and Sign Out button. Auto-expiry check via `isUserBanned()` (client-side time comparison). Unban restores access immediately.
+    - **Ban/Unban System**: Super Admin (userId `306623582`) exclusive feature. Can ban users for 4 hours, 24 hours, 7 days, or permanently. Ban data stored at `users/{uid}/isBanned`, `banUntil`, `bannedBy`, `banReason`. Banned users see "Account Suspended" screen with ban duration and Sign Out button. Auto-expiry check via `isUserBanned()` (client-side time comparison). Unban restores access immediately. User management cards now include: Remove Ban, Device Ban, Remove Device Ban, Shadow Ban, Lift Shadow Ban buttons, plus ban status badges (BANNED/DEVICE BANNED/SHADOW BANNED/ACTIVE).
     - **Super Admin Powers** (all gated to userId `306623582`):
       - **Wallet Admin**: Edit any user's coin balance via Admin Panel (lookup by User ID, set new balance).
       - **Profile Moderator**: "Delete DP" and "Reset Name" buttons on other users' profile bottom sheets.

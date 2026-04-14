@@ -268,18 +268,19 @@ html, body, #root {
 .card {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(108,92,231,0.15);
-  border-radius: 18px; padding: 16px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 20px; padding: 16px;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease, border-color 0.3s ease;
+  backdrop-filter: blur(8px);
 }
 .card-glow { box-shadow: 0 2px 24px rgba(108,92,231,0.1); }
-.card-glow:hover { box-shadow: 0 4px 32px rgba(108,92,231,0.18); }
+.card-glow:hover { box-shadow: 0 4px 32px rgba(108,92,231,0.18); border-color: rgba(108,92,231,0.25); }
 .card:active { transform: scale(0.985); }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 10px 20px; border-radius: 22px; border: none; cursor: pointer;
   font-family: inherit; font-size: 13px; font-weight: 700;
-  transition: all 0.2s ease; -webkit-tap-highlight-color: transparent;
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); -webkit-tap-highlight-color: transparent;
   user-select: none; position: relative; overflow: hidden;
 }
 .btn:active { transform: scale(0.95); }
@@ -306,13 +307,17 @@ html, body, #root {
 .btn-full { width: 100%; }
 
 .input-field {
-  width: 100%; padding: 13px 16px; border-radius: 14px;
+  width: 100%; padding: 13px 16px; border-radius: 16px;
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
   color: var(--text); font-family: inherit; font-size: 14px; outline: none;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
+  transition: border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+.input-field:focus {
+  border-color: rgba(108,92,231,0.5);
+  box-shadow: 0 0 0 3px rgba(108,92,231,0.1), 0 0 12px rgba(108,92,231,0.15);
+  background: rgba(255,255,255,0.07);
 }
 .input-field::placeholder { color: rgba(162,155,254,0.3); }
-.input-field:focus { border-color: rgba(108,92,231,0.6); box-shadow: 0 0 0 3px rgba(108,92,231,0.1); }
 select.input-field option { background: #1A0F2E; color: #fff; }
 textarea.input-field { resize: none; line-height: 1.5; }
 
@@ -1602,13 +1607,23 @@ textarea.input-field { resize: none; line-height: 1.5; }
   z-index: 3;
 }
 
+.vip-glow-border {
+  border: 2px solid rgba(255,215,0,0.5) !important;
+  box-shadow: 0 0 12px rgba(255,215,0,0.25), 0 0 24px rgba(255,215,0,0.1), inset 0 0 8px rgba(255,215,0,0.08) !important;
+  animation: vipGlowPulse 2.5s ease-in-out infinite;
+}
+@keyframes vipGlowPulse {
+  0%,100% { box-shadow: 0 0 12px rgba(255,215,0,0.25), 0 0 24px rgba(255,215,0,0.1); border-color: rgba(255,215,0,0.5); }
+  50% { box-shadow: 0 0 18px rgba(255,215,0,0.4), 0 0 36px rgba(255,215,0,0.2), 0 0 48px rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.7); }
+}
+
 .af-wrapper {
   position: relative;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
   overflow: visible;
 }
 .af-wrapper:hover {
@@ -1620,12 +1635,14 @@ textarea.input-field { resize: none; line-height: 1.5; }
   border-radius: 50%;
   animation: afSpin 3s linear infinite;
   filter: blur(3px);
+  transition: filter 0.4s ease;
 }
 .af-glow {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
+  transition: box-shadow 0.4s ease;
 }
 .af-img {
   position: absolute;
@@ -1636,6 +1653,7 @@ textarea.input-field { resize: none; line-height: 1.5; }
   object-fit: cover;
   background: #0a0515;
   z-index: 2;
+  transition: transform 0.3s ease;
 }
 .af-img-placeholder {
   display: flex;
