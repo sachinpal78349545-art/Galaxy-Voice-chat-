@@ -8,17 +8,29 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "node": "18.18.0",
+      "pnpm": {
+        "installCommand": "pnpm install --no-frozen-lockfile"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "node": "18.18.0",
+      "pnpm": {
+        "installCommand": "pnpm install --no-frozen-lockfile"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "node": "18.18.0",
+      "pnpm": {
+        "installCommand": "pnpm install --no-frozen-lockfile"
       }
     }
   },
