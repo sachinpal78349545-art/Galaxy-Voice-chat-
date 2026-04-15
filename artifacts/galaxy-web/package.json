@@ -1,9 +1,8 @@
 {
-  "name": "galaxy-voice-chat",
+  "name": "@workspace/galaxy-web",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@8.15.0",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
@@ -12,7 +11,10 @@
     "start": "node server.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "devDependencies": {
+  "dependencies": {
+    "@capacitor/android": "^5.7.0",
+    "@capacitor/cli": "^5.7.0",
+    "@capacitor/core": "^5.7.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.4",
     "@radix-ui/react-alert-dialog": "^1.1.7",
@@ -51,11 +53,17 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "agora-rtc-sdk-ng": "^4.24.3",
+    "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
+    "expo": "~50.0.21",
+    "expo-modules-core": "~1.11.11",
+    "express": "^4.21.0",
+    "firebase": "^10.8.0",
     "framer-motion": "^11.0.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.344.0",
@@ -65,6 +73,7 @@
     "react-dom": "18.2.0",
     "react-hook-form": "^7.55.0",
     "react-icons": "^5.4.0",
+    "react-native": "0.73.6",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
     "sonner": "^2.0.7",
@@ -75,17 +84,5 @@
     "vite": "^5.4.0",
     "wouter": "^3.3.5",
     "zod": "^3.22.4"
-  },
-  "dependencies": {
-    "@capacitor/android": "^5.7.0",
-    "@capacitor/cli": "^5.7.0",
-    "@capacitor/core": "^5.7.0",
-    "agora-rtc-sdk-ng": "^4.24.3",
-    "browser-image-compression": "^2.0.2",
-    "expo": "~50.0.21",
-    "expo-modules-core": "~1.11.11",
-    "express": "^4.21.0",
-    "firebase": "^10.8.0",
-    "react-native": "0.73.6"
   }
 }

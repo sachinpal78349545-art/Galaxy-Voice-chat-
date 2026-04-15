@@ -50,28 +50,6 @@ importers:
       '@capacitor/core':
         specifier: ^5.7.0
         version: 5.7.8
-      agora-rtc-sdk-ng:
-        specifier: ^4.24.3
-        version: 4.24.3
-      browser-image-compression:
-        specifier: ^2.0.2
-        version: 2.0.2
-      expo:
-        specifier: ~50.0.21
-        version: 50.0.21(@babel/core@7.29.0)(@react-native/babel-preset@0.73.21(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0)))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0)
-      expo-modules-core:
-        specifier: ~1.11.11
-        version: 1.11.14
-      express:
-        specifier: ^4.21.0
-        version: 4.22.1
-      firebase:
-        specifier: ^10.8.0
-        version: 10.14.1
-      react-native:
-        specifier: 0.73.6
-        version: 0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@18.2.0)
-    devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.71.2(react@18.2.0))
@@ -186,6 +164,12 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.2.1
         version: 4.7.0(vite@5.4.21(@types/node@20.19.39)(lightningcss@1.31.1)(terser@5.46.1))
+      agora-rtc-sdk-ng:
+        specifier: ^4.24.3
+        version: 4.24.3
+      browser-image-compression:
+        specifier: ^2.0.2
+        version: 2.0.2
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -201,6 +185,18 @@ importers:
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@18.2.0)
+      expo:
+        specifier: ~50.0.21
+        version: 50.0.21(@babel/core@7.29.0)(@react-native/babel-preset@0.73.21(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0)))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0)
+      expo-modules-core:
+        specifier: ~1.11.11
+        version: 1.11.14
+      express:
+        specifier: ^4.21.0
+        version: 4.22.1
+      firebase:
+        specifier: ^10.8.0
+        version: 10.14.1
       framer-motion:
         specifier: ^11.0.0
         version: 11.18.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -228,6 +224,9 @@ importers:
       react-icons:
         specifier: ^5.4.0
         version: 5.6.0(react@18.2.0)
+      react-native:
+        specifier: 0.73.6
+        version: 0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(react@18.2.0)
       react-resizable-panels:
         specifier: ^2.1.7
         version: 2.1.9(react-dom@18.2.0(react@18.2.0))(react@18.2.0)

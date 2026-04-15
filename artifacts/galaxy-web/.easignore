@@ -8,3 +8,4 @@ lib/
 scripts/
 .local/
 *.md
+.npmrc
