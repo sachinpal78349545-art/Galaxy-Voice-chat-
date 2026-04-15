@@ -2,3 +2,17 @@ node_modules
 .expo
 dist
 *.log
+
+# Workspace files - exclude so EAS doesn't detect monorepo
+pnpm-workspace.yaml
+pnpm-lock.yaml
+lib/
+scripts/
+artifacts/*/
+!artifacts/galaxy-web/
+.local/
+.eas/
+*.md
+.gitignore
+.npmrc
+eas.json
