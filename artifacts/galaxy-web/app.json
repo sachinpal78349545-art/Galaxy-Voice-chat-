@@ -5,6 +5,7 @@
     "name": "Galaxy Voice Chat",
     "slug": "galaxy-voice-chat",
     "version": "1.0.0",
+    "sdkVersion": "50.0.0",
     "orientation": "portrait",
     "icon": "./public/logo.png",
     "splash": {
