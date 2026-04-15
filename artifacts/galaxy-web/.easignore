@@ -2,10 +2,3 @@ node_modules
 .expo
 dist
 *.log
-pnpm-workspace.yaml
-pnpm-lock.yaml
-lib/
-scripts/
-.local/
-*.md
-.npmrc
