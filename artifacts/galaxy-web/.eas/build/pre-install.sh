@@ -1,15 +1,19 @@
 #!/bin/bash
 set -e
-echo "==> EAS Pre-install: Fixing workspace detection & lockfile mismatch"
+echo "==> EAS Pre-install: Clean standalone setup"
 
-echo "==> Step 1: Remove workspace config so EAS treats this as standalone"
+echo "==> Remove workspace config to prevent monorepo detection"
 rm -f pnpm-workspace.yaml
 rm -f pnpm-lock.yaml
 
-echo "==> Step 2: Disable frozen-lockfile"
-echo "frozen-lockfile=false" > .npmrc
+echo "==> Create .npmrc to disable frozen-lockfile"
+cat > .npmrc << 'EOF'
+frozen-lockfile=false
+auto-install-peers=true
+strict-peer-dependencies=false
+EOF
 
-echo "==> Step 3: Fresh install without frozen lockfile"
+echo "==> Run fresh pnpm install"
 pnpm install --no-frozen-lockfile
 
-echo "==> Pre-install complete. All dependencies resolved."
+echo "==> Pre-install complete"

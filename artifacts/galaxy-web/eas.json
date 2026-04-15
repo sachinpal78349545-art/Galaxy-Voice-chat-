@@ -10,20 +10,23 @@
       "android": {
         "buildType": "apk"
       },
-      "node": "18.18.0"
+      "node": "18.18.0",
+      "pnpm": "8.15.0"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
-      "node": "18.18.0"
+      "node": "18.18.0",
+      "pnpm": "8.15.0"
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
       },
-      "node": "18.18.0"
+      "node": "18.18.0",
+      "pnpm": "8.15.0"
     }
   },
   "submit": {
