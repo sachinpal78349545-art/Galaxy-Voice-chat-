@@ -47,3 +47,6 @@ EXPO_PUBLIC_AGORA_APP_ID = "5a9957fd6a8047f48310fd0e5545d42c"
 [nix]
 packages = ["jre_minimal"]
 channel = "stable-25_05"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-b815cc6e-beec-4716-9d9d-2e434873d96c"
