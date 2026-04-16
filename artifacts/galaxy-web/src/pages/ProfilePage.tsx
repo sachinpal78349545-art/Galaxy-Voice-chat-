@@ -539,11 +539,13 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
     showToast("Copied to Clipboard", "success", "\u2705");
   };
 
-  const PROFILE_PLACEHOLDERS = [
-    { color: "rgba(168,85,247,0.15)", border: "rgba(168,85,247,0.25)" },
-    { color: "rgba(59,130,246,0.15)", border: "rgba(59,130,246,0.25)" },
-    { color: "rgba(236,72,153,0.15)", border: "rgba(236,72,153,0.25)" },
-    { color: "rgba(34,197,94,0.15)", border: "rgba(34,197,94,0.25)" },
+  const PROFILE_FUNCTIONS = [
+    { icon: "\u{1F4B0}", label: "Wallet", color: "#f59e0b", glow: "rgba(245,158,11,0.35)", action: "wallet" },
+    { icon: "\u{1F6CD}\uFE0F", label: "Store", color: "#a855f7", glow: "rgba(168,85,247,0.35)", action: "store" },
+    { icon: "\u2705", label: "Task", color: "#3b82f6", glow: "rgba(59,130,246,0.35)", action: "dailyTasks" },
+    { icon: "\u{1F392}", label: "Backpack", color: "#ec4899", glow: "rgba(236,72,153,0.35)", action: "backpack" },
+    { icon: "\u{1F4A1}", label: "Help", color: "#22c55e", glow: "rgba(34,197,94,0.35)", action: "help" },
+    { icon: "\u{1F4AC}", label: "Feedback", color: "#06b6d4", glow: "rgba(6,182,212,0.35)", action: "feedback" },
   ];
 
   const SETTINGS_ITEMS = [
@@ -656,9 +658,26 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
       </div>
 
       <div className="pf-functions-section">
-        <div className="pf-placeholder-grid">
-          {PROFILE_PLACEHOLDERS.map((ph, i) => (
-            <div key={i} className="pf-placeholder-circle" style={{ background: ph.color, borderColor: ph.border }} />
+        <p className="pf-section-title">Functions</p>
+        <div className="pf-func-grid">
+          {PROFILE_FUNCTIONS.map(item => (
+            <button
+              key={item.label}
+              className="pf-func-card"
+              onClick={() => handleMenu(item.action)}
+            >
+              <div
+                className="pf-func-bubble"
+                style={{
+                  background: `radial-gradient(circle at 30% 25%, ${item.color}33, ${item.color}0d 60%, transparent 100%), linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.2))`,
+                  borderColor: `${item.color}55`,
+                  boxShadow: `0 0 18px ${item.glow}, inset 0 1px 0 rgba(255,255,255,0.12)`,
+                }}
+              >
+                <span className="pf-func-icon" style={{ filter: `drop-shadow(0 0 6px ${item.glow})` }}>{item.icon}</span>
+              </div>
+              <span className="pf-func-label">{item.label}</span>
+            </button>
           ))}
         </div>
       </div>

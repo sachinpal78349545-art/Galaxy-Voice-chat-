@@ -2744,16 +2744,53 @@ textarea.input-field { resize: none; line-height: 1.5; }
   font-weight: 800;
   margin-bottom: 8px;
 }
-.pf-placeholder-grid {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
+.pf-func-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
 }
-.pf-placeholder-circle {
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
+.pf-func-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 2px;
+  border-radius: 14px;
+  transition: transform 0.18s ease;
+  font-family: inherit;
+}
+.pf-func-card:active { transform: scale(0.92); }
+.pf-func-card:hover .pf-func-bubble { transform: translateY(-2px); }
+.pf-func-bubble {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
   border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease;
+}
+.pf-func-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.pf-func-label {
+  color: #d7e8ff;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+@media (max-width: 360px) {
+  .pf-func-bubble { width: 46px; height: 46px; border-radius: 16px; }
+  .pf-func-icon { font-size: 19px; }
+  .pf-func-label { font-size: 9px; }
 }
 .pf-logout-btn {
   width: 100%;
