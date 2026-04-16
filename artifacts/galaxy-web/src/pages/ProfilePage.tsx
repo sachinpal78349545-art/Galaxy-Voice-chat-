@@ -533,244 +533,161 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
     },
   ];
 
+  const handleCopyId = async () => {
+    try { await navigator.clipboard.writeText(user.userId || user.uid); } catch {}
+    showToast("Copied to Clipboard", "success", "\u2705");
+  };
+
+  const PROFILE_ICONS = [
+    { icon: "\u{1F4B0}", label: "Wallet", color: "#f59e0b", action: "wallet" },
+    { icon: "\u{1F6CD}\uFE0F", label: "Store", color: "#a855f7", action: "store" },
+    { icon: "\u2705", label: "Task", color: "#3b82f6", action: "dailyTasks" },
+    { icon: "\u{1F392}", label: "Backpack", color: "#ec4899", action: "backpack" },
+    { icon: "\u{1F46A}", label: "Family", color: "#ec4899", action: "family" },
+    { icon: "\u{1F50D}", label: "Find", color: "#3b82f6", action: "search" },
+    { icon: "\u2753", label: "Help", color: "#22c55e", action: "help" },
+    { icon: "\u{1F4AC}", label: "Feedback", color: "#a855f7", action: "feedback" },
+  ];
+
   return (
-    <div className="page-scroll no-screenshot">
-      <div style={{
-        position: "relative",
-        minHeight: 280,
-        background: "linear-gradient(180deg, rgba(108,92,231,0.22) 0%, rgba(62,35,160,0.12) 40%, rgba(15,5,30,0.95) 100%)",
-        overflow: "hidden",
-      }}>
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "radial-gradient(ellipse 120% 60% at 50% 0%, rgba(108,92,231,0.18) 0%, transparent 70%)",
-        }} />
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: 120,
-          background: `url("data:image/svg+xml,%3Csvg width='400' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3CradialGradient id='a'%3E%3Cstop offset='0' stop-color='%236C5CE7' stop-opacity='.15'/%3E%3Cstop offset='1' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='200' cy='60' r='120' fill='url(%23a)'/%3E%3C/svg%3E") center/cover no-repeat`,
-          opacity: 0.6,
-        }} />
+    <div className="page-scroll no-screenshot" style={{ background: "#0a0820" }}>
+      <div className="pf-hero">
+        <img
+          src="https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=1200&q=80"
+          alt=""
+          className="pf-hero-bg-img"
+        />
+        <div className="pf-hero-gradient" />
 
-        <div style={{ position: "relative", zIndex: 2, padding: "56px 16px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ position: "relative", marginBottom: 12 }}>
-            {isAdmin ? (
-              <SuperAdminAvatar src={user.avatar} userId={user.userId || ""} size={110} onClick={onEditProfile} />
-            ) : (() => {
-              const activeFrame = user.equippedFrame || DEFAULT_FRAME_ID;
-              if (isAnimatedFrame(activeFrame)) {
-                return <FrameAvatar frameId={activeFrame} src={user.avatar} size={110} onClick={onEditProfile} />;
-              }
-              return (
-                <div style={{ position: "relative" }}>
-                  {isPngFrame(activeFrame) && (() => {
-                    const pngPath = getPngFramePath(activeFrame);
-                    return pngPath ? <img src={pngPath} alt="" className="png-frame-profile" /> : null;
-                  })()}
-                  <div style={{
-                    width: 110, height: 110, borderRadius: 55, fontSize: 52,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "linear-gradient(135deg, rgba(108,92,231,0.3), rgba(108,92,231,0.1))",
-                    border: "3px solid rgba(108,92,231,0.35)",
-                    boxShadow: "0 4px 24px rgba(108,92,231,0.25), 0 0 0 4px rgba(108,92,231,0.08)",
-                    cursor: "pointer", overflow: "hidden",
-                  }} onClick={onEditProfile}>
-                    {user.avatar?.startsWith?.("http") ? (
-                      <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
-                    ) : (user.avatar && user.avatar.length <= 4 ? user.avatar : "\u{1F464}")}
-                  </div>
-                </div>
-              );
-            })()}
-            {user.online && !isAdmin && (
-              <div style={{ position: "absolute", bottom: 8, right: 8, width: 18, height: 18, borderRadius: 9, background: "#00e676", border: "3px solid #0F0F1A", boxShadow: "0 0 10px rgba(0,230,118,0.5)" }} />
-            )}
-            {!isAdmin && (
-              <div style={{
-                position: "absolute", bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16,
-                background: "linear-gradient(135deg, #6C5CE7, #8B7CF6)", border: "2.5px solid #0F0F1A", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
-                boxShadow: "0 2px 10px rgba(108,92,231,0.5)",
-              }} onClick={onEditProfile}>{"\u270F\uFE0F"}</div>
-            )}
-          </div>
+        <div className="pf-hero-top">
+          <button className="pf-id-glass" onClick={handleCopyId}>
+            <span className="pf-id-text">ID: {user.userId || "N/A"}</span>
+            <span style={{ fontSize: 11 }}>{"\u{1F4CB}"}</span>
+          </button>
+          <button className="pf-settings-btn" onClick={onEditProfile}>
+            {"\u2699\uFE0F"}
+          </button>
+        </div>
 
-          <div style={{ textAlign: "center", marginBottom: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 }}>
-              <h2 style={{ fontSize: 24, fontWeight: 900, letterSpacing: -0.5 }}>{user.name}</h2>
-              {user.vip && <span className="badge badge-vip" style={{ fontSize: 10, padding: "3px 8px" }}>{"\u{1F451}"} VIP</span>}
-              {isAdmin ? (
-                <span className="super-admin-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>{"\u{1F451}"} SUPER ADMIN</span>
-              ) : user.globalRole === "official" ? (
-                <span className="official-chat-tag" style={{ fontSize: 9, padding: "2px 10px" }}>{"\u{1F6E1}\uFE0F"} OFFICIAL</span>
-              ) : null}
+        <div className="pf-avatar-area">
+          <div className="pf-avatar-wrap" onClick={onEditProfile}>
+            <div className="pf-avatar-glow">
+              <div className="pf-avatar-inner">
+                {isAdmin ? (
+                  <SuperAdminAvatar src={user.avatar} userId={user.userId || ""} size={92} onClick={onEditProfile} />
+                ) : user.avatar?.startsWith?.("http") ? (
+                  <img src={user.avatar} alt="" className="pf-avatar-img" onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.innerHTML = '<span style="font-size:28px;color:#fff">' + (user.name?.slice(0,2).toUpperCase() || "\u{1F464}") + '</span>'; }} />
+                ) : (
+                  <span className="pf-avatar-text">{user.name?.slice(0, 2).toUpperCase() || "\u{1F464}"}</span>
+                )}
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 12, color: "rgba(162,155,254,0.55)", fontFamily: "monospace", letterSpacing: 1.5, background: "rgba(108,92,231,0.08)", padding: "3px 10px", borderRadius: 20 }}>
-                ID: {user.userId || "N/A"}
-              </span>
-              {isAdmin ? (
-                <div className="super-admin-tag-wrapper" style={{ display: "inline-flex" }}>
-                  <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_v2.png`} alt="Super Admin" className="super-admin-tag" style={{ height: 24 }} />
-                  <div className="super-admin-particles" />
-                </div>
-              ) : (user.globalRole === "official") ? (
-                <img src={`${import.meta.env.BASE_URL}assets/official/official_tag.svg`} alt="Official" style={{ height: 20, filter: "drop-shadow(0 0 6px rgba(0,206,201,0.5))" }} />
-              ) : null}
-            </div>
-            {user.bio && (
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, maxWidth: 280, margin: "0 auto 8px", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{user.bio}</p>
-            )}
-          </div>
-
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6, marginBottom: 14,
-          }}>
-            {isAdmin ? (
-              <span className="founder-badge" style={{ fontSize: 10 }}>{"\u{1F451}"} Founder</span>
-            ) : (
-              <span style={{
-                fontSize: 10, fontWeight: 800, padding: "4px 14px", borderRadius: 20,
-                background: "linear-gradient(135deg, rgba(108,92,231,0.2), rgba(139,124,246,0.1))",
-                border: "1px solid rgba(108,92,231,0.3)", color: "#A29BFE",
-              }}>{"\u2B50"} Level {user.level}</span>
-            )}
-            <span style={{
-              fontSize: 10, fontWeight: 800, padding: "4px 14px", borderRadius: 20,
-              background: "linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05))",
-              border: "1px solid rgba(255,215,0,0.25)", color: "#FFD700",
-            }}>{"\u{1F3C6}"} {unlockedCount}/{achievements.length}</span>
-          </div>
-
-          <div style={{ width: "100%", maxWidth: 320, marginBottom: 4 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "rgba(162,155,254,0.4)", marginBottom: 5 }}>
-              <span>Lv.{user.level}</span><span>{user.xp.toLocaleString()}/{(user.level * 1000).toLocaleString()} XP</span>
-            </div>
-            <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-              <div style={{
-                height: "100%", borderRadius: 3, width: `${xpPct}%`,
-                background: "linear-gradient(90deg, #6C5CE7, #A29BFE, #c084fc)",
-                boxShadow: "0 0 12px rgba(108,92,231,0.5)", transition: "width 0.6s ease",
-              }} />
-            </div>
+            <div className="pf-avatar-edit-badge">{"\u270F\uFE0F"}</div>
           </div>
         </div>
       </div>
 
-      <div style={{
-        margin: "-32px 12px 0", position: "relative", zIndex: 10,
-        background: "rgba(20,12,40,0.85)", backdropFilter: "blur(20px)",
-        borderRadius: 20, border: "1px solid rgba(108,92,231,0.15)",
-        padding: "18px 12px", boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-      }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4 }}>
+      <div className="pf-info-block">
+        <h2 className="pf-name">{user.name}</h2>
+        {user.bio && <p className="pf-bio">{user.bio}</p>}
+
+        <div className="pf-badge-line">
+          <span className="pf-pink-badge">18</span>
+          <span className="pf-flag">{"\u{1F1EE}\u{1F1F3}"}</span>
+          <span className="pf-grey-pill">Lv.{user.level}</span>
+          <span className="pf-grey-pill">Diamond</span>
+          {isAdmin && <span className="pf-verified-pill">{"\u2705"}</span>}
+          {user.vip && <span className="pf-verified-pill">{"\u{1F451}"}</span>}
+          {isAdmin ? (
+            <span className="super-admin-chat-tag" style={{ fontSize: 8, padding: "2px 8px", marginLeft: "auto" }}>{"\u{1F451}"} ADMIN</span>
+          ) : user.globalRole === "official" ? (
+            <span className="official-chat-tag" style={{ fontSize: 8, padding: "2px 8px", marginLeft: "auto" }}>{"\u{1F6E1}\uFE0F"} OFFICIAL</span>
+          ) : (
+            <span className="pf-home-icon">{"\u{1F3E0}"}</span>
+          )}
+        </div>
+
+        <div className="pf-stats-row">
           {[
-            { label: "Followers", val: (user.followers || 0).toLocaleString(), action: () => { setShowFollowersList(true); loadFollowers(); } },
-            { label: "Following", val: (user.following || 0).toLocaleString(), action: () => { setShowFollowingList(true); loadFollowing(); } },
-            { label: "Friends", val: (user.friends || 0).toLocaleString(), action: () => { setShowFriendsList(true); loadFriends(); } },
-            { label: "Moments", val: (momentCount).toLocaleString() },
+            { label: "Following", val: user.following || 0, action: () => { setShowFollowingList(true); loadFollowing(); } },
+            { label: "Followers", val: user.followers || 0, action: () => { setShowFollowersList(true); loadFollowers(); } },
+            { label: "Visitors", val: momentCount, dot: true },
           ].map(s => (
-            <div key={s.label} onClick={"action" in s && s.action ? s.action as () => void : undefined}
-              style={{
-                textAlign: "center", padding: "8px 4px", cursor: "action" in s && s.action ? "pointer" : "default",
-                borderRadius: 12, transition: "background 0.15s",
-              }}
-              onMouseEnter={e => { if ("action" in s && s.action) e.currentTarget.style.background = "rgba(108,92,231,0.08)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-            >
-              <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1, color: "#fff" }}>{s.val}</p>
-              <p style={{ fontSize: 9, color: "rgba(162,155,254,0.5)", marginTop: 5, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</p>
+            <div key={s.label} className="pf-stat-btn" onClick={s.action}>
+              <p className="pf-stat-value">{s.val}</p>
+              <p className="pf-stat-label">{s.label}</p>
+              {s.dot && <div className="pf-stat-dot" />}
             </div>
           ))}
         </div>
 
-        <div style={{ height: 1, background: "rgba(108,92,231,0.1)", margin: "12px 0" }} />
-
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-primary" style={{ flex: 1, fontSize: 12, padding: "10px 0", borderRadius: 14, fontWeight: 700 }}
-            onClick={onEditProfile}>
-            {"\u270F\uFE0F"} Edit Profile
-          </button>
-          <button style={{
-            flex: 1, fontSize: 12, padding: "10px 0", borderRadius: 14, fontWeight: 700,
-            background: "linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,215,0,0.06))",
-            border: "1px solid rgba(255,215,0,0.25)", color: "#FFD700", cursor: "pointer", fontFamily: "inherit",
-          }} onClick={() => setShowWallet(true)}>
-            {"\u{1F48E}"} {user.coins.toLocaleString()}
-          </button>
-          <button style={{
-            width: 44, height: 40, borderRadius: 14, border: "1px solid rgba(108,92,231,0.2)",
-            background: "rgba(108,92,231,0.08)", cursor: "pointer", fontSize: 16,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }} onClick={() => handleMenu("store")}>
-            {"\u{1F6CD}\uFE0F"}
-          </button>
+        <div className="pf-level-badge-row">
+          <div className="pf-level-badge">
+            <div className="pf-level-badge-core">{user.level}</div>
+            <span className="pf-wing">{"\u2726"}</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "rgba(162,155,254,0.4)", marginBottom: 4 }}>
+              <span>Lv.{user.level}</span><span>{user.xp.toLocaleString()}/{(user.level * 1000).toLocaleString()} XP</span>
+            </div>
+            <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+              <div style={{ height: "100%", borderRadius: 2, width: `${xpPct}%`, background: "linear-gradient(90deg, #60a5fa, #a78bfa)", transition: "width 0.5s" }} />
+            </div>
+          </div>
+          <span className="pf-chevron">{"\u203A"}</span>
         </div>
       </div>
 
-      <div style={{ padding: "16px 12px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="pf-functions-section">
+        <p className="pf-section-title">Functions</p>
+        <div className="pf-icon-grid">
+          {PROFILE_ICONS.map(item => (
+            <div key={item.label} className="pf-icon-card" onClick={() => handleMenu(item.action)}>
+              <div className="pf-icon-bubble" style={{ background: `${item.color}1a`, borderColor: `${item.color}33` }}>
+                <span>{item.icon}</span>
+              </div>
+              <span className="pf-icon-label">{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: "0 16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
         {friendRequests.length > 0 && (
           <div style={{
             display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 16,
-            background: "linear-gradient(135deg, rgba(108,92,231,0.12), rgba(108,92,231,0.04))",
-            border: "1px solid rgba(108,92,231,0.2)", cursor: "pointer",
+            background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(168,85,247,0.04))",
+            border: "1px solid rgba(168,85,247,0.2)", cursor: "pointer",
           }} onClick={() => setShowFriendRequests(true)}>
-            <div style={{
-              width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(108,92,231,0.15)", fontSize: 20,
-            }}>{"\u{1F91D}"}</div>
+            <div style={{ width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(168,85,247,0.15)", fontSize: 20 }}>{"\u{1F91D}"}</div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 700 }}>Friend Requests</p>
-              <p style={{ fontSize: 10, color: "rgba(162,155,254,0.45)" }}>{friendRequests.length} pending</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Friend Requests</p>
+              <p style={{ fontSize: 10, color: "#8b7aaa" }}>{friendRequests.length} pending</p>
             </div>
-            <span style={{
-              minWidth: 22, height: 22, borderRadius: 11, background: "#6C5CE7",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, fontWeight: 800, padding: "0 6px",
-            }}>{friendRequests.length}</span>
+            <span style={{ minWidth: 22, height: 22, borderRadius: 11, background: "#a855f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, padding: "0 6px", color: "#fff" }}>{friendRequests.length}</span>
           </div>
         )}
 
         {MENU_GROUPS.map((group) => (
           <div key={group.title}>
-            <p style={{ fontSize: 10, fontWeight: 800, color: "rgba(162,155,254,0.35)", textTransform: "uppercase", letterSpacing: 1.5, padding: "0 4px", marginBottom: 8 }}>{group.title}</p>
-            <div style={{
-              borderRadius: 18, overflow: "hidden",
-              background: "rgba(20,12,40,0.6)", backdropFilter: "blur(10px)",
-              border: "1px solid rgba(108,92,231,0.08)",
-            }}>
+            <p style={{ fontSize: 10, fontWeight: 800, color: "rgba(139,122,170,0.4)", textTransform: "uppercase", letterSpacing: 1.5, padding: "0 4px", marginBottom: 8 }}>{group.title}</p>
+            <div style={{ borderRadius: 18, overflow: "hidden", background: "rgba(20,12,40,0.6)", backdropFilter: "blur(10px)", border: "1px solid rgba(168,85,247,0.08)" }}>
               {group.items.map((item, i) => (
                 <React.Fragment key={item.label}>
-                  <button
-                    onClick={() => handleMenu(item.action)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      width: "100%", padding: "13px 14px", background: "none", border: "none",
-                      cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s",
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(108,92,231,0.06)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "none")}
-                  >
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 10,
-                      background: "rgba(108,92,231,0.08)",
-                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0,
-                    }}>{item.icon}</div>
+                  <button onClick={() => handleMenu(item.action)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(168,85,247,0.06)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(168,85,247,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{item.icon}</div>
                     <div style={{ flex: 1, textAlign: "left" }}>
                       <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{item.label}</p>
-                      <p style={{ fontSize: 10, color: "rgba(162,155,254,0.35)", marginTop: 1 }}>{item.desc}</p>
+                      <p style={{ fontSize: 10, color: "rgba(139,122,170,0.4)", marginTop: 1 }}>{item.desc}</p>
                     </div>
                     {"badge" in item && (item as any).badge > 0 && (
-                      <span style={{
-                        minWidth: 20, height: 20, borderRadius: 10, background: "#6C5CE7",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 9, fontWeight: 800, padding: "0 5px",
-                      }}>{(item as any).badge}</span>
+                      <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: "#a855f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, padding: "0 5px", color: "#fff" }}>{(item as any).badge}</span>
                     )}
-                    <span style={{ color: "rgba(162,155,254,0.2)", fontSize: 16, fontWeight: 300 }}>{"\u203A"}</span>
+                    <span style={{ color: "rgba(139,122,170,0.2)", fontSize: 16, fontWeight: 300 }}>{"\u203A"}</span>
                   </button>
-                  {i < group.items.length - 1 && (
-                    <div style={{ height: 1, background: "rgba(108,92,231,0.06)", marginLeft: 62 }} />
-                  )}
+                  {i < group.items.length - 1 && (<div style={{ height: 1, background: "rgba(168,85,247,0.06)", marginLeft: 62 }} />)}
                 </React.Fragment>
               ))}
             </div>
@@ -780,17 +697,9 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
         {(user.globalRole === "official" || isAdmin) && (
           <div>
             <p style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,215,0,0.4)", textTransform: "uppercase", letterSpacing: 1.5, padding: "0 4px", marginBottom: 8 }}>Administration</p>
-            <div style={{
-              borderRadius: 18, overflow: "hidden",
-              background: "rgba(20,12,40,0.6)", backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255,215,0,0.08)",
-            }}>
+            <div style={{ borderRadius: 18, overflow: "hidden", background: "rgba(20,12,40,0.6)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,215,0,0.08)" }}>
               {(user.globalRole === "official" || isAdmin) && (
-                <button onClick={() => setShowOfficialRules(true)} style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  width: "100%", padding: "13px 14px", background: "none", border: "none",
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>
+                <button onClick={() => setShowOfficialRules(true)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(0,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F4DC}"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <p style={{ fontSize: 14, color: "#00ffff", fontWeight: 600 }}>Official Guidelines</p>
@@ -801,11 +710,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
               )}
               {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
               {isAdmin && (
-                <button onClick={() => handleMenu("admin")} style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  width: "100%", padding: "13px 14px", background: "none", border: "none",
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>
+                <button onClick={() => handleMenu("admin")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,215,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F6E1}\uFE0F"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <p style={{ fontSize: 14, color: "#FFD700", fontWeight: 600 }}>Admin Panel</p>
@@ -816,11 +721,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
               )}
               {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
               {isAdmin && (
-                <button onClick={() => setShowGodMode(true)} style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  width: "100%", padding: "13px 14px", background: "none", border: "none",
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>
+                <button onClick={() => setShowGodMode(true)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, rgba(191,0,255,0.15), rgba(0,255,255,0.08))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u26A1"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <p style={{ fontSize: 14, fontWeight: 600 }}><span style={{ color: "#bf00ff" }}>God</span> <span style={{ color: "#00ffff" }}>Mode</span></p>
@@ -831,11 +732,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
               )}
               {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
               {isAdmin && (
-                <button onClick={() => handleMenu("reportQueue")} style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  width: "100%", padding: "13px 14px", background: "none", border: "none",
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>
+                <button onClick={() => handleMenu("reportQueue")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,150,50,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F4CB}"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <p style={{ fontSize: 14, color: "#FFA726", fontWeight: 600 }}>Report Queue</p>
@@ -848,20 +745,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           </div>
         )}
 
-        <button onClick={handleLogout} style={{
-          width: "100%", padding: "14px 0", fontSize: 14, fontWeight: 700,
-          borderRadius: 16, border: "1px solid rgba(255,100,130,0.15)",
-          background: "rgba(255,100,130,0.06)", color: "rgba(255,100,130,0.7)",
-          cursor: "pointer", fontFamily: "inherit", marginTop: 4,
-          transition: "background 0.15s",
-        }}
-          onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,100,130,0.12)")}
-          onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,100,130,0.06)")}
-        >
-          {"\u{1F6AA}"} Log Out
-        </button>
-
-        <p style={{ textAlign: "center", fontSize: 9, color: "rgba(162,155,254,0.2)", padding: "8px 0 24px" }}>
+        <button onClick={handleLogout} className="pf-logout-btn">{"\u{1F6AA}"} Log Out</button>
+        <p style={{ textAlign: "center", fontSize: 9, color: "rgba(139,122,170,0.2)", padding: "8px 0 24px" }}>
           Galaxy Voice Chat v2.0 {"\u00B7"} UID: {user.uid.slice(0, 10).toUpperCase()}
         </p>
       </div>
