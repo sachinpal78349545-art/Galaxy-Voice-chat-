@@ -5,7 +5,6 @@ import { UserProfile, isSuperAdmin } from "../lib/userService";
 import { Room, subscribeRooms, subscribeRoom } from "../lib/roomService";
 import { getGiftLeaderboard, LeaderboardEntry } from "../lib/giftService";
 import Header from "../components/home/Header";
-import SearchBar from "../components/home/SearchBar";
 import BannerCarousel from "../components/home/BannerCarousel";
 import GameSection from "../components/home/GameCard";
 import FriendSection from "../components/home/FriendCard";
@@ -13,14 +12,10 @@ import FriendSection from "../components/home/FriendCard";
 interface OnlineUser { uid: string; name: string; avatar: string; level?: number; }
 interface Props { user: UserProfile; onJoinRoom: (room: Room) => void; onCreateRoom?: () => void; }
 
-const PAGE_SIZE = 8;
 const MEDAL_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
 
 export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [topGifters, setTopGifters] = useState<LeaderboardEntry[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [allUsers, setAllUsers] = useState<OnlineUser[]>([]);
@@ -28,7 +23,7 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unsub = subscribeRooms(r => { setRooms(r); setLoading(false); });
+    const unsub = subscribeRooms(r => { setRooms(r); });
     return unsub;
   }, []);
 
@@ -81,26 +76,9 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
       .catch(() => setTopGifters([]));
   }, []);
 
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-      setVisibleCount(prev => prev + PAGE_SIZE);
-    }
-  }, []);
-
-  const filtered = rooms.filter(r => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return r.name.toLowerCase().includes(q) || r.host?.toLowerCase().includes(q) || r.topic?.toLowerCase().includes(q);
-  }).sort((a, b) => b.listeners - a.listeners);
-
-  const visible = filtered.slice(0, visibleCount);
-
   return (
-    <div className="hp-page" ref={scrollRef} onScroll={handleScroll}>
+    <div className="hp-page" ref={scrollRef}>
       <Header user={user} />
-      <SearchBar onSearch={setSearch} />
       <BannerCarousel />
       <GameSection onCreateRoom={onCreateRoom} />
 
@@ -170,68 +148,6 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
       )}
 
       <FriendSection users={allUsers} />
-
-      <div className="hp-rooms-section">
-        <div className="hp-section-header">
-          <h2 className="hp-section-title">{"\u{1F525}"} Live Rooms</h2>
-          <div className="hp-live-count">
-            <span className="live-dot" />
-            <span>{rooms.filter(r => r.isLive).length} Live</span>
-          </div>
-        </div>
-
-        <div className="hp-rooms-list">
-          {loading ? (
-            <div className="galaxy-loader">
-              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Loading" />
-              <p>Discovering rooms...</p>
-            </div>
-          ) : (
-            <>
-              {!myRoom && (
-                <div className="hp-create-card" onClick={onCreateRoom}>
-                  <div className="hp-create-icon">{"\u{1F3E0}"}</div>
-                  <div className="hp-create-info">
-                    <p className="hp-create-title">Create Your Room</p>
-                    <p className="hp-create-sub">Start voice chatting now</p>
-                  </div>
-                  <div className="hp-create-btn">{"\uFF0B"} Create</div>
-                </div>
-              )}
-              {visible.map((room, i) => (
-                <div key={room.id} className="hp-room-card" style={{ animationDelay: `${i * 0.04}s` }} onClick={() => onJoinRoom(room)}>
-                  <div className="hp-room-avatar">
-                    {(room.seats?.find(s => s.userId)?.avatar || room.coverEmoji || "\u{1F3A4}")?.startsWith?.("http")
-                      ? <img src={room.seats?.find(s => s.userId)?.avatar || ""} alt="" onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.innerHTML = '<span style="font-size:24px">\u{1F3A4}</span>'; }} />
-                      : <span style={{ fontSize: 24 }}>{room.coverEmoji || "\u{1F3A4}"}</span>}
-                    {room.isLive && <div className="hp-room-live-badge"><span className="live-dot" style={{ width: 4, height: 4 }} /> LIVE</div>}
-                  </div>
-                  <div className="hp-room-info">
-                    <h3 className="hp-room-name">{room.name}</h3>
-                    <p className="hp-room-host">by {room.host}</p>
-                    <div className="hp-room-stats">
-                      <span className="hp-room-seats">{"\u{1F465}"} {room.seats?.filter(s => s.userId).length || 0}/{room.seats?.length || 12}</span>
-                      <span className="hp-room-topic">{room.topic || "Chat"}</span>
-                    </div>
-                  </div>
-                  <div className="hp-room-join">Join</div>
-                </div>
-              ))}
-              {visible.length < filtered.length && (
-                <div className="galaxy-loader" style={{ padding: "16px 0" }}>
-                  <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" style={{ width: 28, height: 28 }} />
-                </div>
-              )}
-              {filtered.length === 0 && (
-                <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(162,155,254,0.3)" }}>
-                  <div style={{ fontSize: 44 }}>{"\u{1F30C}"}</div>
-                  <p style={{ marginTop: 8, fontWeight: 600, fontSize: 13 }}>No rooms found</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
       <div style={{ height: 80 }} />
     </div>
   );

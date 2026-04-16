@@ -2198,24 +2198,26 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .hp-create-room-btn:active {
   transform: scale(0.95);
 }
-.hp-games-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.hp-games-vertical {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
-.hp-game-card {
+.hp-game-card-v {
   border-radius: 16px;
   overflow: hidden;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(108,92,231,0.15);
-  padding: 8px;
-  text-align: center;
+  padding: 10px 12px;
   cursor: pointer;
   transition: transform 0.25s, box-shadow 0.25s;
   animation: slide-up 0.4s ease both;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.hp-game-card::before {
+.hp-game-card-v::before {
   content: "";
   position: absolute;
   inset: -1px;
@@ -2225,18 +2227,18 @@ textarea.input-field { resize: none; line-height: 1.5; }
   transition: opacity 0.3s;
   z-index: 0;
 }
-.hp-game-card:active {
-  transform: scale(1.05);
+.hp-game-card-v:active {
+  transform: scale(0.98);
 }
-.hp-game-card:active::before {
+.hp-game-card-v:active::before {
   opacity: 1;
 }
-.hp-game-img-wrap {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 12px;
+.hp-game-img-wrap-v {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border-radius: 14px;
   overflow: hidden;
-  margin-bottom: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2244,21 +2246,41 @@ textarea.input-field { resize: none; line-height: 1.5; }
   position: relative;
   z-index: 1;
 }
-.hp-game-img {
+.hp-game-img-v {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 14px;
 }
-.hp-game-name {
-  font-size: 10px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.85);
+.hp-game-info-v {
+  flex: 1;
+  min-width: 0;
   position: relative;
   z-index: 1;
+}
+.hp-game-name-v {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.hp-game-players-v {
+  font-size: 11px;
+  color: rgba(162,155,254,0.5);
+  margin-top: 2px;
+}
+.hp-game-play-btn {
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .hp-my-room {

@@ -5,11 +5,6 @@ interface Props {
 }
 
 export default function Header({ user }: Props) {
-  const formatId = (uid: string) => {
-    const num = uid.replace(/\D/g, "").slice(0, 9);
-    return num.length >= 4 ? num.padStart(9, "0") : uid.slice(0, 9);
-  };
-
   return (
     <div className="hp-header">
       <div className="hp-header-left">
@@ -25,15 +20,6 @@ export default function Header({ user }: Props) {
         </div>
       </div>
       <div className="hp-header-right">
-        <div className="hp-header-icon-btn hp-icon-trophy">
-          <span>{"\u{1F3C6}"}</span>
-        </div>
-        <div className="hp-header-icon-btn hp-icon-verified">
-          <span>{"\u2714\uFE0F"}</span>
-        </div>
-        <div className="hp-header-icon-btn hp-icon-users">
-          <span>{"\u{1F465}"}</span>
-        </div>
         <div className="hp-coins-badge">
           <span className="hp-coins-icon">{"\u{1F48E}"}</span>
           <span className="hp-coins-count">{user.coins.toLocaleString()}</span>
