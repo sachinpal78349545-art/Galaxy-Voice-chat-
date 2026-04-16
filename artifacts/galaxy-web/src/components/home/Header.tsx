@@ -20,6 +20,13 @@ export default function Header({ user }: Props) {
         </div>
       </div>
       <div className="hp-header-right">
+        <div className="hp-float-icon hp-float-search">
+          <span>{"\u{1F50D}"}</span>
+        </div>
+        <div className="hp-float-icon hp-float-bell">
+          <span>{"\u{1F514}"}</span>
+          <div className="hp-bell-glow" />
+        </div>
         <div className="hp-coins-badge">
           <span className="hp-coins-icon">{"\u{1F48E}"}</span>
           <span className="hp-coins-count">{user.coins.toLocaleString()}</span>
