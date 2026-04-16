@@ -595,7 +595,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                 {isAdmin ? (
                   <SuperAdminAvatar src={user.avatar} userId={user.userId || ""} size={92} onClick={onEditProfile} />
                 ) : user.avatar?.startsWith?.("http") ? (
-                  <img src={user.avatar} alt="" className="pf-avatar-img" onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.innerHTML = '<span style="font-size:28px;color:#fff">' + (user.name?.slice(0,2).toUpperCase() || "\u{1F464}") + '</span>'; }} />
+                  <img src={user.avatar} alt="" className="pf-avatar-img" onError={e => { const img = e.target as HTMLImageElement; img.style.display = "none"; const span = document.createElement("span"); span.style.fontSize = "28px"; span.style.color = "#fff"; span.textContent = user.name?.slice(0, 2).toUpperCase() || "\u{1F464}"; img.parentElement!.appendChild(span); }} />
                 ) : (
                   <span className="pf-avatar-text">{user.name?.slice(0, 2).toUpperCase() || "\u{1F464}"}</span>
                 )}
