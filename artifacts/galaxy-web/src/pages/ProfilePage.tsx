@@ -106,6 +106,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
   const [alertSending, setAlertSending] = useState(false);
   const [modLoading, setModLoading] = useState(false);
   const [showGodMode, setShowGodMode] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [godTab, setGodTab] = useState<string>("deviceBan");
   const [godUserId, setGodUserId] = useState("");
   const [godUser, setGodUser] = useState<UserProfile | null>(null);
@@ -538,15 +539,31 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
     showToast("Copied to Clipboard", "success", "\u2705");
   };
 
-  const PROFILE_ICONS = [
-    { icon: "\u{1F4B0}", label: "Wallet", color: "#f59e0b", action: "wallet" },
-    { icon: "\u{1F6CD}\uFE0F", label: "Store", color: "#a855f7", action: "store" },
-    { icon: "\u2705", label: "Task", color: "#3b82f6", action: "dailyTasks" },
-    { icon: "\u{1F392}", label: "Backpack", color: "#ec4899", action: "backpack" },
-    { icon: "\u{1F46A}", label: "Family", color: "#ec4899", action: "family" },
-    { icon: "\u{1F50D}", label: "Find", color: "#3b82f6", action: "search" },
-    { icon: "\u2753", label: "Help", color: "#22c55e", action: "help" },
-    { icon: "\u{1F4AC}", label: "Feedback", color: "#a855f7", action: "feedback" },
+  const PROFILE_PLACEHOLDERS = [
+    { color: "rgba(168,85,247,0.15)", border: "rgba(168,85,247,0.25)" },
+    { color: "rgba(59,130,246,0.15)", border: "rgba(59,130,246,0.25)" },
+    { color: "rgba(236,72,153,0.15)", border: "rgba(236,72,153,0.25)" },
+    { color: "rgba(34,197,94,0.15)", border: "rgba(34,197,94,0.25)" },
+  ];
+
+  const SETTINGS_ITEMS = [
+    { icon: "\u270F\uFE0F", label: "Edit Profile", desc: "Name, avatar & bio", action: "edit" },
+    { icon: "\u{1F30D}", label: "Language", desc: getCurrentLanguage().toUpperCase(), action: "language" },
+    { icon: "\u{1F512}", label: "Privacy & Settings", desc: "Control who sees you", action: "privacy" },
+    { icon: "\u{1F6AB}", label: "Blocked Users", desc: `${(user.blockedList || []).length} blocked`, action: "blocked" },
+    { icon: "\u{1F4B0}", label: "Wallet", desc: `${user.coins.toLocaleString()} coins`, action: "wallet" },
+    { icon: "\u{1F6CD}\uFE0F", label: "Store", desc: "Frames, effects & themes", action: "store" },
+    { icon: "\u2705", label: "Daily Tasks", desc: "Earn bonus coins", action: "dailyTasks" },
+    { icon: "\u{1F392}", label: "Backpack", desc: "Equipped items", action: "backpack" },
+    { icon: "\u{1F46A}", label: "Family", desc: "Join or create", action: "family" },
+    { icon: "\u{1F91D}", label: "Friend Requests", desc: friendRequests.length > 0 ? `${friendRequests.length} pending` : "No pending", action: "friendRequests", badge: friendRequests.length || 0 },
+    { icon: "\u{1F465}", label: "Friends List", desc: `${user.friends || 0} friends`, action: "friendsList" },
+    { icon: "\u{1F50D}", label: "Find Users", desc: "Search by ID or name", action: "search" },
+    { icon: "\u{1F381}", label: "Daily Reward", desc: "Claim free coins", action: "daily" },
+    { icon: "\u{1F3C6}", label: "Achievements", desc: `${unlockedCount}/${achievements.length} unlocked`, action: "achievements" },
+    { icon: "\u2753", label: "Help", desc: "FAQs & guides", action: "help" },
+    { icon: "\u{1F4AC}", label: "Feedback", desc: "Help us improve", action: "feedback" },
+    { icon: "\u26A0\uFE0F", label: "Report a Problem", desc: "Report bugs or issues", action: "report" },
   ];
 
   return (
@@ -564,7 +581,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             <span className="pf-id-text">ID: {user.userId || "N/A"}</span>
             <span style={{ fontSize: 11 }}>{"\u{1F4CB}"}</span>
           </button>
-          <button className="pf-settings-btn" onClick={onEditProfile}>
+          <button className="pf-settings-btn" onClick={() => setShowSettings(true)}>
             {"\u2699\uFE0F"}
           </button>
         </div>
@@ -639,117 +656,102 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
       </div>
 
       <div className="pf-functions-section">
-        <p className="pf-section-title">Functions</p>
-        <div className="pf-icon-grid">
-          {PROFILE_ICONS.map(item => (
-            <div key={item.label} className="pf-icon-card" onClick={() => handleMenu(item.action)}>
-              <div className="pf-icon-bubble" style={{ background: `${item.color}1a`, borderColor: `${item.color}33` }}>
-                <span>{item.icon}</span>
-              </div>
-              <span className="pf-icon-label">{item.label}</span>
-            </div>
+        <div className="pf-placeholder-grid">
+          {PROFILE_PLACEHOLDERS.map((ph, i) => (
+            <div key={i} className="pf-placeholder-circle" style={{ background: ph.color, borderColor: ph.border }} />
           ))}
         </div>
       </div>
 
-      <div style={{ padding: "0 16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {friendRequests.length > 0 && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 16,
-            background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(168,85,247,0.04))",
-            border: "1px solid rgba(168,85,247,0.2)", cursor: "pointer",
-          }} onClick={() => setShowFriendRequests(true)}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(168,85,247,0.15)", fontSize: 20 }}>{"\u{1F91D}"}</div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Friend Requests</p>
-              <p style={{ fontSize: 10, color: "#8b7aaa" }}>{friendRequests.length} pending</p>
-            </div>
-            <span style={{ minWidth: 22, height: 22, borderRadius: 11, background: "#a855f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, padding: "0 6px", color: "#fff" }}>{friendRequests.length}</span>
-          </div>
-        )}
+      <div style={{ padding: "0 16px", paddingBottom: 100 }}>
+        <p style={{ textAlign: "center", fontSize: 9, color: "rgba(139,122,170,0.2)", padding: "16px 0" }}>
+          Galaxy Voice Chat v2.0 {"\u00B7"} UID: {user.uid.slice(0, 10).toUpperCase()}
+        </p>
+      </div>
 
-        {MENU_GROUPS.map((group) => (
-          <div key={group.title}>
-            <p style={{ fontSize: 10, fontWeight: 800, color: "rgba(139,122,170,0.4)", textTransform: "uppercase", letterSpacing: 1.5, padding: "0 4px", marginBottom: 8 }}>{group.title}</p>
-            <div style={{ borderRadius: 18, overflow: "hidden", background: "rgba(20,12,40,0.6)", backdropFilter: "blur(10px)", border: "1px solid rgba(168,85,247,0.08)" }}>
-              {group.items.map((item, i) => (
-                <React.Fragment key={item.label}>
-                  <button onClick={() => handleMenu(item.action)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(168,85,247,0.06)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(168,85,247,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{item.icon}</div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{item.label}</p>
-                      <p style={{ fontSize: 10, color: "rgba(139,122,170,0.4)", marginTop: 1 }}>{item.desc}</p>
-                    </div>
-                    {"badge" in item && (item as any).badge > 0 && (
-                      <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: "#a855f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, padding: "0 5px", color: "#fff" }}>{(item as any).badge}</span>
-                    )}
-                    <span style={{ color: "rgba(139,122,170,0.2)", fontSize: 16, fontWeight: 300 }}>{"\u203A"}</span>
-                  </button>
-                  {i < group.items.length - 1 && (<div style={{ height: 1, background: "rgba(168,85,247,0.06)", marginLeft: 62 }} />)}
-                </React.Fragment>
-              ))}
-            </div>
+      {showSettings && (
+        <BottomSheet onClose={() => setShowSettings(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u2699\uFE0F"} Settings</h2>
+            <button onClick={() => setShowSettings(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
           </div>
-        ))}
 
-        {(user.globalRole === "official" || isAdmin) && (
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,215,0,0.4)", textTransform: "uppercase", letterSpacing: 1.5, padding: "0 4px", marginBottom: 8 }}>Administration</p>
-            <div style={{ borderRadius: 18, overflow: "hidden", background: "rgba(20,12,40,0.6)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,215,0,0.08)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {SETTINGS_ITEMS.map((item, i) => (
+              <React.Fragment key={item.label}>
+                <button
+                  onClick={() => { setShowSettings(false); handleMenu(item.action); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    width: "100%", padding: "12px 8px", background: "none", border: "none",
+                    cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s",
+                    borderRadius: 12,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(168,85,247,0.06)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                >
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(168,85,247,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{item.icon}</div>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{item.label}</p>
+                    <p style={{ fontSize: 10, color: "rgba(139,122,170,0.4)", marginTop: 1 }}>{item.desc}</p>
+                  </div>
+                  {"badge" in item && (item as any).badge > 0 && (
+                    <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: "#a855f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, padding: "0 5px", color: "#fff" }}>{(item as any).badge}</span>
+                  )}
+                  <span style={{ color: "rgba(139,122,170,0.2)", fontSize: 16, fontWeight: 300 }}>{"\u203A"}</span>
+                </button>
+                {i < SETTINGS_ITEMS.length - 1 && (<div style={{ height: 1, background: "rgba(168,85,247,0.04)", marginLeft: 56 }} />)}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {(user.globalRole === "official" || isAdmin) && (
+            <>
+              <div style={{ height: 1, background: "rgba(255,215,0,0.1)", margin: "12px 0" }} />
+              <p style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,215,0,0.4)", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>Administration</p>
               {(user.globalRole === "official" || isAdmin) && (
-                <button onClick={() => setShowOfficialRules(true)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={() => { setShowSettings(false); setShowOfficialRules(true); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 8px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", borderRadius: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(0,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F4DC}"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <p style={{ fontSize: 14, color: "#00ffff", fontWeight: 600 }}>Official Guidelines</p>
-                    <p style={{ fontSize: 10, color: "rgba(0,255,255,0.3)", marginTop: 1 }}>Rules & policies</p>
                   </div>
                   <span style={{ color: "rgba(0,255,255,0.2)", fontSize: 16 }}>{"\u203A"}</span>
                 </button>
               )}
-              {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
               {isAdmin && (
-                <button onClick={() => handleMenu("admin")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={() => { setShowSettings(false); handleMenu("admin"); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 8px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", borderRadius: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,215,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F6E1}\uFE0F"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <p style={{ fontSize: 14, color: "#FFD700", fontWeight: 600 }}>Admin Panel</p>
-                    <p style={{ fontSize: 10, color: "rgba(255,215,0,0.3)", marginTop: 1 }}>Manage users & rooms</p>
                   </div>
                   <span style={{ color: "rgba(255,215,0,0.2)", fontSize: 16 }}>{"\u203A"}</span>
                 </button>
               )}
-              {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
               {isAdmin && (
-                <button onClick={() => setShowGodMode(true)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={() => { setShowSettings(false); setShowGodMode(true); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 8px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", borderRadius: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, rgba(191,0,255,0.15), rgba(0,255,255,0.08))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u26A1"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <p style={{ fontSize: 14, fontWeight: 600 }}><span style={{ color: "#bf00ff" }}>God</span> <span style={{ color: "#00ffff" }}>Mode</span></p>
-                    <p style={{ fontSize: 10, color: "rgba(191,0,255,0.3)", marginTop: 1 }}>Full control panel</p>
                   </div>
                   <span style={{ color: "rgba(191,0,255,0.2)", fontSize: 16 }}>{"\u203A"}</span>
                 </button>
               )}
-              {isAdmin && (<div style={{ height: 1, background: "rgba(255,215,0,0.06)", marginLeft: 62 }} />)}
               {isAdmin && (
-                <button onClick={() => handleMenu("reportQueue")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={() => { setShowSettings(false); handleMenu("reportQueue"); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 8px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", borderRadius: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,150,50,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F4CB}"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
                     <p style={{ fontSize: 14, color: "#FFA726", fontWeight: 600 }}>Report Queue</p>
-                    <p style={{ fontSize: 10, color: "rgba(255,150,50,0.3)", marginTop: 1 }}>Review user reports</p>
                   </div>
                   <span style={{ color: "rgba(255,150,50,0.2)", fontSize: 16 }}>{"\u203A"}</span>
                 </button>
               )}
-            </div>
-          </div>
-        )}
+            </>
+          )}
 
-        <button onClick={handleLogout} className="pf-logout-btn">{"\u{1F6AA}"} Log Out</button>
-        <p style={{ textAlign: "center", fontSize: 9, color: "rgba(139,122,170,0.2)", padding: "8px 0 24px" }}>
-          Galaxy Voice Chat v2.0 {"\u00B7"} UID: {user.uid.slice(0, 10).toUpperCase()}
-        </p>
-      </div>
+          <div style={{ height: 1, background: "rgba(255,100,130,0.08)", margin: "12px 0" }} />
+          <button onClick={() => { setShowSettings(false); handleLogout(); }} className="pf-logout-btn">{"\u{1F6AA}"} Log Out</button>
+        </BottomSheet>
+      )}
 
       {showWallet && (
         <BottomSheet onClose={() => setShowWallet(false)}>

@@ -2744,37 +2744,16 @@ textarea.input-field { resize: none; line-height: 1.5; }
   font-weight: 800;
   margin-bottom: 8px;
 }
-.pf-icon-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.pf-icon-card {
+.pf-placeholder-grid {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  padding: 8px 0;
-  border-radius: 12px;
-  transition: background 0.15s;
-}
-.pf-icon-card:active { background: rgba(168,85,247,0.08); }
-.pf-icon-bubble {
-  width: 40px;
-  height: 40px;
-  border-radius: 13px;
-  border: 1px solid;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  font-size: 16px;
+  gap: 16px;
 }
-.pf-icon-label {
-  color: #d7e8ff;
-  font-size: 10px;
-  font-weight: 700;
-  text-align: center;
+.pf-placeholder-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  border: 1px solid;
 }
 .pf-logout-btn {
   width: 100%;
