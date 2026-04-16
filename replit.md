@@ -19,6 +19,7 @@ I prefer iterative development with a focus on delivering working features incre
 ## System Architecture
 
 ### UI/UX Decisions
+- **HomePage**: ChalTalk-inspired premium design with: auto-sliding banner carousel (AI-generated images: golden portal, gaming room, treasure chest), glassmorphism search bar, game cards grid (Carrom, Truth&Dare, Yummy Crush, Ludo with AI images), online users section, top gifters leaderboard, find friends grid with user IDs, live rooms list. Components: `src/components/home/Header.tsx`, `SearchBar.tsx`, `BannerCarousel.tsx`, `GameCard.tsx`, `FriendCard.tsx`. AI images in `public/banner*.png` and `public/game_*.png`.
 - **Galaxy Web Theme**: Dark galaxy theme with purple/teal glowing borders, glassmorphism elements, and specific animations (giftFly, logoGlow, speaking-ring, confetti, etc.).
 - **Galaxy Mobile Theme**: "Midnight Nebula" with dark gradients (`#050112 → #0e0520 → #1a0b2e`).
 - **Color Palette**: Primary accents in purple (`#6C5CE7`, `#A29BFE`), gold for VIP/host elements (`#FFD700`), and live green (`#00e676`).

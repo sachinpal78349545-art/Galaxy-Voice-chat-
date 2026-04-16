@@ -24,3 +24,45 @@ id = "0oXrmVCx-s1x5VLhoBBDR"
 uri = "file://artifacts/galaxy-web/public/bg-mystical.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "2NBqDWw2MWxw8jMeYdonN"
+uri = "file://artifacts/galaxy-web/public/banner1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "EnShBB07lu_ADzMme6iLd"
+uri = "file://artifacts/galaxy-web/public/banner2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "fe5P9CdLfw5N6Ty51cJxF"
+uri = "file://artifacts/galaxy-web/public/banner3.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "OVnt5zGSGVezjT3Ex8D65"
+uri = "file://artifacts/galaxy-web/public/game_carrom.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "V1CDUJtba9vj3QUIEnIjG"
+uri = "file://artifacts/galaxy-web/public/game_truthdare.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "yzvqtbxwTsmZ8MVibc0lf"
+uri = "file://artifacts/galaxy-web/public/game_candy.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Gaum9aWfkxngI-7xysELh"
+uri = "file://artifacts/galaxy-web/public/game_ludo.png"
+type = "image"
+title = "generated_image"
