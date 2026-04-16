@@ -12,9 +12,22 @@ app.use(express.json());
 const publicDir = path.join(__dirname, "dist", "public");
 app.use(express.static(publicDir));
 
+const SERVER_STARTED_AT = Date.now();
+
 app.get("/ping", (_req, res) => {
   res.json({ status: "alive", timestamp: Date.now() });
 });
+
+app.get("/healthz", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptimeSeconds: Math.floor((Date.now() - SERVER_STARTED_AT) / 1000),
+    timestamp: new Date().toISOString(),
+    service: "galaxy-voice-chat",
+  });
+});
+
+app.head("/healthz", (_req, res) => res.sendStatus(200));
 
 const AGORA_APP_ID = process.env.AGORA_APP_ID || "5a9957fd6a8047f48310fd0e5545d42c";
 const AGORA_APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE || "";
