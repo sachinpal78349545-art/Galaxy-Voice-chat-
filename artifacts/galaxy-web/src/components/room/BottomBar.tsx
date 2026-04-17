@@ -62,6 +62,13 @@ export default function BottomBar({
 
   const closeAllPopups = () => { setShowEmoji(false); setShowGift(false); setShowReactions(false); };
 
+  const floatBtn = (gradient: string, shadow: string): React.CSSProperties => ({
+    width: 48, height: 48, borderRadius: 24, border: "1px solid rgba(255,255,255,0.18)",
+    padding: 0, cursor: "pointer", color: "#fff",
+    background: gradient, boxShadow: `0 4px 14px ${shadow}`,
+    display: "flex", alignItems: "center", justifyContent: "center",
+  });
+
   const circleBtn = (active = false): React.CSSProperties => ({
     width: 38, height: 38, borderRadius: 19,
     background: active ? "rgba(108,92,231,0.4)" : "rgba(0,0,0,0.45)",
@@ -73,35 +80,23 @@ export default function BottomBar({
 
   return (
     <>
-      {/* Right-side floating action buttons */}
+      {/* Right-side floating action buttons — clean aligned stack */}
       <div style={{
-        position: "fixed", right: 10, bottom: 130, zIndex: 80,
-        display: "flex", flexDirection: "column", gap: 10,
-        maxWidth: 400, marginLeft: "auto",
+        position: "fixed", right: 12, bottom: 140, zIndex: 80,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
       }}>
-        <button onClick={() => showToast("Mela coming soon!", "info")} style={{
-          width: 54, height: 54, borderRadius: 12, border: "none", padding: 0, cursor: "pointer",
-          background: "linear-gradient(135deg, #ff6b9d, #ffa07a)",
-          boxShadow: "0 4px 14px rgba(255,107,157,0.4)", overflow: "hidden", position: "relative",
-        }}>
-          <div style={{
-            position: "absolute", inset: 0,
-            background: "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.3), transparent 60%)",
-          }} />
-          <span style={{ fontSize: 28, position: "relative" }}>{"\u{1F3AA}"}</span>
+        <button onClick={() => showToast("Mela coming soon!", "info")} style={floatBtn("linear-gradient(135deg, #ff6b9d, #ffa07a)", "rgba(255,107,157,0.45)")}
+          title="Mela">
+          <span style={{ fontSize: 24 }}>{"\u{1F3AA}"}</span>
         </button>
-        <button onClick={() => { closeAllPopups(); setShowReactions(true); }} style={{
-          width: 48, height: 48, borderRadius: 24, border: "none", padding: 0, cursor: "pointer",
-          background: "linear-gradient(135deg, #a78bfa, #6C5CE7)",
-          boxShadow: "0 4px 12px rgba(108,92,231,0.5)",
-          color: "#fff", fontSize: 22,
-        }}>{"\u{1F4AC}"}</button>
-        <button onClick={onRaiseHand} style={{
-          width: 48, height: 48, borderRadius: 24, border: "none", padding: 0, cursor: "pointer",
-          background: "linear-gradient(135deg, #a78bfa, #6C5CE7)",
-          boxShadow: "0 4px 12px rgba(108,92,231,0.5)",
-          color: "#fff", fontSize: 22,
-        }}>{isOnSeat ? "\u270B" : "\u{1F464}"}</button>
+        <button onClick={() => { closeAllPopups(); setShowReactions(true); }} style={floatBtn("linear-gradient(135deg, #a78bfa, #6C5CE7)", "rgba(108,92,231,0.5)")}
+          title="Reactions">
+          <span style={{ fontSize: 22 }}>{"\u{1F4AC}"}</span>
+        </button>
+        <button onClick={onRaiseHand} style={floatBtn("linear-gradient(135deg, #a78bfa, #6C5CE7)", "rgba(108,92,231,0.5)")}
+          title="Raise hand">
+          <span style={{ fontSize: 22 }}>{isOnSeat ? "\u270B" : "\u{1F464}"}</span>
+        </button>
       </div>
 
       <div style={{
@@ -117,7 +112,7 @@ export default function BottomBar({
             border: "1px solid rgba(108,92,231,0.3)", backdropFilter: "blur(10px)",
           }}>
             <input autoFocus
-              placeholder="Type a message..."
+              placeholder="Cast your words..."
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") { onSendChat(); setShowInput(false); } }}
