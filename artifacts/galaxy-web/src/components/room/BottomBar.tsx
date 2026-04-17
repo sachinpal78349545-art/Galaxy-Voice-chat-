@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Room, UserProfile } from "./types";
 import {
   Mic, MicOff, Volume2, VolumeX, Smile, MessageCircle,
-  Gift, Gem, Gamepad2, Dices, Menu as MenuIcon, Send,
+  Gift, Menu as MenuIcon, Send,
   Hand, PartyPopper, Sparkles,
 } from "lucide-react";
 
@@ -275,24 +275,9 @@ export default function BottomBar({
               variant: showInput ? "primary" : "muted",
             },
             {
-              icon: <Gamepad2 size={17} strokeWidth={2.3} />,
-              label: "Games", onClick: () => { closeAllPopups(); onOpenGame?.(); },
-              variant: "rose",
-            },
-            {
-              icon: <Dices size={17} strokeWidth={2.3} />,
-              label: "Lucky", onClick: () => { closeAllPopups(); onOpenGame?.(); },
-              variant: "amber",
-            },
-            {
               icon: <Gift size={17} strokeWidth={2.3} />,
               label: "Gift", onClick: () => { const n = !showGift; closeAllPopups(); if (n) setShowGift(true); },
               variant: "pink",
-            },
-            {
-              icon: <Gem size={17} strokeWidth={2.3} />,
-              label: "Gems", onClick: () => showToast("Gems coming soon!", "info"),
-              variant: "cyan",
             },
             {
               icon: <MenuIcon size={17} strokeWidth={2.3} />,
