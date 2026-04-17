@@ -1606,14 +1606,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         </div>
       )}
 
-      {isOwner && !pkBattle && (
-        <button onClick={() => setShowPKPanel(!showPKPanel)} style={{
-          position: "fixed", top: 70, right: 12, zIndex: 450,
-          width: 36, height: 36, borderRadius: 18, border: "1px solid rgba(255,100,50,0.3)",
-          background: "rgba(255,100,50,0.1)", cursor: "pointer", fontSize: 16,
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>⚔️</button>
-      )}
+      {/* PK battle button hidden from UI — feature accessible via admin panel only */}
 
       {showPKPanel && isOwner && (
         <Overlay onClose={() => setShowPKPanel(false)}>
