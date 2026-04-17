@@ -680,6 +680,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         onShare={shareRoom}
         showToast={showToast}
         onOpenGame={() => setShowGameHub(true)}
+        onOpenMenu={openControlPanel}
       />
 
       {showGameHub && (

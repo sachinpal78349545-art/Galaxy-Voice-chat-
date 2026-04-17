@@ -44,78 +44,155 @@ interface BottomBarProps {
   onShare: () => void;
   showToast: (msg: string, type?: string, icon?: string) => void;
   onOpenGame?: () => void;
+  onOpenMenu?: () => void;
 }
 
 export default function BottomBar({
-  room, user, inputText, setInputText,
+  user,
   isMuted, isSpeakerOff, isOnSeat,
-  onSendChat, onSendEmoji, onHandleGift, onHandleReaction,
-  onMicToggle, onSpeakerToggle, onRaiseHand, onShare, showToast, onOpenGame,
+  inputText, setInputText, onSendChat,
+  onSendEmoji, onHandleGift, onHandleReaction,
+  onMicToggle, onSpeakerToggle, onRaiseHand, showToast, onOpenGame, onOpenMenu,
 }: BottomBarProps) {
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGift, setShowGift] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  const [showInput, setShowInput] = useState(false);
   const [giftCombo, setGiftCombo] = useState(1);
 
   const closeAllPopups = () => { setShowEmoji(false); setShowGift(false); setShowReactions(false); };
 
+  const circleBtn = (active = false): React.CSSProperties => ({
+    width: 38, height: 38, borderRadius: 19,
+    background: active ? "rgba(108,92,231,0.4)" : "rgba(0,0,0,0.45)",
+    border: `1px solid ${active ? "rgba(108,92,231,0.6)" : "rgba(255,255,255,0.12)"}`,
+    color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer", fontSize: 18, padding: 0, fontFamily: "inherit",
+    backdropFilter: "blur(8px)", flexShrink: 0,
+  });
+
   return (
     <>
-      <div className="room-hand-fab">
-        <button onClick={onRaiseHand} className="room-btn-circle" style={{
-          width: 44, height: 44, border: isOnSeat ? "1.5px solid rgba(0,255,255,0.3)" : "1.5px solid rgba(138,43,226,0.3)",
-          boxShadow: isOnSeat ? "0 0 12px rgba(0,255,255,0.3)" : "0 0 12px rgba(138,43,226,0.3)", fontSize: 22,
-        }}>{isOnSeat ? "\u270B" : "\u{1F3A4}"}</button>
+      {/* Right-side floating action buttons */}
+      <div style={{
+        position: "fixed", right: 10, bottom: 130, zIndex: 80,
+        display: "flex", flexDirection: "column", gap: 10,
+        maxWidth: 400, marginLeft: "auto",
+      }}>
+        <button onClick={() => showToast("Mela coming soon!", "info")} style={{
+          width: 54, height: 54, borderRadius: 12, border: "none", padding: 0, cursor: "pointer",
+          background: "linear-gradient(135deg, #ff6b9d, #ffa07a)",
+          boxShadow: "0 4px 14px rgba(255,107,157,0.4)", overflow: "hidden", position: "relative",
+        }}>
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.3), transparent 60%)",
+          }} />
+          <span style={{ fontSize: 28, position: "relative" }}>{"\u{1F3AA}"}</span>
+        </button>
+        <button onClick={() => { closeAllPopups(); setShowReactions(true); }} style={{
+          width: 48, height: 48, borderRadius: 24, border: "none", padding: 0, cursor: "pointer",
+          background: "linear-gradient(135deg, #a78bfa, #6C5CE7)",
+          boxShadow: "0 4px 12px rgba(108,92,231,0.5)",
+          color: "#fff", fontSize: 22,
+        }}>{"\u{1F4AC}"}</button>
+        <button onClick={onRaiseHand} style={{
+          width: 48, height: 48, borderRadius: 24, border: "none", padding: 0, cursor: "pointer",
+          background: "linear-gradient(135deg, #a78bfa, #6C5CE7)",
+          boxShadow: "0 4px 12px rgba(108,92,231,0.5)",
+          color: "#fff", fontSize: 22,
+        }}>{isOnSeat ? "\u270B" : "\u{1F464}"}</button>
       </div>
 
-      <div className="room-bottom">
-        <div className="room-bottom-input">
-          <input className="room-bottom-chat-input"
-            placeholder="Cast your words..."
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && onSendChat()}
-          />
-          <button className="room-bottom-send-btn" onClick={onSendChat}>{"\u27A4"}</button>
-        </div>
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 400, margin: "0 auto",
+        zIndex: 100, padding: "10px 10px 14px",
+        background: "linear-gradient(180deg, transparent, rgba(15,15,26,0.85) 60%)",
+      }}>
+        {/* Optional chat input - only shown when chat icon tapped */}
+        {showInput && (
+          <div style={{
+            display: "flex", gap: 8, marginBottom: 10,
+            background: "rgba(0,0,0,0.55)", borderRadius: 24, padding: "4px 4px 4px 14px",
+            border: "1px solid rgba(108,92,231,0.3)", backdropFilter: "blur(10px)",
+          }}>
+            <input autoFocus
+              placeholder="Type a message..."
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { onSendChat(); setShowInput(false); } }}
+              style={{
+                flex: 1, background: "none", border: "none", outline: "none",
+                color: "#fff", fontSize: 13, fontFamily: "inherit",
+              }}
+            />
+            <button onClick={() => { onSendChat(); setShowInput(false); }} style={{
+              width: 36, height: 36, borderRadius: 18, border: "none", cursor: "pointer",
+              background: "linear-gradient(135deg, #6C5CE7, #a78bfa)", color: "#fff", fontSize: 14,
+            }}>{"\u27A4"}</button>
+          </div>
+        )}
 
-        <div className="room-bottom-controls">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          {/* LEFT cluster: speaker, mic, emoji, chat */}
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button onClick={onSpeakerToggle}
-              className={`room-btn-circle room-btn-speaker ${isSpeakerOff ? "room-btn-speaker-off" : "room-btn-speaker-on"}`}>
+            <button onClick={onSpeakerToggle} style={circleBtn(!isSpeakerOff)} title="Speaker">
               {isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}
             </button>
-            <button onClick={onMicToggle}
-              className={`room-btn-circle room-btn-mic ${!isOnSeat ? "mic-btn-disabled" : isMuted ? "mic-btn-muted" : "mic-btn-active"}`}
-              title={!isOnSeat ? "Take a seat to use mic" : isMuted ? "Unmute" : "Mute"}>
+            <button onClick={onMicToggle} style={circleBtn(isOnSeat && !isMuted)} title={!isOnSeat ? "Take a seat" : isMuted ? "Unmute" : "Mute"}>
               {!isOnSeat ? "\u{1F507}" : isMuted ? "\u{1F507}" : "\u{1F3A4}"}
             </button>
+            <button onClick={() => { const next = !showEmoji; closeAllPopups(); if (next) setShowEmoji(true); }}
+              style={circleBtn(showEmoji)} title="Emoji">{"\u{1F642}"}</button>
+            <button onClick={() => { closeAllPopups(); setShowInput(s => !s); }} style={circleBtn(showInput)} title="Chat">
+              {"\u{1F4AC}"}
+            </button>
           </div>
 
+          {/* CENTER cluster: game shortcuts */}
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button onClick={() => { closeAllPopups(); onOpenGame?.(); }} style={{
+              width: 44, height: 44, borderRadius: 12, border: "none", padding: 0, cursor: "pointer",
+              background: "linear-gradient(135deg, #ff8a65, #ff5252)",
+              boxShadow: "0 3px 10px rgba(255,138,101,0.4)", color: "#fff", fontSize: 22,
+            }} title="Games">{"\u{1F3A1}"}</button>
+            <button onClick={() => { closeAllPopups(); onOpenGame?.(); }} style={{
+              width: 44, height: 44, borderRadius: 12, border: "none", padding: 0, cursor: "pointer",
+              background: "linear-gradient(135deg, #ffd54f, #ff9800)",
+              boxShadow: "0 3px 10px rgba(255,152,0,0.4)", color: "#fff", fontSize: 22,
+            }} title="Lucky">{"\u{1F3B0}"}</button>
+          </div>
+
+          {/* RIGHT cluster: gift + menu */}
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button className="room-btn-circle room-btn-share" onClick={onShare}>{"\u{1F517}"}</button>
-            <EmojiPopup active={showEmoji} onToggle={() => { const next = !showEmoji; closeAllPopups(); if (next) setShowEmoji(true); }}
-              onSelect={(e) => { onSendEmoji(e); closeAllPopups(); }} />
-          </div>
-
-          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <button onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }} className="room-btn-circle room-btn-gift">
-              <span style={{ fontSize: 16 }}>{"\u{1F381}"}</span>
-              <span style={{ fontSize: 7, marginTop: -2, color: "rgba(255,255,255,0.8)" }}>Gift</span>
+            <button onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }} style={{
+              position: "relative",
+              width: 50, height: 50, borderRadius: 14, border: "none", padding: 0, cursor: "pointer",
+              background: "linear-gradient(135deg, #ff6b9d, #c2185b)",
+              boxShadow: "0 4px 12px rgba(255,107,157,0.5)", color: "#fff",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            }} title="Recharge Bonus">
+              <span style={{ fontSize: 22, lineHeight: 1 }}>{"\u{1F381}"}</span>
+              <span style={{ fontSize: 7, fontWeight: 800, marginTop: 1, letterSpacing: 0.2 }}>BONUS</span>
             </button>
-            <button onClick={() => { const next = !showReactions; closeAllPopups(); if (next) setShowReactions(true); }} className="room-btn-circle room-btn-gems">
-              <span style={{ fontSize: 16 }}>{"\u{1F48E}"}</span>
-              <span style={{ fontSize: 7, marginTop: -2, color: "rgba(255,255,255,0.8)" }}>Gems</span>
-            </button>
-            <button onClick={() => { closeAllPopups(); onOpenGame?.(); }} className="room-btn-circle room-btn-gems">
-              <span style={{ fontSize: 16 }}>{"\u{1F3B2}"}</span>
-              <span style={{ fontSize: 7, marginTop: -2, color: "rgba(255,255,255,0.8)" }}>Game</span>
-            </button>
+            <button onClick={onOpenMenu} style={circleBtn()} title="Menu">{"\u2630"}</button>
           </div>
         </div>
 
+        {/* Popups */}
+        {showEmoji && (
+          <div className="room-popup" style={{ left: "50%", right: "auto", transform: "translateX(-50%)", width: 240, bottom: 70 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {EMOJIS.map(e => (
+                <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
+                  onClick={() => { onSendEmoji(e); closeAllPopups(); }}>{e}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {showGift && (
-          <div className="room-popup">
+          <div className="room-popup" style={{ bottom: 70 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>{"\u{1F48E}"} {user.coins} coins</span>
               <div style={{ display: "flex", gap: 3 }}>
@@ -150,37 +227,17 @@ export default function BottomBar({
         )}
 
         {showReactions && (
-          <div className="room-popup" style={{ left: "auto", right: 12 }}>
+          <div className="room-popup" style={{ left: "auto", right: 12, bottom: 70 }}>
             <div style={{ display: "flex", gap: 8 }}>
               {REACTIONS.map(r => (
                 <button key={r.emoji} onClick={() => { onHandleReaction(r.emoji); closeAllPopups(); }} style={{
                   background: "none", border: "none", cursor: "pointer", fontSize: 30, padding: 4,
-                  transition: "transform 0.15s", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
-                }} onMouseOver={e => (e.currentTarget.style.transform = "scale(1.3)")}
-                  onMouseOut={e => (e.currentTarget.style.transform = "scale(1)")}>{r.emoji}</button>
+                }}>{r.emoji}</button>
               ))}
             </div>
           </div>
         )}
       </div>
     </>
-  );
-}
-
-function EmojiPopup({ active, onToggle, onSelect }: { active: boolean; onToggle: () => void; onSelect: (e: string) => void }) {
-  return (
-    <div style={{ position: "relative" }}>
-      <button className={`room-btn-circle room-btn-emoji ${active ? "room-btn-emoji-active" : ""}`} onClick={onToggle}>{"\u{1F4AC}"}</button>
-      {active && (
-        <div className="room-popup" style={{ left: "50%", right: "auto", transform: "translateX(-50%)", width: 220 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-            {EMOJIS.map(e => (
-              <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
-                onClick={() => onSelect(e)}>{e}</button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
