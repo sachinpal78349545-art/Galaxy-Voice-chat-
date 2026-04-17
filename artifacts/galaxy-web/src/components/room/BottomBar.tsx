@@ -129,38 +129,92 @@ export default function BottomBar({
 
   const closeAllPopups = () => { setShowEmoji(false); setShowGift(false); setShowReactions(false); };
 
-  const floatBtn = (gradient: string, shadow: string): React.CSSProperties => ({
-    width: 46, height: 46, borderRadius: 23, border: "1px solid rgba(255,255,255,0.18)",
-    padding: 0, cursor: "pointer", color: "#fff",
-    background: gradient, boxShadow: `0 4px 14px ${shadow}`,
-    display: "flex", alignItems: "center", justifyContent: "center",
-  });
-
-  const circleBtn = (active = false): React.CSSProperties => ({
-    width: 34, height: 34, borderRadius: 17,
-    background: active ? "rgba(108,92,231,0.4)" : "rgba(0,0,0,0.45)",
-    border: `1px solid ${active ? "rgba(108,92,231,0.6)" : "rgba(255,255,255,0.12)"}`,
-    color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-    cursor: "pointer", fontSize: 18, padding: 0, fontFamily: "inherit",
-    backdropFilter: "blur(8px)", flexShrink: 0,
-  });
+  // ── right-widget card base ──
+  const widgetCard: React.CSSProperties = {
+    width: 52, borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.14)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    cursor: "pointer", overflow: "hidden", position: "relative",
+    boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
+    padding: "8px 0 6px",
+    fontFamily: "inherit",
+  };
 
   return (
     <>
-      {/* Right-side floating action buttons — uniform neon stack */}
+      {/* ── RIGHT SIDE GRAPHIC WIDGETS ── */}
       <div style={{
-        position: "fixed", right: 14, bottom: 140, zIndex: 80,
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+        position: "fixed", right: 10, bottom: 130, zIndex: 80,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+        width: 52,
       }}>
-        <NeonIconBtn variant="pink" size={46} title="Mela / Events"
-          onClick={() => showToast("Mela coming soon!", "info")}
-          icon={<PartyPopper size={22} strokeWidth={2.2} />} />
-        <NeonIconBtn variant="primary" size={46} title="Reactions"
-          onClick={() => { closeAllPopups(); setShowReactions(true); }}
-          icon={<Sparkles size={22} strokeWidth={2.2} />} />
-        <NeonIconBtn variant="primary" size={46} title="Raise hand"
+
+        {/* EVENT BANNER WIDGET */}
+        <button
+          onClick={() => showToast("Events coming soon!", "info")}
+          style={{ ...widgetCard, background: "linear-gradient(160deg, #ff6b9d 0%, #9b27af 60%, #4b1fa8 100%)" }}
+        >
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+            background: "radial-gradient(circle at 70% 20%, rgba(255,255,255,0.2), transparent 55%)",
+          }} />
+          <span style={{ fontSize: 22, lineHeight: 1 }}>🎪</span>
+          <span style={{
+            marginTop: 4, fontSize: 8, fontWeight: 800, color: "#fff",
+            letterSpacing: 0.3, textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+          }}>EVENT</span>
+        </button>
+
+        {/* SOFA / SEAT WIDGET */}
+        <button
           onClick={onRaiseHand}
-          icon={<Hand size={22} strokeWidth={2.2} />} />
+          style={{ ...widgetCard, background: "linear-gradient(160deg, #6C5CE7 0%, #4b3bbf 100%)" }}
+        >
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+            background: "radial-gradient(circle at 70% 20%, rgba(255,255,255,0.18), transparent 55%)",
+          }} />
+          <span style={{ fontSize: 22, lineHeight: 1 }}>🛋️</span>
+          <span style={{
+            marginTop: 4, fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.85)",
+            letterSpacing: 0.3,
+          }}>{isOnSeat ? "ON SEAT" : "GET SEAT"}</span>
+        </button>
+
+        {/* RECHARGE BONUS WIDGET */}
+        <button
+          onClick={() => { closeAllPopups(); setShowGift(s => !s); }}
+          style={{ ...widgetCard, background: "linear-gradient(160deg, #ffd54f 0%, #ff9800 55%, #e65100 100%)" }}
+        >
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+            background: "radial-gradient(circle at 70% 20%, rgba(255,255,255,0.25), transparent 55%)",
+          }} />
+          <span style={{ fontSize: 22, lineHeight: 1 }}>💰</span>
+          <span style={{
+            marginTop: 4, fontSize: 7, fontWeight: 800, color: "#fff",
+            letterSpacing: 0.2, textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+            textAlign: "center", lineHeight: 1.2, padding: "0 2px",
+          }}>RECHARGE</span>
+        </button>
+
+        {/* REACTIONS WIDGET */}
+        <button
+          onClick={() => { closeAllPopups(); setShowReactions(s => !s); }}
+          style={{ ...widgetCard, background: "linear-gradient(160deg, #00b4d8 0%, #0077b6 100%)" }}
+        >
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+            background: "radial-gradient(circle at 70% 20%, rgba(255,255,255,0.2), transparent 55%)",
+          }} />
+          <Sparkles size={22} color="#fff" strokeWidth={2} />
+          <span style={{
+            marginTop: 4, fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.9)",
+            letterSpacing: 0.3,
+          }}>REACT</span>
+        </button>
       </div>
 
       <div style={{
@@ -192,54 +246,97 @@ export default function BottomBar({
           </div>
         )}
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          {/* LEFT cluster: speaker, mic, emoji, chat */}
-          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-            <NeonIconBtn variant={isSpeakerOff ? "muted" : "primary"} size={36}
-              title="Speaker" onClick={onSpeakerToggle}
-              icon={isSpeakerOff ? <VolumeX size={18} strokeWidth={2.2} /> : <Volume2 size={18} strokeWidth={2.2} />} />
-            <NeonIconBtn variant={!isOnSeat || isMuted ? "muted" : "primary"} size={36}
-              title={!isOnSeat ? "Take a seat" : isMuted ? "Unmute" : "Mute"} onClick={onMicToggle}
-              icon={!isOnSeat || isMuted ? <MicOff size={18} strokeWidth={2.2} /> : <Mic size={18} strokeWidth={2.2} />} />
-            <NeonIconBtn variant={showEmoji ? "primary" : "muted"} size={36} active={showEmoji}
-              title="Emoji" onClick={() => { const next = !showEmoji; closeAllPopups(); if (next) setShowEmoji(true); }}
-              icon={<Smile size={18} strokeWidth={2.2} />} />
-            <NeonIconBtn variant={showInput ? "primary" : "muted"} size={36} active={showInput}
-              title="Chat" onClick={() => { closeAllPopups(); setShowInput(s => !s); }}
-              icon={<MessageCircle size={18} strokeWidth={2.2} />} />
-          </div>
-
-          {/* CENTER cluster: game shortcuts — neon */}
-          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-            <NeonIconBtn variant="rose" size={38} title="Games"
-              onClick={() => { closeAllPopups(); onOpenGame?.(); }}
-              icon={<Gamepad2 size={20} strokeWidth={2.2} />} />
-            <NeonIconBtn variant="amber" size={38} title="Lucky"
-              onClick={() => { closeAllPopups(); onOpenGame?.(); }}
-              icon={<Dices size={20} strokeWidth={2.2} />} />
-          </div>
-
-          {/* RIGHT cluster: gift + gems + menu — neon */}
-          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-            <div style={{ position: "relative" }}>
-              <NeonIconBtn variant="pink" size={42} title="Recharge Bonus"
-                onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }}
-                icon={<Gift size={22} strokeWidth={2.2} />} />
-              <span style={{
-                position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)",
-                background: "linear-gradient(90deg, #ff7eb3, #c2185b)",
-                color: "#fff", fontSize: 7, fontWeight: 800, letterSpacing: 0.3,
-                padding: "1px 6px", borderRadius: 6,
-                boxShadow: "0 1px 4px rgba(194,24,91,0.6)",
-              }}>BONUS</span>
-            </div>
-            <NeonIconBtn variant="cyan" size={36} title="Gems"
-              onClick={() => showToast("Gems wallet coming soon!", "info")}
-              icon={<Gem size={18} strokeWidth={2.2} />} />
-            <NeonIconBtn variant="muted" size={36} title="Menu"
-              onClick={onOpenMenu}
-              icon={<MenuIcon size={18} strokeWidth={2.2} />} />
-          </div>
+        {/* ── BOTTOM FUNCTION BAR: icon + label grid ── */}
+        <div style={{
+          display: "flex", alignItems: "flex-end",
+          justifyContent: "space-between", gap: 2,
+        }}>
+          {/* Helper: labeled icon button */}
+          {([
+            {
+              icon: isSpeakerOff ? <VolumeX size={17} strokeWidth={2.3} /> : <Volume2 size={17} strokeWidth={2.3} />,
+              label: "Sound", onClick: onSpeakerToggle,
+              variant: isSpeakerOff ? "muted" : "primary",
+            },
+            {
+              icon: (!isOnSeat || isMuted) ? <MicOff size={17} strokeWidth={2.3} /> : <Mic size={17} strokeWidth={2.3} />,
+              label: isMuted ? "Muted" : "Mic", onClick: onMicToggle,
+              variant: (!isOnSeat || isMuted) ? "muted" : "primary",
+              dot: isOnSeat && !isMuted,
+            },
+            {
+              icon: <Smile size={17} strokeWidth={2.3} />,
+              label: "Emoji", onClick: () => { const n = !showEmoji; closeAllPopups(); if (n) setShowEmoji(true); },
+              variant: showEmoji ? "primary" : "muted",
+            },
+            {
+              icon: <MessageCircle size={17} strokeWidth={2.3} />,
+              label: "Chat", onClick: () => { closeAllPopups(); setShowInput(s => !s); },
+              variant: showInput ? "primary" : "muted",
+            },
+            {
+              icon: <Gamepad2 size={17} strokeWidth={2.3} />,
+              label: "Games", onClick: () => { closeAllPopups(); onOpenGame?.(); },
+              variant: "rose",
+            },
+            {
+              icon: <Dices size={17} strokeWidth={2.3} />,
+              label: "Lucky", onClick: () => { closeAllPopups(); onOpenGame?.(); },
+              variant: "amber",
+            },
+            {
+              icon: <Gift size={17} strokeWidth={2.3} />,
+              label: "Gift", onClick: () => { const n = !showGift; closeAllPopups(); if (n) setShowGift(true); },
+              variant: "pink",
+            },
+            {
+              icon: <Gem size={17} strokeWidth={2.3} />,
+              label: "Gems", onClick: () => showToast("Gems coming soon!", "info"),
+              variant: "cyan",
+            },
+            {
+              icon: <MenuIcon size={17} strokeWidth={2.3} />,
+              label: "More", onClick: onOpenMenu,
+              variant: "muted",
+            },
+          ] as Array<{ icon: React.ReactNode; label: string; onClick?: () => void; variant: string; dot?: boolean }>)
+            .map(({ icon, label, onClick, variant, dot }, i) => {
+              const palettes: Record<string, { bg: string; glow: string }> = {
+                primary: { bg: "radial-gradient(circle at 30% 25%, #b8a4ff, #6C5CE7 70%, #4b3bbf)", glow: "rgba(108,92,231,0.5)" },
+                pink:    { bg: "radial-gradient(circle at 30% 25%, #ffc1d9, #ff7eb3 50%, #c2185b)", glow: "rgba(255,107,157,0.5)" },
+                amber:   { bg: "radial-gradient(circle at 30% 25%, #ffeaa1, #ffc14d 50%, #ff8c00)", glow: "rgba(255,170,40,0.5)" },
+                cyan:    { bg: "radial-gradient(circle at 30% 25%, #b9f1ff, #4dd0e1 50%, #0097a7)", glow: "rgba(77,208,225,0.5)" },
+                rose:    { bg: "radial-gradient(circle at 30% 25%, #ffd1c1, #ff8a65 50%, #e64a19)", glow: "rgba(255,122,80,0.5)" },
+                muted:   { bg: "rgba(20,12,40,0.6)", glow: "rgba(108,92,231,0.2)" },
+              };
+              const p = palettes[variant] || palettes.muted;
+              return (
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  <div style={{ position: "relative" }}>
+                    <button onClick={onClick} style={{
+                      width: 34, height: 34, borderRadius: 17,
+                      border: "1px solid rgba(255,255,255,0.18)",
+                      background: p.bg,
+                      boxShadow: `0 0 10px ${p.glow}, inset 0 1px 2px rgba(255,255,255,0.3)`,
+                      color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer", padding: 0,
+                    }}>{icon}</button>
+                    {dot && (
+                      <span style={{
+                        position: "absolute", top: 0, right: 0,
+                        width: 8, height: 8, borderRadius: 4,
+                        background: "#4ade80",
+                        border: "1.5px solid rgba(0,0,0,0.6)",
+                        boxShadow: "0 0 6px rgba(74,222,128,0.8)",
+                      }} />
+                    )}
+                  </div>
+                  <span style={{ fontSize: 8.5, color: "rgba(255,255,255,0.6)", fontWeight: 600, letterSpacing: 0.2 }}>
+                    {label}
+                  </span>
+                </div>
+              );
+            })}
         </div>
 
         {/* Popups */}

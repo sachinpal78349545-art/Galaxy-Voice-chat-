@@ -1,4 +1,5 @@
 import React from "react";
+import { Share2, MoreHorizontal, X, Users } from "lucide-react";
 import { Room } from "./types";
 
 interface RoomHeaderProps {
@@ -18,128 +19,179 @@ export default function RoomHeader({
   room, myRole, liveCount,
   onOpenControlPanel, onShowUsersPanel, onShowCloseMenu, onLoadLeaderboard, onShare,
 }: RoomHeaderProps) {
-  const avatarContent = (room.roomAvatar || room.coverEmoji || "\u{1F3A4}");
+  const avatarSrc = room.roomAvatar || "";
+  const avatarEmoji = room.coverEmoji || "🎤";
   const lbValue = (liveCount * 0.95 + 7.23).toFixed(2);
-  const previewUsers = Object.values(room.roomUsers || {}).slice(0, 1);
+  const previewUsers = Object.values(room.roomUsers || {}).slice(0, 3);
 
-  // Shared semi-transparent panel base — soft gold glow (not thick line)
-  const panelBase: React.CSSProperties = {
-    background: "rgba(20,12,40,0.42)",
-    border: "1px solid rgba(255,215,0,0.18)",
-    borderRadius: 24,
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.3), 0 0 14px rgba(255,200,80,0.18), inset 0 0 18px rgba(255,200,80,0.05)",
+  const glassPanel: React.CSSProperties = {
+    background: "rgba(18,10,38,0.52)",
+    border: "1px solid rgba(255,215,0,0.14)",
+    backdropFilter: "blur(16px)",
+    WebkitBackdropFilter: "blur(16px)",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.4), 0 0 18px rgba(255,200,80,0.1)",
   };
 
   return (
     <>
       <div style={{
-        position: "relative", zIndex: 5, padding: "44px 10px 8px",
-        display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8,
+        position: "relative", zIndex: 5,
+        padding: "46px 10px 6px",
+        display: "flex", alignItems: "flex-start",
+        justifyContent: "space-between", gap: 8,
       }}>
-        {/* LEFT: connected avatar + name + ID + trophy badge — single panel */}
-        <div style={{ ...panelBase, padding: "4px 12px 4px 4px", display: "flex", alignItems: "center", gap: 8, maxWidth: "65%" }}
-          onClick={onOpenControlPanel}>
+
+        {/* ── LEFT: room info panel ── */}
+        <div
+          onClick={onOpenControlPanel}
+          style={{
+            ...glassPanel,
+            borderRadius: 20,
+            padding: "0 12px 0 0",
+            display: "flex", alignItems: "center", gap: 0,
+            maxWidth: "60%", cursor: "pointer", overflow: "hidden",
+          }}
+        >
+          {/* Avatar — flush to left edge, slightly taller than panel */}
           <div style={{
-            width: 40, height: 40, borderRadius: 20, overflow: "hidden",
-            background: "rgba(108,92,231,0.25)",
-            border: "2px solid rgba(255,215,0,0.7)",
-            boxShadow: "0 0 8px rgba(255,215,0,0.4)",
+            width: 48, height: 48, borderRadius: 16,
+            background: "linear-gradient(135deg, rgba(108,92,231,0.5), rgba(74,222,128,0.2))",
+            border: "2px solid rgba(255,215,0,0.55)",
+            boxShadow: "0 0 10px rgba(255,215,0,0.3)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 22, flexShrink: 0,
+            fontSize: 24, flexShrink: 0, overflow: "hidden",
+            margin: "0 10px 0 0",
           }}>
-            {avatarContent.startsWith?.("http")
-              ? <img src={room.roomAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : avatarContent}
+            {avatarSrc
+              ? <img src={avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : avatarEmoji}
           </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <h2 style={{
-                fontSize: 13, fontWeight: 800, color: "#fff",
-                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              }}>{room.name}</h2>
-              <span style={{ fontSize: 12 }}>{"\u{1F381}"}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 1 }}>
-              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.6)" }}>ID:{room.id.slice(5, 14)}</span>
-              <button onClick={(e) => { e.stopPropagation(); onLoadLeaderboard(); }} style={{
-                display: "inline-flex", alignItems: "center", gap: 3,
-                background: "linear-gradient(90deg, rgba(255,193,7,0.25), rgba(255,140,0,0.18))",
-                border: "1px solid rgba(255,215,0,0.55)",
-                borderRadius: 10, padding: "1px 8px 1px 5px",
-                cursor: "pointer", fontFamily: "inherit", color: "#FFD700",
-                fontSize: 10, fontWeight: 800, lineHeight: 1.4,
-              }}>
-                <span style={{ fontSize: 11 }}>{"\u{1F3C6}"}</span>
+
+          <div style={{ minWidth: 0, flex: 1, paddingTop: 6, paddingBottom: 6 }}>
+            {/* Room name */}
+            <p style={{
+              margin: 0, fontSize: 13, fontWeight: 700,
+              color: "#fff", letterSpacing: 0.1,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}>{room.name}</p>
+
+            {/* ID + trophy score row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+              <span style={{
+                fontSize: 9.5, color: "rgba(255,255,255,0.45)",
+                fontWeight: 500, letterSpacing: 0.2,
+              }}>ID {room.id.slice(5, 14).toUpperCase()}</span>
+
+              <button
+                onClick={(e) => { e.stopPropagation(); onLoadLeaderboard(); }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 3,
+                  background: "linear-gradient(90deg, rgba(255,193,7,0.22), rgba(255,120,0,0.14))",
+                  border: "1px solid rgba(255,215,0,0.38)",
+                  borderRadius: 8, padding: "1px 7px 1px 4px",
+                  cursor: "pointer", fontFamily: "inherit",
+                  color: "#FFD700", fontSize: 10, fontWeight: 700,
+                }}>
+                <span style={{ fontSize: 11 }}>🏆</span>
                 <span>{lbValue}K</span>
-                <span style={{ fontSize: 8, color: "rgba(255,215,0,0.7)" }}>{"\u203A"}</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* RIGHT: SINGLE merged action panel — viewer + share + menu + close together */}
-        <div style={{ ...panelBase, padding: "3px 6px 3px 3px", display: "flex", alignItems: "center", gap: 4 }}>
-          <button onClick={onShowUsersPanel} title="Online viewers" style={{
-            display: "flex", alignItems: "center", gap: 4,
-            background: "transparent", border: "none", padding: "0 4px 0 0",
-            cursor: "pointer", fontFamily: "inherit",
-          }}>
-            {previewUsers[0] ? (
-              <div style={{
-                width: 24, height: 24, borderRadius: 12, overflow: "hidden",
-                background: "rgba(108,92,231,0.3)", border: "1px solid rgba(255,215,0,0.35)",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
-              }}>
-                {previewUsers[0].avatar?.startsWith?.("http")
-                  ? <img src={previewUsers[0].avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : (previewUsers[0].avatar || "\u{1F464}")}
-              </div>
-            ) : (
-              <div style={{
-                width: 24, height: 24, borderRadius: 12,
-                background: "rgba(108,92,231,0.3)", border: "1px solid rgba(255,215,0,0.35)",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12,
-              }}>{"\u{1F464}"}</div>
-            )}
-            <span style={{ fontSize: 11, color: "#fff", fontWeight: 700 }}>{liveCount}</span>
+        {/* ── RIGHT: single glass action panel ── */}
+        <div style={{
+          ...glassPanel,
+          borderRadius: 20,
+          padding: "5px 7px",
+          display: "flex", alignItems: "center", gap: 0,
+        }}>
+          {/* Online viewers cluster */}
+          <button
+            onClick={onShowUsersPanel}
+            style={{
+              display: "flex", alignItems: "center", gap: 4,
+              background: "none", border: "none", cursor: "pointer",
+              padding: "2px 8px 2px 4px", fontFamily: "inherit",
+            }}
+          >
+            {/* Stacked mini-avatars */}
+            <div style={{ display: "flex", alignItems: "center" }}>
+              {previewUsers.length > 0
+                ? previewUsers.slice(0, 2).map((u, i) => (
+                    <div key={i} style={{
+                      width: 22, height: 22, borderRadius: 11, overflow: "hidden",
+                      border: "1.5px solid rgba(255,215,0,0.35)",
+                      background: "rgba(108,92,231,0.35)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12,
+                      marginLeft: i === 0 ? 0 : -7,
+                      zIndex: 2 - i,
+                      position: "relative",
+                    }}>
+                      {(u.avatar || "").startsWith("http")
+                        ? <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : (u.avatar || "👤")}
+                    </div>
+                  ))
+                : <div style={{
+                    width: 22, height: 22, borderRadius: 11,
+                    background: "rgba(108,92,231,0.35)",
+                    border: "1.5px solid rgba(255,215,0,0.3)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, color: "#fff",
+                  }}><Users size={11} /></div>
+              }
+            </div>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.9)", fontWeight: 700 }}>
+              {liveCount}
+            </span>
           </button>
-          <span style={divider} />
-          <button onClick={onShare} title="Share" style={iconBtn}>{"\u2197"}</button>
-          <span style={divider} />
-          <button onClick={onOpenControlPanel} title="Menu" style={iconBtn}>{"\u22EF"}</button>
-          <span style={divider} />
-          <button onClick={onShowCloseMenu} title="Close" style={iconBtn}>{"\u2715"}</button>
+
+          {/* Divider */}
+          <span style={{ width: 1, height: 18, background: "rgba(255,215,0,0.18)", flexShrink: 0 }} />
+
+          {/* Share */}
+          <button onClick={onShare} title="Share" style={actionBtn}>
+            <Share2 size={14} strokeWidth={2.4} />
+          </button>
+
+          {/* More */}
+          <button onClick={onOpenControlPanel} title="More" style={actionBtn}>
+            <MoreHorizontal size={15} strokeWidth={2.4} />
+          </button>
+
+          {/* Divider */}
+          <span style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)", flexShrink: 0 }} />
+
+          {/* Close */}
+          <button onClick={onShowCloseMenu} title="Leave" style={{ ...actionBtn, color: "rgba(255,120,120,0.9)" }}>
+            <X size={14} strokeWidth={2.6} />
+          </button>
         </div>
       </div>
 
       {myRole !== "user" && (
         <div className="room-role-bar" style={{ position: "relative", zIndex: 5 }}>
           <span className={myRole === "owner" ? "room-role-tag room-role-owner" : "room-role-tag room-role-admin"}>
-            {myRole === "owner" ? "\u{1F451} Owner" : "\u{1F6E1}\uFE0F Admin"}
+            {myRole === "owner" ? "👑 Owner" : "🛡️ Admin"}
           </span>
           {room.micPermission && room.micPermission !== "all" && (
             <span className="room-role-tag room-role-mic">
-              {"\u{1F3A4}"} Mic: {room.micPermission === "request" ? "Request" : "Admin Only"}
+              🎤 Mic: {room.micPermission === "request" ? "Request" : "Admin Only"}
             </span>
           )}
-          {room.isPrivate && (
-            <span className="room-role-tag room-role-private">{"\u{1F512}"} Private</span>
-          )}
+          {room.isPrivate && <span className="room-role-tag room-role-private">🔒 Private</span>}
         </div>
       )}
     </>
   );
 }
 
-const iconBtn: React.CSSProperties = {
+const actionBtn: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 15,
   background: "transparent", border: "none",
-  color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-  cursor: "pointer", fontFamily: "inherit", fontSize: 13, padding: 0,
-};
-
-const divider: React.CSSProperties = {
-  width: 1, height: 16, background: "rgba(255,215,0,0.25)",
+  color: "rgba(255,255,255,0.85)",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  cursor: "pointer", padding: 0, flexShrink: 0,
 };
