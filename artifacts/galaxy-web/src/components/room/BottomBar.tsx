@@ -1,5 +1,72 @@
 import React, { useState } from "react";
 import { Room, UserProfile } from "./types";
+import {
+  Mic, MicOff, Volume2, VolumeX, Smile, MessageCircle,
+  Gift, Gem, Gamepad2, Dices, Menu as MenuIcon, Send,
+  Hand, PartyPopper, Sparkles,
+} from "lucide-react";
+
+// Premium neon button — gradient bg + soft theme glow + inner highlight
+const NEON_PRIMARY = "#6C5CE7";
+const NEON_LIGHT = "#a78bfa";
+
+function NeonIconBtn({
+  icon, onClick, title, size = 38, active = false, variant = "primary",
+}: {
+  icon: React.ReactNode;
+  onClick?: () => void;
+  title?: string;
+  size?: number;
+  active?: boolean;
+  variant?: "primary" | "pink" | "amber" | "cyan" | "rose" | "muted";
+}) {
+  const palettes: Record<string, { bg: string; glow: string; ring: string }> = {
+    primary: {
+      bg: "radial-gradient(circle at 30% 25%, #b8a4ff 0%, #8B7BFF 35%, #6C5CE7 75%, #4b3bbf 100%)",
+      glow: "rgba(108,92,231,0.55)",
+      ring: "rgba(167,139,250,0.6)",
+    },
+    pink: {
+      bg: "radial-gradient(circle at 30% 25%, #ffc1d9 0%, #ff7eb3 40%, #c2185b 100%)",
+      glow: "rgba(255,107,157,0.55)",
+      ring: "rgba(255,160,200,0.65)",
+    },
+    amber: {
+      bg: "radial-gradient(circle at 30% 25%, #ffeaa1 0%, #ffc14d 40%, #ff8c00 100%)",
+      glow: "rgba(255,170,40,0.55)",
+      ring: "rgba(255,210,120,0.65)",
+    },
+    cyan: {
+      bg: "radial-gradient(circle at 30% 25%, #b9f1ff 0%, #4dd0e1 40%, #0097a7 100%)",
+      glow: "rgba(77,208,225,0.55)",
+      ring: "rgba(178,235,242,0.65)",
+    },
+    rose: {
+      bg: "radial-gradient(circle at 30% 25%, #ffd1c1 0%, #ff8a65 40%, #e64a19 100%)",
+      glow: "rgba(255,122,80,0.55)",
+      ring: "rgba(255,180,150,0.65)",
+    },
+    muted: {
+      bg: "rgba(20,12,40,0.55)",
+      glow: "rgba(108,92,231,0.25)",
+      ring: "rgba(167,139,250,0.3)",
+    },
+  };
+  const p = palettes[variant];
+  return (
+    <button onClick={onClick} title={title} style={{
+      width: size, height: size, borderRadius: size / 2,
+      border: `1px solid ${active ? "rgba(255,255,255,0.45)" : p.ring}`,
+      padding: 0, cursor: "pointer", color: "#fff",
+      background: p.bg,
+      boxShadow: `0 0 ${active ? 16 : 10}px ${p.glow}, inset 0 1px 2px rgba(255,255,255,0.35), inset 0 -2px 4px rgba(0,0,0,0.2)`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      transition: "transform 0.12s ease, box-shadow 0.12s ease",
+    }}>
+      {icon}
+    </button>
+  );
+}
 
 const EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u2728", "\u{1F602}", "\u{1F3B5}", "\u{1F44F}", "\u{1F31F}", "\u{1F4AF}", "\u{1F680}", "\u{1F60D}", "\u{1F389}", "\u{1F48E}"];
 const GIFTS = [
@@ -80,23 +147,20 @@ export default function BottomBar({
 
   return (
     <>
-      {/* Right-side floating action buttons — clean aligned stack */}
+      {/* Right-side floating action buttons — uniform neon stack */}
       <div style={{
-        position: "fixed", right: 12, bottom: 140, zIndex: 80,
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+        position: "fixed", right: 14, bottom: 140, zIndex: 80,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
       }}>
-        <button onClick={() => showToast("Mela coming soon!", "info")} style={floatBtn("linear-gradient(135deg, #ff6b9d, #ffa07a)", "rgba(255,107,157,0.45)")}
-          title="Mela">
-          <span style={{ fontSize: 24 }}>{"\u{1F3AA}"}</span>
-        </button>
-        <button onClick={() => { closeAllPopups(); setShowReactions(true); }} style={floatBtn("linear-gradient(135deg, #a78bfa, #6C5CE7)", "rgba(108,92,231,0.5)")}
-          title="Reactions">
-          <span style={{ fontSize: 22 }}>{"\u{1F4AC}"}</span>
-        </button>
-        <button onClick={onRaiseHand} style={floatBtn("linear-gradient(135deg, #a78bfa, #6C5CE7)", "rgba(108,92,231,0.5)")}
-          title="Raise hand">
-          <span style={{ fontSize: 22 }}>{isOnSeat ? "\u270B" : "\u{1F464}"}</span>
-        </button>
+        <NeonIconBtn variant="pink" size={46} title="Mela / Events"
+          onClick={() => showToast("Mela coming soon!", "info")}
+          icon={<PartyPopper size={22} strokeWidth={2.2} />} />
+        <NeonIconBtn variant="primary" size={46} title="Reactions"
+          onClick={() => { closeAllPopups(); setShowReactions(true); }}
+          icon={<Sparkles size={22} strokeWidth={2.2} />} />
+        <NeonIconBtn variant="primary" size={46} title="Raise hand"
+          onClick={onRaiseHand}
+          icon={<Hand size={22} strokeWidth={2.2} />} />
       </div>
 
       <div style={{
@@ -130,53 +194,51 @@ export default function BottomBar({
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           {/* LEFT cluster: speaker, mic, emoji, chat */}
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button onClick={onSpeakerToggle} style={circleBtn(!isSpeakerOff)} title="Speaker">
-              {isSpeakerOff ? "\u{1F508}" : "\u{1F50A}"}
-            </button>
-            <button onClick={onMicToggle} style={circleBtn(isOnSeat && !isMuted)} title={!isOnSeat ? "Take a seat" : isMuted ? "Unmute" : "Mute"}>
-              {!isOnSeat ? "\u{1F507}" : isMuted ? "\u{1F507}" : "\u{1F3A4}"}
-            </button>
-            <button onClick={() => { const next = !showEmoji; closeAllPopups(); if (next) setShowEmoji(true); }}
-              style={circleBtn(showEmoji)} title="Emoji">{"\u{1F642}"}</button>
-            <button onClick={() => { closeAllPopups(); setShowInput(s => !s); }} style={circleBtn(showInput)} title="Chat">
-              {"\u{1F4AC}"}
-            </button>
+          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            <NeonIconBtn variant={isSpeakerOff ? "muted" : "primary"} size={36}
+              title="Speaker" onClick={onSpeakerToggle}
+              icon={isSpeakerOff ? <VolumeX size={18} strokeWidth={2.2} /> : <Volume2 size={18} strokeWidth={2.2} />} />
+            <NeonIconBtn variant={!isOnSeat || isMuted ? "muted" : "primary"} size={36}
+              title={!isOnSeat ? "Take a seat" : isMuted ? "Unmute" : "Mute"} onClick={onMicToggle}
+              icon={!isOnSeat || isMuted ? <MicOff size={18} strokeWidth={2.2} /> : <Mic size={18} strokeWidth={2.2} />} />
+            <NeonIconBtn variant={showEmoji ? "primary" : "muted"} size={36} active={showEmoji}
+              title="Emoji" onClick={() => { const next = !showEmoji; closeAllPopups(); if (next) setShowEmoji(true); }}
+              icon={<Smile size={18} strokeWidth={2.2} />} />
+            <NeonIconBtn variant={showInput ? "primary" : "muted"} size={36} active={showInput}
+              title="Chat" onClick={() => { closeAllPopups(); setShowInput(s => !s); }}
+              icon={<MessageCircle size={18} strokeWidth={2.2} />} />
           </div>
 
-          {/* CENTER cluster: game shortcuts — circular neon */}
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button onClick={() => { closeAllPopups(); onOpenGame?.(); }} style={{
-              width: 36, height: 36, borderRadius: 18, border: "1px solid rgba(255,138,101,0.55)",
-              padding: 0, cursor: "pointer",
-              background: "radial-gradient(circle at 35% 30%, #ffb199, #ff5252 75%)",
-              boxShadow: "0 0 10px rgba(255,82,82,0.55), inset 0 0 6px rgba(255,255,255,0.25)",
-              color: "#fff", fontSize: 17,
-            }} title="Games">{"\u{1F3A1}"}</button>
-            <button onClick={() => { closeAllPopups(); onOpenGame?.(); }} style={{
-              width: 36, height: 36, borderRadius: 18, border: "1px solid rgba(255,193,7,0.55)",
-              padding: 0, cursor: "pointer",
-              background: "radial-gradient(circle at 35% 30%, #ffe082, #ff9800 75%)",
-              boxShadow: "0 0 10px rgba(255,152,0,0.55), inset 0 0 6px rgba(255,255,255,0.25)",
-              color: "#fff", fontSize: 17,
-            }} title="Lucky">{"\u{1F3B0}"}</button>
+          {/* CENTER cluster: game shortcuts — neon */}
+          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            <NeonIconBtn variant="rose" size={38} title="Games"
+              onClick={() => { closeAllPopups(); onOpenGame?.(); }}
+              icon={<Gamepad2 size={20} strokeWidth={2.2} />} />
+            <NeonIconBtn variant="amber" size={38} title="Lucky"
+              onClick={() => { closeAllPopups(); onOpenGame?.(); }}
+              icon={<Dices size={20} strokeWidth={2.2} />} />
           </div>
 
-          {/* RIGHT cluster: gift + menu — circular neon */}
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }} style={{
-              position: "relative",
-              width: 40, height: 40, borderRadius: 20, border: "1px solid rgba(255,107,157,0.6)",
-              padding: 0, cursor: "pointer",
-              background: "radial-gradient(circle at 35% 30%, #ff9ec0, #c2185b 80%)",
-              boxShadow: "0 0 12px rgba(255,107,157,0.6), inset 0 0 6px rgba(255,255,255,0.25)",
-              color: "#fff",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            }} title="Recharge Bonus">
-              <span style={{ fontSize: 18, lineHeight: 1 }}>{"\u{1F381}"}</span>
-              <span style={{ fontSize: 6, fontWeight: 800, marginTop: 1, letterSpacing: 0.2 }}>BONUS</span>
-            </button>
-            <button onClick={onOpenMenu} style={circleBtn()} title="Menu">{"\u2630"}</button>
+          {/* RIGHT cluster: gift + gems + menu — neon */}
+          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            <div style={{ position: "relative" }}>
+              <NeonIconBtn variant="pink" size={42} title="Recharge Bonus"
+                onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }}
+                icon={<Gift size={22} strokeWidth={2.2} />} />
+              <span style={{
+                position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)",
+                background: "linear-gradient(90deg, #ff7eb3, #c2185b)",
+                color: "#fff", fontSize: 7, fontWeight: 800, letterSpacing: 0.3,
+                padding: "1px 6px", borderRadius: 6,
+                boxShadow: "0 1px 4px rgba(194,24,91,0.6)",
+              }}>BONUS</span>
+            </div>
+            <NeonIconBtn variant="cyan" size={36} title="Gems"
+              onClick={() => showToast("Gems wallet coming soon!", "info")}
+              icon={<Gem size={18} strokeWidth={2.2} />} />
+            <NeonIconBtn variant="muted" size={36} title="Menu"
+              onClick={onOpenMenu}
+              icon={<MenuIcon size={18} strokeWidth={2.2} />} />
           </div>
         </div>
 
