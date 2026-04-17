@@ -1640,7 +1640,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         </Overlay>
       )}
 
-      <div style={{ position: "fixed", bottom: 160, right: 12, zIndex: 450, display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* ── Left-side utility buttons (voice fx, music, mystery, waitlist) — moved LEFT so right side stays clean ── */}
+      <div style={{ position: "fixed", bottom: 160, left: 12, zIndex: 450, display: "flex", flexDirection: "column", gap: 8 }}>
         {isOnSeat && (
           <button onClick={() => setShowVoiceEffects(!showVoiceEffects)} style={{
             width: 40, height: 40, borderRadius: 20,
@@ -1679,7 +1680,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
 
       {showVoiceEffects && (
         <div style={{
-          position: "fixed", bottom: 220, right: 60, zIndex: 500,
+          position: "fixed", bottom: 220, left: 60, zIndex: 500,
           background: "rgba(26,15,46,0.95)", border: "1px solid rgba(108,92,231,0.25)",
           borderRadius: 16, padding: 12, backdropFilter: "blur(10px)", width: 200,
         }}>
@@ -1709,7 +1710,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
 
       {showMusicPlayer && (
         <div style={{
-          position: "fixed", bottom: 220, right: 60, zIndex: 500,
+          position: "fixed", bottom: 220, left: 60, zIndex: 500,
           background: "rgba(26,15,46,0.95)", border: "1px solid rgba(108,92,231,0.25)",
           borderRadius: 16, padding: 14, backdropFilter: "blur(10px)", width: 260,
         }}>
