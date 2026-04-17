@@ -63,14 +63,14 @@ export default function BottomBar({
   const closeAllPopups = () => { setShowEmoji(false); setShowGift(false); setShowReactions(false); };
 
   const floatBtn = (gradient: string, shadow: string): React.CSSProperties => ({
-    width: 48, height: 48, borderRadius: 24, border: "1px solid rgba(255,255,255,0.18)",
+    width: 46, height: 46, borderRadius: 23, border: "1px solid rgba(255,255,255,0.18)",
     padding: 0, cursor: "pointer", color: "#fff",
     background: gradient, boxShadow: `0 4px 14px ${shadow}`,
     display: "flex", alignItems: "center", justifyContent: "center",
   });
 
   const circleBtn = (active = false): React.CSSProperties => ({
-    width: 38, height: 38, borderRadius: 19,
+    width: 34, height: 34, borderRadius: 17,
     background: active ? "rgba(108,92,231,0.4)" : "rgba(0,0,0,0.45)",
     border: `1px solid ${active ? "rgba(108,92,231,0.6)" : "rgba(255,255,255,0.12)"}`,
     color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
@@ -144,31 +144,37 @@ export default function BottomBar({
             </button>
           </div>
 
-          {/* CENTER cluster: game shortcuts */}
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          {/* CENTER cluster: game shortcuts — circular neon */}
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button onClick={() => { closeAllPopups(); onOpenGame?.(); }} style={{
-              width: 44, height: 44, borderRadius: 12, border: "none", padding: 0, cursor: "pointer",
-              background: "linear-gradient(135deg, #ff8a65, #ff5252)",
-              boxShadow: "0 3px 10px rgba(255,138,101,0.4)", color: "#fff", fontSize: 22,
+              width: 36, height: 36, borderRadius: 18, border: "1px solid rgba(255,138,101,0.55)",
+              padding: 0, cursor: "pointer",
+              background: "radial-gradient(circle at 35% 30%, #ffb199, #ff5252 75%)",
+              boxShadow: "0 0 10px rgba(255,82,82,0.55), inset 0 0 6px rgba(255,255,255,0.25)",
+              color: "#fff", fontSize: 17,
             }} title="Games">{"\u{1F3A1}"}</button>
             <button onClick={() => { closeAllPopups(); onOpenGame?.(); }} style={{
-              width: 44, height: 44, borderRadius: 12, border: "none", padding: 0, cursor: "pointer",
-              background: "linear-gradient(135deg, #ffd54f, #ff9800)",
-              boxShadow: "0 3px 10px rgba(255,152,0,0.4)", color: "#fff", fontSize: 22,
+              width: 36, height: 36, borderRadius: 18, border: "1px solid rgba(255,193,7,0.55)",
+              padding: 0, cursor: "pointer",
+              background: "radial-gradient(circle at 35% 30%, #ffe082, #ff9800 75%)",
+              boxShadow: "0 0 10px rgba(255,152,0,0.55), inset 0 0 6px rgba(255,255,255,0.25)",
+              color: "#fff", fontSize: 17,
             }} title="Lucky">{"\u{1F3B0}"}</button>
           </div>
 
-          {/* RIGHT cluster: gift + menu */}
+          {/* RIGHT cluster: gift + menu — circular neon */}
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button onClick={() => { const next = !showGift; closeAllPopups(); if (next) setShowGift(true); }} style={{
               position: "relative",
-              width: 50, height: 50, borderRadius: 14, border: "none", padding: 0, cursor: "pointer",
-              background: "linear-gradient(135deg, #ff6b9d, #c2185b)",
-              boxShadow: "0 4px 12px rgba(255,107,157,0.5)", color: "#fff",
+              width: 40, height: 40, borderRadius: 20, border: "1px solid rgba(255,107,157,0.6)",
+              padding: 0, cursor: "pointer",
+              background: "radial-gradient(circle at 35% 30%, #ff9ec0, #c2185b 80%)",
+              boxShadow: "0 0 12px rgba(255,107,157,0.6), inset 0 0 6px rgba(255,255,255,0.25)",
+              color: "#fff",
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             }} title="Recharge Bonus">
-              <span style={{ fontSize: 22, lineHeight: 1 }}>{"\u{1F381}"}</span>
-              <span style={{ fontSize: 7, fontWeight: 800, marginTop: 1, letterSpacing: 0.2 }}>BONUS</span>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>{"\u{1F381}"}</span>
+              <span style={{ fontSize: 6, fontWeight: 800, marginTop: 1, letterSpacing: 0.2 }}>BONUS</span>
             </button>
             <button onClick={onOpenMenu} style={circleBtn()} title="Menu">{"\u2630"}</button>
           </div>

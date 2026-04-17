@@ -22,14 +22,14 @@ export default function RoomHeader({
   const lbValue = (liveCount * 0.95 + 7.23).toFixed(2);
   const previewUsers = Object.values(room.roomUsers || {}).slice(0, 1);
 
-  // Shared semi-transparent panel base with gold outline
+  // Shared semi-transparent panel base — soft gold glow (not thick line)
   const panelBase: React.CSSProperties = {
-    background: "rgba(20,12,40,0.45)",
-    border: "1px solid rgba(255,215,0,0.45)",
+    background: "rgba(20,12,40,0.42)",
+    border: "1px solid rgba(255,215,0,0.18)",
     borderRadius: 24,
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    boxShadow: "0 2px 14px rgba(0,0,0,0.35), inset 0 0 12px rgba(255,215,0,0.08)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.3), 0 0 14px rgba(255,200,80,0.18), inset 0 0 18px rgba(255,200,80,0.05)",
   };
 
   return (
@@ -79,27 +79,18 @@ export default function RoomHeader({
           </div>
         </div>
 
-        {/* RIGHT: grouped action panel — share + menu + close + viewer count in ONE pill panel */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-          <div style={{ ...panelBase, padding: "4px 6px", display: "flex", alignItems: "center", gap: 4 }}>
-            <button onClick={onShare} title="Share" style={iconBtn}>{"\u2197"}</button>
-            <span style={divider} />
-            <button onClick={onOpenControlPanel} title="Menu" style={iconBtn}>{"\u22EF"}</button>
-            <span style={divider} />
-            <button onClick={onShowCloseMenu} title="Close" style={iconBtn}>{"\u2715"}</button>
-          </div>
-
-          {/* Online viewer pill — also gold-outline panel */}
-          <button onClick={onShowUsersPanel} style={{
-            ...panelBase, borderRadius: 20,
-            display: "flex", alignItems: "center", gap: 5,
-            padding: "2px 10px 2px 2px", cursor: "pointer", fontFamily: "inherit",
+        {/* RIGHT: SINGLE merged action panel — viewer + share + menu + close together */}
+        <div style={{ ...panelBase, padding: "3px 6px 3px 3px", display: "flex", alignItems: "center", gap: 4 }}>
+          <button onClick={onShowUsersPanel} title="Online viewers" style={{
+            display: "flex", alignItems: "center", gap: 4,
+            background: "transparent", border: "none", padding: "0 4px 0 0",
+            cursor: "pointer", fontFamily: "inherit",
           }}>
             {previewUsers[0] ? (
               <div style={{
-                width: 26, height: 26, borderRadius: 13, overflow: "hidden",
-                background: "rgba(108,92,231,0.25)", border: "1.5px solid rgba(255,215,0,0.5)",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+                width: 24, height: 24, borderRadius: 12, overflow: "hidden",
+                background: "rgba(108,92,231,0.3)", border: "1px solid rgba(255,215,0,0.35)",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
               }}>
                 {previewUsers[0].avatar?.startsWith?.("http")
                   ? <img src={previewUsers[0].avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -107,13 +98,19 @@ export default function RoomHeader({
               </div>
             ) : (
               <div style={{
-                width: 26, height: 26, borderRadius: 13,
-                background: "rgba(108,92,231,0.25)", border: "1.5px solid rgba(255,215,0,0.5)",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
+                width: 24, height: 24, borderRadius: 12,
+                background: "rgba(108,92,231,0.3)", border: "1px solid rgba(255,215,0,0.35)",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12,
               }}>{"\u{1F464}"}</div>
             )}
-            <span style={{ fontSize: 12, color: "#fff", fontWeight: 700 }}>{liveCount}</span>
+            <span style={{ fontSize: 11, color: "#fff", fontWeight: 700 }}>{liveCount}</span>
           </button>
+          <span style={divider} />
+          <button onClick={onShare} title="Share" style={iconBtn}>{"\u2197"}</button>
+          <span style={divider} />
+          <button onClick={onOpenControlPanel} title="Menu" style={iconBtn}>{"\u22EF"}</button>
+          <span style={divider} />
+          <button onClick={onShowCloseMenu} title="Close" style={iconBtn}>{"\u2715"}</button>
         </div>
       </div>
 
