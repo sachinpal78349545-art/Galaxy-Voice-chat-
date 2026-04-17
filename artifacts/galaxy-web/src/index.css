@@ -1554,23 +1554,15 @@ textarea.input-field { resize: none; line-height: 1.5; }
   top: 50%;
   left: 50%;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: conic-gradient(
-    #8a2be2,
-    #00cfff,
-    #ff00ff,
-    #8a2be2
-  );
+  background: transparent;
+  border: 2px solid rgba(255, 215, 0, 0.85);
   animation: saSpin 3s linear infinite;
-  filter: blur(3px);
   box-shadow:
-    0 0 10px #8a2be2,
-    0 0 18px #00cfff,
-    0 0 26px #ff00ff;
+    0 0 10px rgba(138, 43, 226, 0.65),
+    0 0 18px rgba(0, 207, 255, 0.45),
+    0 0 26px rgba(255, 0, 255, 0.35);
   pointer-events: none;
-  z-index: 3;
+  z-index: 1;
 }
 
 .sa-seat-crown {

@@ -132,9 +132,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
       <div className="seat-wrapper">
         {isSuperAdmin && isActive && (
           <>
-            <div className="sa-seat-ring" style={{ width: 66, height: 66, transform: "translate(-50%, -50%)" }}>
-              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#1A0F2E" }} />
-            </div>
+            <div className="sa-seat-ring" style={{ width: 66, height: 66, transform: "translate(-50%, -50%)" }} />
             <div className="sa-seat-crown">{"\u{1F451}"}</div>
           </>
         )}
