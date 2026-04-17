@@ -615,11 +615,8 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
           <span className="pf-flag">{"\u{1F1EE}\u{1F1F3}"}</span>
           <span className="pf-grey-pill">Lv.{user.level}</span>
           <span className="pf-grey-pill">Diamond</span>
-          {isAdmin && <span className="pf-verified-pill">{"\u2705"}</span>}
           {user.vip && <span className="pf-verified-pill">{"\u{1F451}"}</span>}
-          {isAdmin ? (
-            <span className="super-admin-chat-tag" style={{ fontSize: 8, padding: "2px 8px", marginLeft: "auto" }}>{"\u{1F451}"} ADMIN</span>
-          ) : user.globalRole === "official" ? (
+          {!isAdmin && user.globalRole === "official" ? (
             <span className="official-chat-tag" style={{ fontSize: 8, padding: "2px 8px", marginLeft: "auto" }}>{"\u{1F6E1}\uFE0F"} OFFICIAL</span>
           ) : (
             <span className="pf-home-icon">{"\u{1F3E0}"}</span>
@@ -1155,28 +1152,22 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
             <div style={{ position: "relative" }}>
               <div className={viewingProfile.vip ? "vip-glow-border" : ""} style={{
                 width: 80, height: 80, borderRadius: 40, fontSize: 40,
-                background: isSuperAdmin(viewingProfile) ? "rgba(255,215,0,0.12)" : "rgba(108,92,231,0.15)",
-                border: isSuperAdmin(viewingProfile) ? "3px solid rgba(255,215,0,0.5)" : viewingProfile.vip ? undefined : "3px solid rgba(108,92,231,0.3)",
+                background: "rgba(108,92,231,0.15)",
+                border: viewingProfile.vip ? undefined : "3px solid rgba(108,92,231,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
-                boxShadow: isSuperAdmin(viewingProfile) ? "0 0 20px rgba(255,215,0,0.3)" : viewingProfile.vip ? undefined : "0 0 15px rgba(108,92,231,0.2)",
+                boxShadow: viewingProfile.vip ? undefined : "0 0 15px rgba(108,92,231,0.2)",
                 transition: "all 0.3s ease",
               }}>
                 {viewingProfile.avatar?.startsWith("http")
                   ? <img src={viewingProfile.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 40 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = "\u{1F464}"; }} />
                   : (viewingProfile.avatar && viewingProfile.avatar.length <= 4 ? viewingProfile.avatar : "\u{1F464}")}
               </div>
-              {isSuperAdmin(viewingProfile) && (
-                <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_v2.png`} alt="Super Admin" style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", height: 20 }} />
-              )}
               {viewingProfile.globalRole === "official" && !isSuperAdmin(viewingProfile) && (
                 <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.png`} alt="Official" style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", height: 18 }} />
               )}
             </div>
             <div style={{ textAlign: "center", marginTop: 4 }}>
               <p style={{ fontSize: 18, fontWeight: 900 }}>{viewingProfile.name}</p>
-              {isSuperAdmin(viewingProfile) && (
-                <span className="super-admin-chat-tag" style={{ fontSize: 9, padding: "2px 10px", borderRadius: 8 }}>{"\u{1F451}"} SUPER ADMIN</span>
-              )}
               {viewingProfile.globalRole === "official" && !isSuperAdmin(viewingProfile) && (
                 <span className="official-chat-tag" style={{ fontSize: 9, padding: "2px 10px", borderRadius: 8 }}>{"\u{1F6E1}\uFE0F"} OFFICIAL</span>
               )}

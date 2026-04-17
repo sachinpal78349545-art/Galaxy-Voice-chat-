@@ -485,12 +485,6 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <p style={{ fontWeight: 800, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active.participantNames[otherIdx]}</p>
-              {otherIsSuperAdmin && (
-                <span style={{ fontSize: 12, color: "#1DA1F2", flexShrink: 0 }}>{"\u2714"}</span>
-              )}
-              {otherIsSuperAdmin && (
-                <span className="super-admin-chat-tag">{"\u{1F451}"} S.ADMIN</span>
-              )}
               {otherProfile?.globalRole === "official" && !otherIsSuperAdmin && (
                 <span className="official-chat-tag">{"\u{1F6E1}\uFE0F"} OFFICIAL</span>
               )}
@@ -554,26 +548,6 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
                   }}>{"\u21A9\uFE0F"}</div>
                 )}
 
-                {senderIsSuperAdmin && !isSelf && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3, padding: "0 4px" }}>
-                    <div style={{ position: "relative", width: 18, height: 18, flexShrink: 0 }}>
-                      <div style={{ width: 18, height: 18, borderRadius: 9, overflow: "hidden", background: "rgba(255,215,0,0.15)", border: "1px solid rgba(255,215,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>
-                        {active.participantAvatars[otherIdx]?.startsWith?.("http")
-                          ? <img src={active.participantAvatars[otherIdx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 9 }} />
-                          : active.participantAvatars[otherIdx]}
-                      </div>
-                      <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" style={{ position: "absolute", top: -2, left: -2, width: 22, height: 22, pointerEvents: "none" }} />
-                    </div>
-                    <span className="super-admin-chat-tag">SUPER ADMIN</span>
-                    <span style={{ fontSize: 11, color: "#1DA1F2" }}>{"\u2714"}</span>
-                  </div>
-                )}
-                {senderIsSuperAdmin && isSelf && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2, padding: "0 4px" }}>
-                    <span className="super-admin-chat-tag">SUPER ADMIN</span>
-                    <span style={{ fontSize: 11, color: "#1DA1F2" }}>{"\u2714"}</span>
-                  </div>
-                )}
 
                 {msg.replyTo && (
                   <div style={{

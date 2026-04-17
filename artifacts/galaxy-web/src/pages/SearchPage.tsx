@@ -175,7 +175,7 @@ export default function SearchPage({ user, onMessage, onBack }: Props) {
                   {u.vip && <span className="badge badge-vip" style={{ fontSize: 7, padding: "1px 4px" }}>{"\u{1F451}"}</span>}
                 </div>
                 <p style={{ fontSize: 10, color: "rgba(162,155,254,0.4)" }}>
-                  {isSuperAdmin(u) ? "\u{1F451} Super Admin" : `Lv.${u.level || 1}`} {followsMe && !isFollowing ? " \u2022 Follows you" : ""}
+                  {`Lv.${u.level || 1}`} {followsMe && !isFollowing ? " \u2022 Follows you" : ""}
                 </p>
               </div>
               {!blocked && (

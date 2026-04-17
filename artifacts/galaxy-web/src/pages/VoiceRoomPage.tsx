@@ -620,7 +620,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         hashCode={hashCode}
         isOwnerSeat={(seat) => seat.userId === room.hostId}
         officialUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isOfficial).map((ru: any) => ru.uid))}
-        superAdminUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.isSuperAdmin).map((ru: any) => ru.uid))}
+        superAdminUids={new Set()}
         equippedFrames={equippedFrames}
         ghostUids={new Set(Object.values(room.roomUsers || {}).filter((ru: any) => ru.ghostMode).map((ru: any) => ru.uid))}
         onSeatTap={(i, seat) => {
@@ -875,7 +875,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                       {ru.uid === user.uid && <span style={{ fontSize: 9, color: "rgba(162,155,254,0.4)" }}>(you)</span>}
                     </div>
                     {(ru as any).isSuperAdmin
-                      ? <span className="badge" style={{ fontSize: 8, padding: "1px 6px", background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(191,0,255,0.15))", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)", fontWeight: 900, textShadow: "0 0 4px rgba(255,215,0,0.4)" }}>{"\u{1F451}"} Super Admin</span>
+                      ? <RoleBadge role={ru.role} />
                       : (ru as any).isOfficial
                       ? <span className="badge" style={{ fontSize: 8, padding: "1px 6px", background: "rgba(255,215,0,0.15)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.3)" }}>{"\u{1F6E1}\uFE0F"} Official</span>
                       : <RoleBadge role={ru.role} />
