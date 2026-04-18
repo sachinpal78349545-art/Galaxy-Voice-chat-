@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import { ChevronDownIcon } from "lucide-react"
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -31,8 +31,8 @@ function Calendar({
         months: "relative flex flex-col gap-4 md:flex-row",
         month: "flex w-full flex-col gap-4",
         nav: "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1",
-        button_previous: cn("h-[--cell-size] w-[--cell-size] select-none p-0 aria-disabled:opacity-50", buttonVariant ? "" : ""),
-        button_next: cn("h-[--cell-size] w-[--cell-size] select-none p-0 aria-disabled:opacity-50", buttonVariant ? "" : ""),
+        nav_button_previous: cn("h-[--cell-size] w-[--cell-size] select-none p-0 aria-disabled:opacity-50", buttonVariant ? "" : ""),
+        nav_button_next: cn("h-[--cell-size] w-[--cell-size] select-none p-0 aria-disabled:opacity-50", buttonVariant ? "" : ""),
         month_caption: "flex h-[--cell-size] w-full items-center justify-center px-[--cell-size]",
         dropdowns: "flex h-[--cell-size] w-full items-center justify-center gap-1.5 text-sm font-medium",
         dropdown_root: "has-focus:border-ring border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] relative rounded-md border",
@@ -55,15 +55,7 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Chevron: ({ className, orientation, ...props }) => {
-          if (orientation === "left") {
-            return <ChevronLeftIcon className={cn("size-4", className)} {...props} />
-          }
-
-          if (orientation === "right") {
-            return <ChevronRightIcon className={cn("size-4", className)} {...props} />
-          }
-
+        Icon: ({ className, ...props }) => {
           return <ChevronDownIcon className={cn("size-4", className)} {...props} />
         },
         ...components,
