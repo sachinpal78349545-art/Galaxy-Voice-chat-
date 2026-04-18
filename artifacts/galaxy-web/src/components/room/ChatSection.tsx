@@ -4,7 +4,7 @@ import { RoomMessage, cleanName } from "./types";
 interface ChatSectionProps {
   messages: RoomMessage[];
   userId: string;
-  msgEndRef: React.RefObject<HTMLDivElement | null>;
+  msgEndRef: React.RefObject<HTMLDivElement>;
 }
 
 export default function ChatSection({ messages, userId, msgEndRef }: ChatSectionProps) {
