@@ -1,8 +1,39 @@
-import { defineConfig } from "vite";
+import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+
+/** Serves /ping and /healthz as JSON — so UptimeRobot gets a proper 200 */
+function healthPlugin(): Plugin {
+  const startedAt = Date.now();
+  return {
+    name: "health-endpoints",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url === "/ping") {
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(200);
+          res.end(JSON.stringify({ status: "alive", timestamp: Date.now() }));
+          return;
+        }
+        if (req.url === "/healthz") {
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(200);
+          res.end(JSON.stringify({
+            status: "ok",
+            uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
+            timestamp: new Date().toISOString(),
+            service: "galaxy-voice-chat",
+            mode: "development",
+          }));
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
 
 const isBuild = process.argv.includes("build");
 const rawPort = process.env.PORT;
@@ -24,6 +55,7 @@ const basePath = process.env.BASE_PATH || "/";
 export default defineConfig({
   base: basePath,
   plugins: [
+    healthPlugin(),
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
