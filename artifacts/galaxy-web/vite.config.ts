@@ -4,12 +4,37 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-/** Serves /ping and /healthz as JSON — so UptimeRobot gets a proper 200 */
+/** Serves /ping and /healthz as JSON — so UptimeRobot gets proper 200 JSON.
+ *  Also runs a heartbeat every 2 minutes to prevent Replit idle/sleep. */
 function healthPlugin(): Plugin {
   const startedAt = Date.now();
+  let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+  function fmt(ms: number) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+    if (m > 0) return `${m}m ${s % 60}s`;
+    return `${s}s`;
+  }
+
+  function memMB() {
+    const m = process.memoryUsage();
+    return `heap=${Math.round(m.heapUsed / 1024 / 1024)}MB rss=${Math.round(m.rss / 1024 / 1024)}MB`;
+  }
+
   return {
     name: "health-endpoints",
     configureServer(server) {
+      // ── Anti-idle heartbeat: log every 2 minutes to keep process active ──
+      heartbeatTimer = setInterval(() => {
+        const uptime = fmt(Date.now() - startedAt);
+        const mem    = memMB();
+        console.log(`\x1b[35m[HEARTBEAT]\x1b[0m 💓 Galaxy alive | up=${uptime} | ${mem}`);
+      }, 2 * 60 * 1000); // every 2 minutes
+
+      // ── Health endpoints ──
       server.middlewares.use((req, res, next) => {
         if (req.url === "/ping") {
           res.setHeader("Content-Type", "application/json");
@@ -18,6 +43,7 @@ function healthPlugin(): Plugin {
           return;
         }
         if (req.url === "/healthz") {
+          const mem = process.memoryUsage();
           res.setHeader("Content-Type", "application/json");
           res.writeHead(200);
           res.end(JSON.stringify({
@@ -26,10 +52,19 @@ function healthPlugin(): Plugin {
             timestamp: new Date().toISOString(),
             service: "galaxy-voice-chat",
             mode: "development",
+            memory: {
+              heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
+              rssMB:      Math.round(mem.rss       / 1024 / 1024),
+            },
           }));
           return;
         }
         next();
+      });
+
+      // Clear heartbeat when dev server closes
+      server.httpServer?.on("close", () => {
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
       });
     },
   };
