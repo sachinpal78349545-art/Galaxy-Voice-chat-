@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, User as FBUser, getRedirectResult, signOut } from "firebase/auth";
 import { auth } from "./lib/firebase";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward, isUserBanned, getBanTimeRemaining } from "./lib/userService";
 import { Room, subscribeMaintenanceMode, getAutoEntryRoom } from "./lib/roomService";
 import { subscribeConversations, Conversation } from "./lib/chatService";
@@ -265,10 +266,41 @@ function AppInner() {
   }
 
   if (activeRoom) {
+    const handleRoomLeave = () => { setActiveRoom(null); changePage("rooms"); };
     return (
       <div className="app-wrapper">
         <div className="stars" />
-        <VoiceRoomPage roomId={activeRoom.id} user={profile} onLeave={() => { setActiveRoom(null); changePage("rooms"); }} enteredPassword={(activeRoom as any)._enteredPassword} onMessage={(uid) => { setActiveRoom(null); setChatTargetUid(uid); changePage("chats"); }} />
+        <ErrorBoundary
+          fallback={
+            <div style={{
+              minHeight: "100vh",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "linear-gradient(135deg,#0d001a,#1a0030)",
+              color: "#fff",
+              fontFamily: "'Poppins','Inter',sans-serif",
+              textAlign: "center",
+              padding: 24,
+            }}>
+              <div style={{ fontSize: 52, marginBottom: 12 }}>🎙️</div>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#a78bfa", marginBottom: 8 }}>Room error — connection lost</h2>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 24 }}>The voice room ran into a problem. You've been safely returned.</p>
+              <button onClick={handleRoomLeave} style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff", border: "none", borderRadius: 24, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                Back to Rooms
+              </button>
+            </div>
+          }
+        >
+          <VoiceRoomPage
+            roomId={activeRoom.id}
+            user={profile}
+            onLeave={handleRoomLeave}
+            enteredPassword={(activeRoom as any)._enteredPassword}
+            onMessage={(uid) => { setActiveRoom(null); setChatTargetUid(uid); changePage("chats"); }}
+          />
+        </ErrorBoundary>
       </div>
     );
   }
