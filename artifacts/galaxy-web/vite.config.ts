@@ -57,6 +57,14 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    watch: {
+      // Ignore galaxy/ uploads folder — file changes there won't trigger HMR restart
+      ignored: [
+        "**/galaxy/**",
+        "**/public/galaxy/**",
+        "**/dist/**",
+      ],
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],

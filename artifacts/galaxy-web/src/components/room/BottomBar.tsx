@@ -1,96 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Room, UserProfile } from "./types";
 import {
   Mic, MicOff, Volume2, VolumeX, Smile, MessageCircle,
-  Gift, Menu as MenuIcon, Send,
-  Hand, PartyPopper, Sparkles,
+  Gift, MoreHorizontal, Sparkles, Send,
 } from "lucide-react";
 
-// Premium neon button — gradient bg + soft theme glow + inner highlight
-const NEON_PRIMARY = "#6C5CE7";
-const NEON_LIGHT = "#a78bfa";
-
-function NeonIconBtn({
-  icon, onClick, title, size = 38, active = false, variant = "primary",
-}: {
-  icon: React.ReactNode;
-  onClick?: () => void;
-  title?: string;
-  size?: number;
-  active?: boolean;
-  variant?: "primary" | "pink" | "amber" | "cyan" | "rose" | "muted";
-}) {
-  const palettes: Record<string, { bg: string; glow: string; ring: string }> = {
-    primary: {
-      bg: "radial-gradient(circle at 30% 25%, #b8a4ff 0%, #8B7BFF 35%, #6C5CE7 75%, #4b3bbf 100%)",
-      glow: "rgba(108,92,231,0.55)",
-      ring: "rgba(167,139,250,0.6)",
-    },
-    pink: {
-      bg: "radial-gradient(circle at 30% 25%, #ffc1d9 0%, #ff7eb3 40%, #c2185b 100%)",
-      glow: "rgba(255,107,157,0.55)",
-      ring: "rgba(255,160,200,0.65)",
-    },
-    amber: {
-      bg: "radial-gradient(circle at 30% 25%, #ffeaa1 0%, #ffc14d 40%, #ff8c00 100%)",
-      glow: "rgba(255,170,40,0.55)",
-      ring: "rgba(255,210,120,0.65)",
-    },
-    cyan: {
-      bg: "radial-gradient(circle at 30% 25%, #b9f1ff 0%, #4dd0e1 40%, #0097a7 100%)",
-      glow: "rgba(77,208,225,0.55)",
-      ring: "rgba(178,235,242,0.65)",
-    },
-    rose: {
-      bg: "radial-gradient(circle at 30% 25%, #ffd1c1 0%, #ff8a65 40%, #e64a19 100%)",
-      glow: "rgba(255,122,80,0.55)",
-      ring: "rgba(255,180,150,0.65)",
-    },
-    muted: {
-      bg: "rgba(20,12,40,0.55)",
-      glow: "rgba(108,92,231,0.25)",
-      ring: "rgba(167,139,250,0.3)",
-    },
-  };
-  const p = palettes[variant];
-  return (
-    <button onClick={onClick} title={title} style={{
-      width: size, height: size, borderRadius: size / 2,
-      border: `1px solid ${active ? "rgba(255,255,255,0.45)" : p.ring}`,
-      padding: 0, cursor: "pointer", color: "#fff",
-      background: p.bg,
-      boxShadow: `0 0 ${active ? 16 : 10}px ${p.glow}, inset 0 1px 2px rgba(255,255,255,0.35), inset 0 -2px 4px rgba(0,0,0,0.2)`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      transition: "transform 0.12s ease, box-shadow 0.12s ease",
-    }}>
-      {icon}
-    </button>
-  );
-}
-
-const EMOJIS = ["\u2764\uFE0F", "\u{1F525}", "\u2728", "\u{1F602}", "\u{1F3B5}", "\u{1F44F}", "\u{1F31F}", "\u{1F4AF}", "\u{1F680}", "\u{1F60D}", "\u{1F389}", "\u{1F48E}"];
+const EMOJIS = ["❤️","🔥","✨","😂","🎵","👏","🌟","💯","🚀","😍","🎉","💎"];
 const GIFTS = [
-  { emoji: "\u{1F381}", name: "Gift Box", cost: 10 },
-  { emoji: "\u{1F48E}", name: "Diamond", cost: 50 },
-  { emoji: "\u{1F451}", name: "Crown", cost: 100 },
-  { emoji: "\u{1F339}", name: "Rose", cost: 20 },
-  { emoji: "\u{1F38A}", name: "Confetti", cost: 30 },
-  { emoji: "\u{1F340}", name: "Clover", cost: 15 },
-  { emoji: "\u{1F98B}", name: "Butterfly", cost: 25 },
-  { emoji: "\u2B50", name: "Star", cost: 40 },
-  { emoji: "\u{1F3B6}", name: "Music", cost: 35 },
-  { emoji: "\u{1F4B0}", name: "Money Bag", cost: 200 },
-  { emoji: "\u{1F3C6}", name: "Trophy", cost: 500 },
-  { emoji: "\u{1F52E}", name: "Crystal Ball", cost: 75 },
+  { emoji: "🎁", name: "Gift Box",    cost: 10  },
+  { emoji: "💎", name: "Diamond",     cost: 50  },
+  { emoji: "👑", name: "Crown",       cost: 100 },
+  { emoji: "🌹", name: "Rose",        cost: 20  },
+  { emoji: "🎊", name: "Confetti",    cost: 30  },
+  { emoji: "🍀", name: "Clover",      cost: 15  },
+  { emoji: "🦋", name: "Butterfly",   cost: 25  },
+  { emoji: "⭐", name: "Star",        cost: 40  },
+  { emoji: "🎶", name: "Music",       cost: 35  },
+  { emoji: "💰", name: "Money Bag",   cost: 200 },
+  { emoji: "🏆", name: "Trophy",      cost: 500 },
+  { emoji: "🔮", name: "Crystal Ball",cost: 75  },
 ];
 const GIFT_COMBOS = [1, 10, 50, 100];
 const REACTIONS = [
-  { emoji: "\u{1F44F}", label: "Clap" },
-  { emoji: "\u{1F525}", label: "Fire" },
-  { emoji: "\u2764\uFE0F", label: "Love" },
-  { emoji: "\u{1F602}", label: "LOL" },
-  { emoji: "\u{1F4AF}", label: "100" },
-  { emoji: "\u{1F389}", label: "Party" },
+  { emoji: "👏", label: "Clap"  },
+  { emoji: "🔥", label: "Fire"  },
+  { emoji: "❤️", label: "Love"  },
+  { emoji: "😂", label: "LOL"   },
+  { emoji: "💯", label: "100"   },
+  { emoji: "🎉", label: "Party" },
 ];
 
 interface BottomBarProps {
@@ -116,273 +53,385 @@ interface BottomBarProps {
 
 export default function BottomBar({
   user,
-  isMuted, isSpeakerOff, isOnSeat,
+  isMuted, isSpeakerOff: _isSpeakerOff, isOnSeat,
   inputText, setInputText, onSendChat,
   onSendEmoji, onHandleGift, onHandleReaction,
-  onMicToggle, onSpeakerToggle, onRaiseHand, showToast, onOpenGame, onOpenMenu,
+  onMicToggle, onSpeakerToggle: _onSpeakerToggle,
+  onRaiseHand, showToast, onOpenMenu,
+  onOpenGame: _onOpenGame, onShare: _onShare,
 }: BottomBarProps) {
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [showGift, setShowGift] = useState(false);
+  const [showEmoji,     setShowEmoji]     = useState(false);
+  const [showGift,      setShowGift]      = useState(false);
   const [showReactions, setShowReactions] = useState(false);
-  const [showInput, setShowInput] = useState(false);
-  const [giftCombo, setGiftCombo] = useState(1);
+  const [inputOpen,     setInputOpen]     = useState(false);
+  const [giftCombo,     setGiftCombo]     = useState(1);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const closeAllPopups = () => { setShowEmoji(false); setShowGift(false); setShowReactions(false); };
+  const closeAllPopups = () => {
+    setShowEmoji(false);
+    setShowGift(false);
+    setShowReactions(false);
+  };
 
-  // ── right-widget card base ──
-  const widgetCard: React.CSSProperties = {
+  useEffect(() => {
+    if (inputOpen) setTimeout(() => inputRef.current?.focus(), 80);
+  }, [inputOpen]);
+
+  // Mic button state
+  const micActive   = isOnSeat && !isMuted;
+  const micVariant  = micActive ? "on" : "off";
+
+  /* ── tiny round icon button helper ── */
+  const RoundBtn = ({
+    icon, onClick, active = false, size = 38, color = "purple", label,
+  }: {
+    icon: React.ReactNode;
+    onClick?: () => void;
+    active?: boolean;
+    size?: number;
+    color?: "purple" | "pink" | "amber" | "muted" | "cyan";
+    label?: string;
+  }) => {
+    const bg: Record<string, string> = {
+      purple: "radial-gradient(circle at 30% 25%, #c4b5fd, #7c3aed 60%, #4c1d95)",
+      pink:   "radial-gradient(circle at 30% 25%, #ffc1d9, #ec4899 55%, #9d174d)",
+      amber:  "radial-gradient(circle at 30% 25%, #fde68a, #f59e0b 55%, #92400e)",
+      cyan:   "radial-gradient(circle at 30% 25%, #a5f3fc, #06b6d4 55%, #155e75)",
+      muted:  "rgba(20,10,40,0.65)",
+    };
+    const glow: Record<string, string> = {
+      purple: "rgba(124,58,237,0.55)",
+      pink:   "rgba(236,72,153,0.5)",
+      amber:  "rgba(245,158,11,0.5)",
+      cyan:   "rgba(6,182,212,0.5)",
+      muted:  "rgba(124,58,237,0.2)",
+    };
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+        <button onClick={onClick} style={{
+          width: size, height: size, borderRadius: size / 2,
+          background: bg[color],
+          border: `1.5px solid ${active ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.18)"}`,
+          boxShadow: `0 0 ${active ? 18 : 10}px ${glow[color]}, inset 0 1px 2px rgba(255,255,255,0.3)`,
+          color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", padding: 0,
+          transition: "transform 0.1s, box-shadow 0.1s",
+        }}>
+          {icon}
+        </button>
+        {label && (
+          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.55)", fontWeight: 600, letterSpacing: 0.3 }}>
+            {label}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  /* ── right side graphic widget cards ── */
+  const widgetBase: React.CSSProperties = {
     width: 52, borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.14)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
+    border: "1px solid rgba(255,255,255,0.13)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
     cursor: "pointer", overflow: "hidden", position: "relative",
-    boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
+    boxShadow: "0 4px 14px rgba(0,0,0,0.5)",
     padding: "8px 0 6px",
     fontFamily: "inherit",
   };
 
   return (
     <>
-      {/* ── RIGHT SIDE GRAPHIC WIDGETS ── */}
+      {/* ══════════ RIGHT SIDE BANNER WIDGETS ══════════ */}
       <div style={{
-        position: "fixed", right: 10, bottom: 130, zIndex: 80,
+        position: "fixed", right: 10, bottom: 134, zIndex: 80,
         display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
         width: 52,
       }}>
-
-        {/* EVENT BANNER WIDGET */}
+        {/* EVENT */}
         <button
           onClick={() => showToast("Events coming soon!", "info")}
-          style={{ ...widgetCard, background: "linear-gradient(160deg, #ff6b9d 0%, #9b27af 60%, #4b1fa8 100%)" }}
+          style={{ ...widgetBase, background: "linear-gradient(160deg,#ff6b9d 0%,#9b27af 60%,#4b1fa8 100%)" }}
         >
-          <div style={{
-            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-            background: "radial-gradient(circle at 70% 20%, rgba(255,255,255,0.2), transparent 55%)",
-          }} />
+          <div style={{ position:"absolute",inset:0, background:"radial-gradient(circle at 70% 20%,rgba(255,255,255,0.2),transparent 55%)" }} />
           <span style={{ fontSize: 22, lineHeight: 1 }}>🎪</span>
-          <span style={{
-            marginTop: 4, fontSize: 8, fontWeight: 800, color: "#fff",
-            letterSpacing: 0.3, textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-          }}>EVENT</span>
+          <span style={{ marginTop: 4, fontSize: 8, fontWeight: 800, color: "#fff", letterSpacing: 0.3, textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>EVENT</span>
         </button>
 
-        {/* SOFA / SEAT WIDGET */}
+        {/* SEAT */}
         <button
           onClick={onRaiseHand}
-          style={{ ...widgetCard, background: "linear-gradient(160deg, #6C5CE7 0%, #4b3bbf 100%)" }}
+          style={{ ...widgetBase, background: "linear-gradient(160deg,#6C5CE7 0%,#4b3bbf 100%)" }}
         >
-          <div style={{
-            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-            background: "radial-gradient(circle at 70% 20%, rgba(255,255,255,0.18), transparent 55%)",
-          }} />
+          <div style={{ position:"absolute",inset:0, background:"radial-gradient(circle at 70% 20%,rgba(255,255,255,0.18),transparent 55%)" }} />
           <span style={{ fontSize: 22, lineHeight: 1 }}>🛋️</span>
-          <span style={{
-            marginTop: 4, fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.85)",
-            letterSpacing: 0.3,
-          }}>{isOnSeat ? "ON SEAT" : "GET SEAT"}</span>
+          <span style={{ marginTop: 4, fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.85)", letterSpacing: 0.3 }}>
+            {isOnSeat ? "ON SEAT" : "GET SEAT"}
+          </span>
         </button>
 
-        {/* RECHARGE BONUS WIDGET */}
+        {/* RECHARGE */}
         <button
           onClick={() => { closeAllPopups(); setShowGift(s => !s); }}
-          style={{ ...widgetCard, background: "linear-gradient(160deg, #ffd54f 0%, #ff9800 55%, #e65100 100%)" }}
+          style={{ ...widgetBase, background: "linear-gradient(160deg,#ffd54f 0%,#ff9800 55%,#e65100 100%)" }}
         >
-          <div style={{
-            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-            background: "radial-gradient(circle at 70% 20%, rgba(255,255,255,0.25), transparent 55%)",
-          }} />
+          <div style={{ position:"absolute",inset:0, background:"radial-gradient(circle at 70% 20%,rgba(255,255,255,0.25),transparent 55%)" }} />
           <span style={{ fontSize: 22, lineHeight: 1 }}>💰</span>
-          <span style={{
-            marginTop: 4, fontSize: 7, fontWeight: 800, color: "#fff",
-            letterSpacing: 0.2, textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-            textAlign: "center", lineHeight: 1.2, padding: "0 2px",
-          }}>RECHARGE</span>
+          <span style={{ marginTop: 4, fontSize: 7, fontWeight: 800, color: "#fff", letterSpacing: 0.2, textAlign: "center", lineHeight: 1.2, padding: "0 2px" }}>RECHARGE</span>
         </button>
 
-        {/* REACTIONS WIDGET */}
+        {/* REACT */}
         <button
           onClick={() => { closeAllPopups(); setShowReactions(s => !s); }}
-          style={{ ...widgetCard, background: "linear-gradient(160deg, #00b4d8 0%, #0077b6 100%)" }}
+          style={{ ...widgetBase, background: "linear-gradient(160deg,#00b4d8 0%,#0077b6 100%)" }}
         >
-          <div style={{
-            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-            background: "radial-gradient(circle at 70% 20%, rgba(255,255,255,0.2), transparent 55%)",
-          }} />
+          <div style={{ position:"absolute",inset:0, background:"radial-gradient(circle at 70% 20%,rgba(255,255,255,0.2),transparent 55%)" }} />
           <Sparkles size={22} color="#fff" strokeWidth={2} />
-          <span style={{
-            marginTop: 4, fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.9)",
-            letterSpacing: 0.3,
-          }}>REACT</span>
+          <span style={{ marginTop: 4, fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: 0.3 }}>REACT</span>
         </button>
       </div>
 
+      {/* ══════════ MAIN BOTTOM BAR ══════════ */}
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 400, margin: "0 auto",
-        zIndex: 100, padding: "10px 10px 14px",
-        background: "linear-gradient(180deg, transparent, rgba(15,15,26,0.85) 60%)",
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        maxWidth: 480, margin: "0 auto",
+        zIndex: 100,
+        background: "linear-gradient(180deg,transparent 0%,rgba(10,6,25,0.92) 45%,rgba(8,4,18,0.98) 100%)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        padding: "10px 12px 18px",
       }}>
-        {/* Optional chat input - only shown when chat icon tapped */}
-        {showInput && (
+
+        {/* ── CHAT INPUT (expanded when open) ── */}
+        {inputOpen && (
           <div style={{
-            display: "flex", gap: 8, marginBottom: 10,
-            background: "rgba(0,0,0,0.55)", borderRadius: 24, padding: "4px 4px 4px 14px",
-            border: "1px solid rgba(108,92,231,0.3)", backdropFilter: "blur(10px)",
+            display: "flex", alignItems: "center", gap: 8,
+            marginBottom: 10,
+            background: "rgba(255,255,255,0.07)",
+            borderRadius: 24,
+            border: "1px solid rgba(124,58,237,0.4)",
+            padding: "5px 5px 5px 14px",
+            backdropFilter: "blur(12px)",
           }}>
-            <input autoFocus
-              placeholder="Cast your words..."
+            <input
+              ref={inputRef}
+              placeholder="Say something…"
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") { onSendChat(); setShowInput(false); } }}
+              onKeyDown={e => {
+                if (e.key === "Enter") { onSendChat(); setInputOpen(false); }
+                if (e.key === "Escape") setInputOpen(false);
+              }}
               style={{
                 flex: 1, background: "none", border: "none", outline: "none",
                 color: "#fff", fontSize: 13, fontFamily: "inherit",
               }}
             />
-            <button onClick={() => { onSendChat(); setShowInput(false); }} style={{
-              width: 36, height: 36, borderRadius: 18, border: "none", cursor: "pointer",
-              background: "linear-gradient(135deg, #6C5CE7, #a78bfa)", color: "#fff", fontSize: 14,
-            }}>{"\u27A4"}</button>
+            <button
+              onClick={() => { onSendChat(); setInputOpen(false); }}
+              style={{
+                width: 36, height: 36, borderRadius: 18, border: "none",
+                background: "linear-gradient(135deg,#7c3aed,#a78bfa)",
+                color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", flexShrink: 0,
+                boxShadow: "0 0 14px rgba(124,58,237,0.6)",
+              }}
+            >
+              <Send size={15} strokeWidth={2.5} />
+            </button>
           </div>
         )}
 
-        {/* ── BOTTOM FUNCTION BAR: icon + label grid ── */}
+        {/* ── TWO-GROUP BOTTOM ROW ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+
+          {/* ── LEFT GROUP: Chat pill + Emoji ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+
+            {/* Chat pill — takes all remaining space */}
+            <button
+              onClick={() => { closeAllPopups(); setInputOpen(s => !s); }}
+              style={{
+                flex: 1, minWidth: 0,
+                height: 38, borderRadius: 19,
+                background: inputOpen
+                  ? "rgba(124,58,237,0.18)"
+                  : "rgba(255,255,255,0.07)",
+                border: inputOpen
+                  ? "1.5px solid rgba(124,58,237,0.5)"
+                  : "1.5px solid rgba(255,255,255,0.13)",
+                display: "flex", alignItems: "center",
+                padding: "0 14px", gap: 8, cursor: "pointer",
+                backdropFilter: "blur(8px)",
+                boxShadow: inputOpen ? "0 0 14px rgba(124,58,237,0.25)" : "none",
+                transition: "border 0.15s, box-shadow 0.15s",
+              }}
+            >
+              <MessageCircle
+                size={15}
+                strokeWidth={2.3}
+                color={inputOpen ? "#c4b5fd" : "rgba(255,255,255,0.45)"}
+              />
+              <span style={{
+                fontSize: 12, color: inputOpen ? "#c4b5fd" : "rgba(255,255,255,0.38)",
+                fontFamily: "inherit", fontWeight: 500, overflow: "hidden",
+                textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+                {inputText || "Say something…"}
+              </span>
+            </button>
+
+            {/* Emoji button */}
+            <RoundBtn
+              icon={<Smile size={17} strokeWidth={2.3} />}
+              onClick={() => { const n = !showEmoji; closeAllPopups(); if (n) setShowEmoji(true); }}
+              active={showEmoji}
+              size={38}
+              color={showEmoji ? "purple" : "muted"}
+              label="Emoji"
+            />
+          </div>
+
+          {/* ── RIGHT GROUP: Gift · Mic · More ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+
+            {/* Gift */}
+            <RoundBtn
+              icon={<Gift size={17} strokeWidth={2.3} />}
+              onClick={() => { const n = !showGift; closeAllPopups(); if (n) setShowGift(true); }}
+              active={showGift}
+              size={38}
+              color="pink"
+              label="Gift"
+            />
+
+            {/* Mic — bigger & prominent */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+              <button
+                onClick={onMicToggle}
+                style={{
+                  width: 48, height: 48, borderRadius: 24,
+                  background: micActive
+                    ? "radial-gradient(circle at 30% 25%, #86efac, #22c55e 55%, #14532d)"
+                    : "radial-gradient(circle at 30% 25%, #fca5a5, #ef4444 55%, #7f1d1d)",
+                  border: "2px solid rgba(255,255,255,0.25)",
+                  boxShadow: micActive
+                    ? "0 0 22px rgba(34,197,94,0.65), inset 0 1px 3px rgba(255,255,255,0.35)"
+                    : "0 0 18px rgba(239,68,68,0.5), inset 0 1px 3px rgba(255,255,255,0.3)",
+                  color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", padding: 0,
+                  transition: "box-shadow 0.15s",
+                }}
+              >
+                {micActive
+                  ? <Mic     size={20} strokeWidth={2.5} />
+                  : <MicOff  size={20} strokeWidth={2.5} />}
+              </button>
+              <span style={{ fontSize: 8, color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>
+                {micActive ? "Mic ON" : "Muted"}
+              </span>
+            </div>
+
+            {/* More */}
+            <RoundBtn
+              icon={<MoreHorizontal size={17} strokeWidth={2.3} />}
+              onClick={onOpenMenu}
+              size={38}
+              color="muted"
+              label="More"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════ POPUPS ══════════ */}
+
+      {/* Emoji picker */}
+      {showEmoji && (
         <div style={{
-          display: "flex", alignItems: "flex-end",
-          justifyContent: "space-between", gap: 2,
+          position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+          width: 240, zIndex: 200,
+          background: "rgba(15,8,35,0.96)", backdropFilter: "blur(16px)",
+          border: "1px solid rgba(124,58,237,0.3)", borderRadius: 18,
+          padding: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
         }}>
-          {/* Helper: labeled icon button */}
-          {([
-            {
-              icon: isSpeakerOff ? <VolumeX size={17} strokeWidth={2.3} /> : <Volume2 size={17} strokeWidth={2.3} />,
-              label: "Sound", onClick: onSpeakerToggle,
-              variant: isSpeakerOff ? "muted" : "primary",
-            },
-            {
-              icon: (!isOnSeat || isMuted) ? <MicOff size={17} strokeWidth={2.3} /> : <Mic size={17} strokeWidth={2.3} />,
-              label: isMuted ? "Muted" : "Mic", onClick: onMicToggle,
-              variant: (!isOnSeat || isMuted) ? "muted" : "primary",
-              dot: isOnSeat && !isMuted,
-            },
-            {
-              icon: <Smile size={17} strokeWidth={2.3} />,
-              label: "Emoji", onClick: () => { const n = !showEmoji; closeAllPopups(); if (n) setShowEmoji(true); },
-              variant: showEmoji ? "primary" : "muted",
-            },
-            {
-              icon: <MessageCircle size={17} strokeWidth={2.3} />,
-              label: "Chat", onClick: () => { closeAllPopups(); setShowInput(s => !s); },
-              variant: showInput ? "primary" : "muted",
-            },
-            {
-              icon: <Gift size={17} strokeWidth={2.3} />,
-              label: "Gift", onClick: () => { const n = !showGift; closeAllPopups(); if (n) setShowGift(true); },
-              variant: "pink",
-            },
-            {
-              icon: <MenuIcon size={17} strokeWidth={2.3} />,
-              label: "More", onClick: onOpenMenu,
-              variant: "muted",
-            },
-          ] as Array<{ icon: React.ReactNode; label: string; onClick?: () => void; variant: string; dot?: boolean }>)
-            .map(({ icon, label, onClick, variant, dot }, i) => {
-              const palettes: Record<string, { bg: string; glow: string }> = {
-                primary: { bg: "radial-gradient(circle at 30% 25%, #b8a4ff, #6C5CE7 70%, #4b3bbf)", glow: "rgba(108,92,231,0.5)" },
-                pink:    { bg: "radial-gradient(circle at 30% 25%, #ffc1d9, #ff7eb3 50%, #c2185b)", glow: "rgba(255,107,157,0.5)" },
-                amber:   { bg: "radial-gradient(circle at 30% 25%, #ffeaa1, #ffc14d 50%, #ff8c00)", glow: "rgba(255,170,40,0.5)" },
-                cyan:    { bg: "radial-gradient(circle at 30% 25%, #b9f1ff, #4dd0e1 50%, #0097a7)", glow: "rgba(77,208,225,0.5)" },
-                rose:    { bg: "radial-gradient(circle at 30% 25%, #ffd1c1, #ff8a65 50%, #e64a19)", glow: "rgba(255,122,80,0.5)" },
-                muted:   { bg: "rgba(20,12,40,0.6)", glow: "rgba(108,92,231,0.2)" },
-              };
-              const p = palettes[variant] || palettes.muted;
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {EMOJIS.map(e => (
+              <button key={e} onClick={() => { onSendEmoji(e); closeAllPopups(); }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 26, padding: 3, lineHeight: 1 }}>
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Gift picker */}
+      {showGift && (
+        <div style={{
+          position: "fixed", bottom: 80, left: 8, right: 8, zIndex: 200,
+          background: "rgba(15,8,35,0.96)", backdropFilter: "blur(16px)",
+          border: "1px solid rgba(236,72,153,0.3)", borderRadius: 18,
+          padding: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>💎 {user.coins} coins</span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {GIFT_COMBOS.map(c => (
+                <button key={c} onClick={() => setGiftCombo(c)} style={{
+                  padding: "3px 9px", borderRadius: 8, fontSize: 10, fontWeight: 800, fontFamily: "inherit",
+                  border: giftCombo === c ? "1px solid rgba(167,139,250,0.6)" : "1px solid rgba(255,255,255,0.1)",
+                  background: giftCombo === c ? "rgba(124,58,237,0.25)" : "rgba(255,255,255,0.04)",
+                  color: giftCombo === c ? "#c4b5fd" : "rgba(255,255,255,0.35)", cursor: "pointer",
+                }}>x{c}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {GIFTS.map(g => {
+              const total = g.cost * giftCombo;
+              const canAfford = user.coins >= total;
               return (
-                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  <div style={{ position: "relative" }}>
-                    <button onClick={onClick} style={{
-                      width: 34, height: 34, borderRadius: 17,
-                      border: "1px solid rgba(255,255,255,0.18)",
-                      background: p.bg,
-                      boxShadow: `0 0 10px ${p.glow}, inset 0 1px 2px rgba(255,255,255,0.3)`,
-                      color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: "pointer", padding: 0,
-                    }}>{icon}</button>
-                    {dot && (
-                      <span style={{
-                        position: "absolute", top: 0, right: 0,
-                        width: 8, height: 8, borderRadius: 4,
-                        background: "#4ade80",
-                        border: "1.5px solid rgba(0,0,0,0.6)",
-                        boxShadow: "0 0 6px rgba(74,222,128,0.8)",
-                      }} />
-                    )}
-                  </div>
-                  <span style={{ fontSize: 8.5, color: "rgba(255,255,255,0.6)", fontWeight: 600, letterSpacing: 0.2 }}>
-                    {label}
-                  </span>
-                </div>
+                <button key={g.emoji}
+                  onClick={() => { if (canAfford) { onHandleGift(g, giftCombo); closeAllPopups(); } }}
+                  style={{
+                    background: canAfford ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.09)", borderRadius: 14,
+                    cursor: canAfford ? "pointer" : "not-allowed",
+                    padding: "7px 9px",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                    opacity: canAfford ? 1 : 0.35, minWidth: 52,
+                  }}>
+                  <span style={{ fontSize: 22 }}>{g.emoji}</span>
+                  <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 800 }}>{total}</span>
+                </button>
               );
             })}
+          </div>
         </div>
+      )}
 
-        {/* Popups */}
-        {showEmoji && (
-          <div className="room-popup" style={{ left: "50%", right: "auto", transform: "translateX(-50%)", width: 240, bottom: 70 }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {EMOJIS.map(e => (
-                <button key={e} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, padding: 3 }}
-                  onClick={() => { onSendEmoji(e); closeAllPopups(); }}>{e}</button>
-              ))}
-            </div>
+      {/* Reactions */}
+      {showReactions && (
+        <div style={{
+          position: "fixed", bottom: 80, right: 12, zIndex: 200,
+          background: "rgba(15,8,35,0.96)", backdropFilter: "blur(16px)",
+          border: "1px solid rgba(6,182,212,0.3)", borderRadius: 18,
+          padding: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+        }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            {REACTIONS.map(r => (
+              <button key={r.emoji}
+                onClick={() => { onHandleReaction(r.emoji); closeAllPopups(); }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 30, padding: 4, lineHeight: 1 }}>
+                {r.emoji}
+              </button>
+            ))}
           </div>
-        )}
-
-        {showGift && (
-          <div className="room-popup" style={{ bottom: 70 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>{"\u{1F48E}"} {user.coins} coins</span>
-              <div style={{ display: "flex", gap: 3 }}>
-                {GIFT_COMBOS.map(c => (
-                  <button key={c} onClick={() => setGiftCombo(c)} style={{
-                    padding: "3px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, fontFamily: "inherit",
-                    border: giftCombo === c ? "1px solid rgba(45,212,191,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                    background: giftCombo === c ? "rgba(45,212,191,0.15)" : "rgba(255,255,255,0.04)",
-                    color: giftCombo === c ? "#2DD4BF" : "rgba(255,255,255,0.35)", cursor: "pointer",
-                  }}>x{c}</button>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {GIFTS.map(g => {
-                const totalCost = g.cost * giftCombo;
-                return (
-                  <button key={g.emoji} onClick={() => { onHandleGift(g, giftCombo); closeAllPopups(); }} style={{
-                    background: user.coins >= totalCost ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14,
-                    cursor: user.coins >= totalCost ? "pointer" : "not-allowed",
-                    padding: "6px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                    opacity: user.coins >= totalCost ? 1 : 0.35,
-                  }}>
-                    <span style={{ fontSize: 20 }}>{g.emoji}</span>
-                    <span style={{ fontSize: 8, color: "#FFD700", fontWeight: 700 }}>{totalCost}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {showReactions && (
-          <div className="room-popup" style={{ left: "auto", right: 12, bottom: 70 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              {REACTIONS.map(r => (
-                <button key={r.emoji} onClick={() => { onHandleReaction(r.emoji); closeAllPopups(); }} style={{
-                  background: "none", border: "none", cursor: "pointer", fontSize: 30, padding: 4,
-                }}>{r.emoji}</button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 }

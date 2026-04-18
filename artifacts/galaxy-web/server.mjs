@@ -176,4 +176,30 @@ app.use((_req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`[SERVER] Galaxy Voice Chat started on port ${PORT} at ${new Date().toISOString()}`);
   console.log(`[SERVER] Keep-alive: /ping | Health: /healthz | Agora: POST /api/agora-token`);
+
+  // ── Integrated Keep-Alive: self-ping every 4 min to prevent sleep ──
+  const SELF_PING_MS = 4 * 60 * 1000; // 4 minutes
+  let selfPingFailures = 0;
+
+  async function selfPing() {
+    try {
+      const res = await fetch(`http://localhost:${PORT}/healthz`);
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.log(`[KEEP-ALIVE] ✅ OK | uptime=${data.uptimeSeconds ?? "?"}s | heap=${data.memory?.heapUsedMB ?? "?"}MB`);
+        selfPingFailures = 0;
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch (err) {
+      selfPingFailures++;
+      console.warn(`[KEEP-ALIVE] ⚠️  Ping failed (${selfPingFailures}): ${err.message}`);
+    }
+  }
+
+  // First ping after 30s, then every 4 minutes
+  setTimeout(() => {
+    selfPing();
+    setInterval(selfPing, SELF_PING_MS);
+  }, 30_000);
 });
