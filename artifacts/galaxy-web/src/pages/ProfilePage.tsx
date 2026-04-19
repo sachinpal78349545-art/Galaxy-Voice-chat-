@@ -21,6 +21,8 @@ interface Props {
   onLogout: () => void;
   onEditProfile: () => void;
   onMessage?: (uid: string) => void;
+  onRecharge?: () => void;
+  onAdminRecharge?: () => void;
 }
 
 const MENU_ITEMS = [
@@ -52,7 +54,7 @@ const RECHARGE_PACKAGES = [
 
 const REPORT_REASONS = ["Harassment", "Spam", "Inappropriate Content", "Fake Profile", "Scam", "Other"];
 
-export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, onMessage }: Props) {
+export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, onMessage, onRecharge, onAdminRecharge }: Props) {
   const [showWallet, setShowWallet] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -744,6 +746,16 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
                 </button>
               )}
               {isAdmin && (
+                <button onClick={() => { setShowSettings(false); if (onAdminRecharge) onAdminRecharge(); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 8px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", borderRadius: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(0,230,118,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F4B3}"}</div>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <p style={{ fontSize: 14, color: "#00e676", fontWeight: 600 }}>Recharge Approvals</p>
+                    <p style={{ fontSize: 10, color: "rgba(0,230,118,0.5)" }}>Approve UPI recharge requests</p>
+                  </div>
+                  <span style={{ color: "rgba(0,230,118,0.2)", fontSize: 16 }}>{"\u203A"}</span>
+                </button>
+              )}
+              {isAdmin && (
                 <button onClick={() => { setShowSettings(false); setShowGodMode(true); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 8px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", borderRadius: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, rgba(191,0,255,0.15), rgba(0,255,255,0.08))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u26A1"}</div>
                   <div style={{ flex: 1, textAlign: "left" }}>
@@ -772,39 +784,40 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
       {showWallet && (
         <BottomSheet onClose={() => setShowWallet(false)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F48E}"} Recharge Coins</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F4B0}"} My Wallet</h2>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => { setShowHistory(true); setShowWallet(false); }} className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>{"\u{1F4CB}"} History</button>
               <button onClick={() => setShowWallet(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {RECHARGE_PACKAGES.map((pkg, i) => (
-              <button key={i} onClick={() => handleRecharge(pkg.coins, i)} disabled={recharging !== null}
-                style={{
-                  display: "flex", alignItems: "center", gap: 14, padding: "14px 18px",
-                  background: recharging === i ? "rgba(108,92,231,0.2)" : "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(108,92,231,0.2)", borderRadius: 16,
-                  cursor: recharging !== null ? "not-allowed" : "pointer", fontFamily: "inherit", width: "100%",
-                  transition: "all 0.2s",
-                }}>
-                <span style={{ fontSize: 26 }}>{"\u{1F48E}"}</span>
-                <div style={{ flex: 1, textAlign: "left" }}>
-                  <p style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>
-                    {pkg.coins.toLocaleString()} Coins
-                    {pkg.bonus && <span style={{ fontSize: 11, color: "#00e676", marginLeft: 6 }}>{pkg.bonus}</span>}
-                  </p>
-                </div>
-                {recharging === i ? (
-                  <div style={{ width: 20, height: 20, borderRadius: 10, border: "2px solid rgba(108,92,231,0.3)", borderTopColor: "#A29BFE", animation: "spin 0.7s linear infinite" }} />
-                ) : (
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#A29BFE" }}>{pkg.price}</span>
-                )}
-              </button>
-            ))}
+          {/* Coin balance */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 16, padding: "18px 20px",
+            background: "linear-gradient(135deg,rgba(108,92,231,0.18),rgba(167,139,250,0.08))",
+            border: "1px solid rgba(167,139,250,0.25)", borderRadius: 18, marginBottom: 18,
+          }}>
+            <span style={{ fontSize: 42 }}>{"\u{1F48E}"}</span>
+            <div>
+              <p style={{ fontSize: 12, color: "rgba(162,155,254,0.6)", fontWeight: 600 }}>YOUR BALANCE</p>
+              <p style={{ fontSize: 28, fontWeight: 900, color: "#c4b5fd", lineHeight: 1 }}>{user.coins.toLocaleString()}</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>coins</p>
+            </div>
           </div>
-          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", textAlign: "center", marginTop: 14 }}>
-            Demo mode {"\u2014"} no real payment processed.
+          {/* Recharge CTA */}
+          <button
+            onClick={() => { setShowWallet(false); if (onRecharge) onRecharge(); }}
+            style={{
+              width: "100%", padding: "15px 0", borderRadius: 16, border: "none",
+              background: "linear-gradient(135deg,#7c3aed,#a855f7)",
+              color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer",
+              fontFamily: "inherit", marginBottom: 12,
+              boxShadow: "0 0 24px rgba(124,58,237,0.45)",
+            }}
+          >
+            {"\u{1F4B3}"} Recharge via UPI
+          </button>
+          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.35)", textAlign: "center" }}>
+            Pay via GPay, PhonePe or Paytm {"\u2022"} Instant approval
           </p>
         </BottomSheet>
       )}

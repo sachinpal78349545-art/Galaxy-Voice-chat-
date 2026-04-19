@@ -19,9 +19,11 @@ import EditProfilePage from "./pages/EditProfilePage";
 import NotificationPage from "./pages/NotificationPage";
 import SearchPage from "./pages/SearchPage";
 import ExplorePage from "./pages/ExplorePage";
+import RechargePage from "./pages/RechargePage";
+import AdminRechargePage from "./pages/AdminRechargePage";
 import "./index.css";
 
-type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications" | "search" | "explore";
+type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications" | "search" | "explore" | "recharge" | "admin-recharge";
 
 const NAV = [
   { id: "home", icon: "\u{1F3E0}", label: "Home" },
@@ -379,7 +381,15 @@ function AppInner() {
               onLogout={() => { setFbUser(null); setProfile(null); }}
               onEditProfile={() => setShowEdit(true)}
               onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }}
+              onRecharge={() => changePage("recharge")}
+              onAdminRecharge={() => changePage("admin-recharge")}
             />
+          )}
+          {page === "recharge" && (
+            <RechargePage user={profile} onBack={() => changePage("mine")} />
+          )}
+          {page === "admin-recharge" && (
+            <AdminRechargePage user={profile} onBack={() => changePage("mine")} />
           )}
         </div>
         <nav className="bottom-nav" style={{ display: chatActive ? "none" : undefined }}>
