@@ -5,7 +5,7 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 /** Serves /ping and /healthz as JSON — so UptimeRobot gets proper 200 JSON.
- *  Also runs a heartbeat every 2 minutes to prevent Replit idle/sleep. */
+ * Also runs a heartbeat every 2 minutes to prevent Replit idle/sleep. */
 function healthPlugin(): Plugin {
   const startedAt = Date.now();
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -27,14 +27,12 @@ function healthPlugin(): Plugin {
   return {
     name: "health-endpoints",
     configureServer(server) {
-      // ── Anti-idle heartbeat: log every 2 minutes to keep process active ──
       heartbeatTimer = setInterval(() => {
         const uptime = fmt(Date.now() - startedAt);
         const mem    = memMB();
         console.log(`\x1b[35m[HEARTBEAT]\x1b[0m 💓 Galaxy alive | up=${uptime} | ${mem}`);
-      }, 2 * 60 * 1000); // every 2 minutes
+      }, 2 * 60 * 1000);
 
-      // ── Health endpoints ──
       server.middlewares.use((req, res, next) => {
         if (req.url === "/ping") {
           res.setHeader("Content-Type", "application/json");
@@ -62,7 +60,6 @@ function healthPlugin(): Plugin {
         next();
       });
 
-      // Clear heartbeat when dev server closes
       server.httpServer?.on("close", () => {
         if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
       });
@@ -74,18 +71,11 @@ const isBuild = process.argv.includes("build");
 const rawPort = process.env.PORT;
 
 if (!rawPort && !isBuild) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
+  throw new Error("PORT environment variable is required but was not provided.");
 }
 
 const port = rawPort ? Number(rawPort) : 3000;
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-const basePath = process.env.BASE_PATH || "/";
+const basePath = "./"; // Maine ise fixed "./" kar diya hai white screen fix karne ke liye
 
 export default defineConfig({
   base: basePath,
@@ -125,7 +115,6 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
     watch: {
-      // Ignore galaxy/ uploads folder — file changes there won't trigger HMR restart
       ignored: [
         "**/galaxy/**",
         "**/public/galaxy/**",
