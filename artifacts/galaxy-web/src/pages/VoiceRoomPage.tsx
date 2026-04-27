@@ -753,7 +753,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
       )}
       {activeGame === "ludo" && (
         <ClassicLudo roomId={roomId} userId={user.uid} username={user.name}
-          hasControl={hasControl} onClose={() => setActiveGame(null)} />
+          hasControl={hasControl} onClose={() => setActiveGame(null)}
+          voiceUsers={roomUsers.map(u => ({ uid: u.uid, name: u.name, avatar: u.avatar }))}
+          speakingUidsHash={speakingUids}
+          hashCode={hashCode} />
       )}
       {activeGame === "carrom" && (
         <CarromGame roomId={roomId} userId={user.uid} username={user.name}
