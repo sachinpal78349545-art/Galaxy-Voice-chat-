@@ -30,6 +30,7 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
   const [dpFile, setDpFile] = useState<File | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [myRoom, setMyRoom] = useState<Room | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -79,6 +80,7 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
     setDpPreview(null);
     setIsPrivate(false);
     setPassword("");
+    setSelectedGame(null);
     setCreating(false);
   };
 
@@ -99,10 +101,11 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
         ...(roomAvatarUrl ? { roomAvatar: roomAvatarUrl } : {}),
         isPrivate: isPrivate,
         ...(isPrivate && password.trim() ? { password: password.trim() } : {}),
+        ...(selectedGame ? { initialGame: selectedGame } as any : {}),
       });
       setShowCreate(false);
       resetForm();
-      showToast("Room created!", "success");
+      showToast(selectedGame ? `Room created with ${selectedGame}!` : "Room created!", "success");
       onJoinRoom(room);
     } catch (err: any) {
       console.error("Create room error:", err);
@@ -259,6 +262,38 @@ export default function RoomsPage({ user, onJoinRoom }: Props) {
                     display: "flex", alignItems: "center", gap: 4, transition: "all 0.15s",
                   }}>
                     <span style={{ fontSize: 14 }}>{c.icon}</span> {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Game Mode chips — auto-launch a game when room is created */}
+            <div style={{ width: "100%" }}>
+              <label style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 700, marginBottom: 8, display: "block" }}>
+                🎮 Room Game (optional)
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                {[
+                  { id: "ludo",   name: "Ludo",     emoji: "🏰", grad: "linear-gradient(135deg,#8b5cf6,#ec4899)" },
+                  { id: "snake",  name: "Snake",    emoji: "🐍", grad: "linear-gradient(135deg,#10b981,#06b6d4)" },
+                  { id: "tod",    name: "T&D",      emoji: "🍾", grad: "linear-gradient(135deg,#f59e0b,#ef4444)" },
+                  { id: "carrom", name: "Carrom",   emoji: "🎱", grad: "linear-gradient(135deg,#7c3aed,#06b6d4)" },
+                ].map(g => (
+                  <button key={g.id} onClick={() => setSelectedGame(selectedGame === g.id ? null : g.id)} disabled={creating} style={{
+                    padding: "8px 4px", borderRadius: 12, cursor: "pointer",
+                    border: selectedGame === g.id ? "2px solid #a78bfa" : "1px solid rgba(255,255,255,0.08)",
+                    background: selectedGame === g.id ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.03)",
+                    fontFamily: "inherit",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                    boxShadow: selectedGame === g.id ? "0 0 14px rgba(167,139,250,0.4)" : "none",
+                    transition: "all 0.15s",
+                  }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 10, background: g.grad,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 20, filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))",
+                    }}>{g.emoji}</div>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: selectedGame === g.id ? "#c4b5fd" : "rgba(255,255,255,0.6)" }}>{g.name}</span>
                   </button>
                 ))}
               </div>

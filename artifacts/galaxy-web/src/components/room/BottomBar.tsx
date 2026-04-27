@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Room, UserProfile } from "./types";
 import {
   Mic, MicOff, Volume2, VolumeX, Smile, MessageCircle,
-  Gift, MoreHorizontal, Sparkles, Send,
+  Gift, MoreHorizontal, Sparkles, Send, Inbox,
 } from "lucide-react";
 
 const EMOJIS = ["❤️","🔥","✨","😂","🎵","👏","🌟","💯","🚀","😍","🎉","💎"];
@@ -49,6 +49,9 @@ interface BottomBarProps {
   showToast: (msg: string, type?: string, icon?: string) => void;
   onOpenGame?: () => void;
   onOpenMenu?: () => void;
+  onOpenInbox?: () => void;
+  onFloatEmoji?: (emoji: string) => void;
+  inboxBadge?: number;
 }
 
 export default function BottomBar({
@@ -59,10 +62,12 @@ export default function BottomBar({
   onMicToggle, onSpeakerToggle: _onSpeakerToggle,
   onRaiseHand, showToast, onOpenMenu,
   onOpenGame: _onOpenGame, onShare: _onShare,
+  onOpenInbox, onFloatEmoji, inboxBadge = 0,
 }: BottomBarProps) {
   const [showEmoji,     setShowEmoji]     = useState(false);
   const [showGift,      setShowGift]      = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  const [showFloatPicker, setShowFloatPicker] = useState(false);
   const [inputOpen,     setInputOpen]     = useState(false);
   const [giftCombo,     setGiftCombo]     = useState(1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +76,7 @@ export default function BottomBar({
     setShowEmoji(false);
     setShowGift(false);
     setShowReactions(false);
+    setShowFloatPicker(false);
   };
 
   useEffect(() => {
@@ -171,26 +177,59 @@ export default function BottomBar({
           </span>
         </button>
 
-        {/* RECHARGE */}
+        {/* INBOX */}
         <button
-          onClick={() => { closeAllPopups(); setShowGift(s => !s); }}
-          style={{ ...widgetBase, background: "linear-gradient(160deg,#ffd54f 0%,#ff9800 55%,#e65100 100%)" }}
+          onClick={() => { closeAllPopups(); onOpenInbox?.(); }}
+          style={{ ...widgetBase, background: "linear-gradient(160deg,#06b6d4 0%,#0e7490 60%,#164e63 100%)", position: "relative" }}
         >
-          <div style={{ position:"absolute",inset:0, background:"radial-gradient(circle at 70% 20%,rgba(255,255,255,0.25),transparent 55%)" }} />
-          <span style={{ fontSize: 22, lineHeight: 1 }}>💰</span>
-          <span style={{ marginTop: 4, fontSize: 7, fontWeight: 800, color: "#fff", letterSpacing: 0.2, textAlign: "center", lineHeight: 1.2, padding: "0 2px" }}>RECHARGE</span>
+          <div style={{ position:"absolute",inset:0, background:"radial-gradient(circle at 70% 20%,rgba(255,255,255,0.22),transparent 55%)" }} />
+          <Inbox size={22} color="#fff" strokeWidth={2.2} />
+          <span style={{ marginTop: 4, fontSize: 8, fontWeight: 800, color: "#fff", letterSpacing: 0.3, textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>INBOX</span>
+          {inboxBadge > 0 && (
+            <span style={{
+              position: "absolute", top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8,
+              background: "#ff4757", color: "#fff", fontSize: 9, fontWeight: 800,
+              display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px",
+              border: "1.5px solid rgba(0,0,0,0.4)", lineHeight: 1,
+            }}>{inboxBadge > 9 ? "9+" : inboxBadge}</span>
+          )}
         </button>
 
-        {/* REACT */}
+        {/* FLOAT EMOJI — animates over user's seat */}
         <button
-          onClick={() => { closeAllPopups(); setShowReactions(s => !s); }}
-          style={{ ...widgetBase, background: "linear-gradient(160deg,#00b4d8 0%,#0077b6 100%)" }}
+          onClick={() => { closeAllPopups(); setShowFloatPicker(s => !s); }}
+          style={{ ...widgetBase, background: "linear-gradient(160deg,#a78bfa 0%,#7c3aed 55%,#4c1d95 100%)" }}
         >
-          <div style={{ position:"absolute",inset:0, background:"radial-gradient(circle at 70% 20%,rgba(255,255,255,0.2),transparent 55%)" }} />
-          <Sparkles size={22} color="#fff" strokeWidth={2} />
-          <span style={{ marginTop: 4, fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: 0.3 }}>REACT</span>
+          <div style={{ position:"absolute",inset:0, background:"radial-gradient(circle at 70% 20%,rgba(255,255,255,0.25),transparent 55%)" }} />
+          <Sparkles size={22} color="#fff" strokeWidth={2.2} />
+          <span style={{ marginTop: 4, fontSize: 7.5, fontWeight: 800, color: "#fff", letterSpacing: 0.2, textAlign: "center", lineHeight: 1.2, padding: "0 2px" }}>FLOAT</span>
         </button>
       </div>
+
+      {/* Float emoji picker — fires animations from user's seat */}
+      {showFloatPicker && (
+        <div style={{
+          position: "fixed", bottom: 80, right: 70, zIndex: 200,
+          background: "rgba(15,8,35,0.96)", backdropFilter: "blur(16px)",
+          border: "1px solid rgba(167,139,250,0.4)", borderRadius: 18,
+          padding: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+          width: 200,
+        }}>
+          <div style={{ fontSize: 10, color: "#c4b5fd", fontWeight: 700, marginBottom: 8, textAlign: "center", letterSpacing: 0.5 }}>
+            ✨ FLOAT OVER YOUR SEAT
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
+            {EMOJIS.map(e => (
+              <button key={e} onClick={() => { onFloatEmoji?.(e); }}
+                style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(167,139,250,0.25)",
+                  borderRadius: 10, cursor: "pointer", fontSize: 22, padding: 5, lineHeight: 1, width: 38, height: 38,
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ══════════ MAIN BOTTOM BAR ══════════ */}
       <div style={{

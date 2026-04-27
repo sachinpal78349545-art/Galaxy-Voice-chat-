@@ -62,6 +62,7 @@ export interface Room {
   enterPermission?: "everyone" | "invite_only";
   maxMics?: number;
   mode?: "voice" | "chat";
+  initialGame?: string;
   country?: string;
 }
 
@@ -129,7 +130,7 @@ export function subscribeRoom(roomId: string, cb: (room: Room | null) => void): 
 
 export async function createRoom(
   userId: string, username: string, avatar: string, name: string, topic: string,
-  options?: { isPrivate?: boolean; password?: string; roomAvatar?: string; micPermission?: "all" | "request" | "admin_only" }
+  options?: { isPrivate?: boolean; password?: string; roomAvatar?: string; micPermission?: "all" | "request" | "admin_only"; initialGame?: string }
 ): Promise<Room> {
   const userSnap = await get(ref(db, `users/${userId}`));
   if (userSnap.exists()) {
@@ -166,6 +167,7 @@ export async function createRoom(
     micPermission: options?.micPermission || "all",
     roomLevel: 1,
     theme: "galaxy",
+    ...(options?.initialGame ? { initialGame: options.initialGame } : {}),
     roomUsers: { [userId]: ownerUser },
   };
   await set(ref(db, `rooms/${id}`), room);

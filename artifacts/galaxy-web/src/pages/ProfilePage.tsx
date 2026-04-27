@@ -2140,7 +2140,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
 
       {showGodMode && (
         <div style={{
-          position: "fixed", inset: 0, zIndex: 600, background: "#0a0618",
+          position: "fixed", inset: 0, zIndex: 1200, background: "#0a0618",
           display: "flex", flexDirection: "column", maxWidth: 430, margin: "0 auto",
         }}>
           <div style={{
@@ -2986,7 +2986,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
 
       {showStore && (
         <div style={{
-          position: "fixed", inset: 0, zIndex: 500, background: "#0F0F1A",
+          position: "fixed", inset: 0, zIndex: 1100, background: "#0F0F1A",
           display: "flex", flexDirection: "column", maxWidth: 430, margin: "0 auto",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "52px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -3081,7 +3081,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
 
       {showBackpack && (
         <div style={{
-          position: "fixed", inset: 0, zIndex: 500, background: "#0F0F1A",
+          position: "fixed", inset: 0, zIndex: 1100, background: "#0F0F1A",
           display: "flex", flexDirection: "column", maxWidth: 430, margin: "0 auto",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "52px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -3433,7 +3433,7 @@ function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose
   return (
     <div style={{
       position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(5px)",
-      display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400,
+      display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1100,
     }} onClick={onClose}>
       <div className="card" style={{
         width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",

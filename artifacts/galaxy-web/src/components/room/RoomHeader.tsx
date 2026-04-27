@@ -13,6 +13,7 @@ interface RoomHeaderProps {
   onShowCloseMenu: () => void;
   onLoadLeaderboard: () => void;
   onShare: () => void;
+  onShowMoreMenu?: () => void;
 }
 
 // Shared glassmorphism panel — slightly rectangular, soft gold ambient
@@ -56,6 +57,7 @@ const IBtn = ({
 export default function RoomHeader({
   room, myRole, liveCount,
   onOpenControlPanel, onShowUsersPanel, onShowCloseMenu, onLoadLeaderboard, onShare,
+  onShowMoreMenu,
 }: RoomHeaderProps) {
   const avatarSrc = room.roomAvatar || "";
   const avatarEmoji = room.coverEmoji || "🎤";
@@ -180,8 +182,8 @@ export default function RoomHeader({
             <Share2 size={13} strokeWidth={2.5} />
           </IBtn>
 
-          {/* More */}
-          <IBtn onClick={onOpenControlPanel} title="More options">
+          {/* More — opens 3-dot menu (Clean Chat / Lock / Theme / Report) */}
+          <IBtn onClick={onShowMoreMenu || onOpenControlPanel} title="More options">
             <MoreHorizontal size={14} strokeWidth={2.5} />
           </IBtn>
 

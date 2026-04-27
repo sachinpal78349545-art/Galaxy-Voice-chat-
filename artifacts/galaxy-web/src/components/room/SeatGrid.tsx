@@ -128,7 +128,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   const pngPath = hasPngFrame ? getPngFramePath(activeFrameId!) : null;
 
   return (
-    <div className="seat-cell" style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
+    <div className="seat-cell" data-seat-idx={seatIndex} data-seat-uid={seat.userId || ""} style={{ cursor: clickable ? "pointer" : "default" }} onClick={onTap}>
       <div className="seat-wrapper">
         {isSuperAdmin && isActive && (
           <>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "../lib/firebase";
 const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
 
@@ -26,10 +26,14 @@ export default function AuthPage({ onDone }: Props) {
       await signInWithPopup(auth, provider);
       onDone();
     } catch (e: any) {
-      if (e.code === "auth/popup-blocked" || e.code === "auth/popup-closed-by-user") {
-        try { await signInWithRedirect(auth, provider); } catch { setError("Sign in failed. Please try opening the app in a new tab."); }
-      } else if (e.code === "auth/cancelled-popup-request") {
-        setLoading(false); return;
+      if (e.code === "auth/popup-closed-by-user" || e.code === "auth/cancelled-popup-request") {
+        setLoading(false);
+        return;
+      }
+      if (e.code === "auth/popup-blocked") {
+        setError("Popup blocked. Please allow popups and try again.");
+      } else if (e.code === "auth/unauthorized-domain") {
+        setError("This domain isn't authorized in Firebase. Add it under Auth → Settings → Authorized domains.");
       } else {
         setError(e.message || "Sign in failed.");
       }

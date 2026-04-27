@@ -206,8 +206,20 @@ export default function TruthDareWheel({ roomId, userId, username, hasControl, r
                     </g>
                   );
                 })}
-                <circle cx="90" cy="90" r="15" fill="#1A0F2E" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
-                <text x="90" y="93" textAnchor="middle" fill="#fff" fontSize="12">{"\u{1F3A1}"}</text>
+                <circle cx="90" cy="90" r="22" fill="#0d0820" stroke="rgba(255,215,0,0.5)" strokeWidth="2" />
+                {/* Spin-the-bottle in room center */}
+                <g transform="translate(90,90)">
+                  <ellipse cx="0" cy="0" rx="6" ry="14" fill="url(#bottleBody)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.5" />
+                  <rect x="-2.5" y="-22" width="5" height="10" rx="1.5" fill="#1f2937" stroke="rgba(255,255,255,0.3)" strokeWidth="0.4" />
+                  <rect x="-2" y="-23" width="4" height="2" rx="0.5" fill="#facc15" />
+                  <ellipse cx="-1.5" cy="-2" rx="1" ry="3" fill="rgba(255,255,255,0.4)" />
+                </g>
+                <defs>
+                  <linearGradient id="bottleBody" x1="-1" y1="-1" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#22d3ee" />
+                    <stop offset="100%" stopColor="#7c3aed" />
+                  </linearGradient>
+                </defs>
               </svg>
               <div style={{
                 position: "absolute", top: -4, left: "50%", transform: "translateX(-50%)",

@@ -21,6 +21,8 @@ import { openMysteryBox, MYSTERY_BOX_COST, MysteryBoxReward } from "../lib/giftS
 import { subscribeWaitlist, joinWaitlist, leaveWaitlist, admitFromWaitlist } from "../lib/roomService";
 import { PKBattle, PKInvite, subscribePKBattle, subscribePKInvites, sendPKInvite, respondPKInvite, addPKScore, endPKBattle, getPKDurations } from "../lib/pkBattleService";
 import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, ClassicLudo, CarromGame, TruthDareWheel, cleanName, hashCode } from "../components/room";
+import SnakeLadders from "../components/room/SnakeLadders";
+import { subscribeNotifications, Notification } from "../lib/notificationService";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; onMessage?: (uid: string) => void; }
 
@@ -76,6 +78,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
   const [pkInvites, setPkInvites] = useState<PKInvite[]>([]);
   const [showPKPanel, setShowPKPanel] = useState(false);
   const [pkTimer, setPkTimer] = useState("");
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showRoomMode, setShowRoomMode] = useState(false);
+  const [showInbox, setShowInbox] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [seatFloats, setSeatFloats] = useState<{ id: number; emoji: string; left: number; top: number }[]>([]);
+  const [inboxNotifs, setInboxNotifs] = useState<Notification[]>([]);
   const floatId = useRef(0);
   const msgEnd = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
@@ -277,6 +285,39 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
     setFloats(prev => [...prev, { id, item, x, big }]);
     setTimeout(() => setFloats(prev => prev.filter(f => f.id !== id)), big ? 3200 : 2800);
   };
+
+  const spawnFloatAtSeat = (emoji: string) => {
+    const seatEls = document.querySelectorAll<HTMLElement>("[data-seat-idx]");
+    let target: HTMLElement | null = null;
+    seatEls.forEach(el => {
+      if (el.dataset.seatUid === user.uid) target = el;
+    });
+    let left = window.innerWidth / 2;
+    let top = window.innerHeight * 0.35;
+    if (target) {
+      const r = (target as HTMLElement).getBoundingClientRect();
+      left = r.left + r.width / 2;
+      top = r.top + r.height / 2;
+    }
+    const id = floatId.current++;
+    setSeatFloats(prev => [...prev, { id, emoji, left, top }]);
+    setTimeout(() => setSeatFloats(prev => prev.filter(f => f.id !== id)), 2200);
+  };
+
+  useEffect(() => {
+    const unsub = subscribeNotifications(user.uid, setInboxNotifs);
+    return unsub;
+  }, [user.uid]);
+
+  // Auto-launch initialGame once when room loads (for the room creator)
+  const initialGameLaunched = useRef(false);
+  useEffect(() => {
+    if (!room?.initialGame || initialGameLaunched.current) return;
+    if (room.hostId === user.uid) {
+      initialGameLaunched.current = true;
+      setActiveGame(room.initialGame);
+    }
+  }, [room?.initialGame, room?.hostId, user.uid]);
 
   const sendChat = async () => {
     const text = inputText.trim();
@@ -611,6 +652,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         onShowCloseMenu={() => setShowCloseMenu(true)}
         onLoadLeaderboard={() => { loadLeaderboard("daily"); setShowLeaderboard(true); }}
         onShare={shareRoom}
+        onShowMoreMenu={() => setShowMoreMenu(true)}
       />
 
       <SeatGrid
@@ -680,8 +722,22 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         onShare={shareRoom}
         showToast={showToast}
         onOpenGame={() => setShowGameHub(true)}
-        onOpenMenu={openControlPanel}
+        onOpenMenu={() => setShowRoomMode(true)}
+        onOpenInbox={() => setShowInbox(true)}
+        onFloatEmoji={spawnFloatAtSeat}
+        inboxBadge={inboxNotifs.filter(n => !n.read).length}
       />
+
+      {/* Seat-anchored floating emojis */}
+      {seatFloats.map(f => (
+        <div key={f.id} style={{
+          position: "fixed", left: f.left, top: f.top, zIndex: 1500,
+          pointerEvents: "none", fontSize: 38,
+          transform: "translate(-50%, -50%)",
+          animation: "seatFloatRise 2.2s ease-out forwards",
+          filter: "drop-shadow(0 0 8px rgba(167,139,250,0.6))",
+        }}>{f.emoji}</div>
+      ))}
 
       {showGameHub && (
         <GameHub
@@ -708,6 +764,187 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
           hasControl={hasControl}
           roomUsers={roomUsers.map(u => ({ uid: u.uid, name: u.name }))}
           onClose={() => setActiveGame(null)} />
+      )}
+      {activeGame === "snake" && (
+        <SnakeLadders roomId={roomId} userId={user.uid} username={user.name}
+          hasControl={hasControl} onClose={() => setActiveGame(null)} />
+      )}
+
+      {/* ── 3-DOT MORE MENU (Clean Chat / Lock Room / Theme / Report) ── */}
+      {showMoreMenu && (
+        <div onClick={() => setShowMoreMenu(false)} style={{
+          position: "fixed", inset: 0, zIndex: 1100,
+          background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "flex-start", justifyContent: "flex-end",
+          paddingTop: 90, paddingRight: 14,
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: 200, background: "rgba(20,12,40,0.97)",
+            border: "1px solid rgba(167,139,250,0.4)", borderRadius: 14,
+            padding: 6, boxShadow: "0 12px 36px rgba(0,0,0,0.7)",
+            animation: "popIn 0.18s ease",
+          }}>
+            {[
+              { icon: "🧹", label: "Clean Chat", color: "#22d3ee", onClick: () => { setMessages([]); showToast("Chat cleared (locally)", "success"); }, show: true },
+              { icon: room.isPrivate ? "🔓" : "🔒", label: room.isPrivate ? "Unlock Room" : "Lock Room", color: "#f59e0b", onClick: async () => {
+                if (!hasControl) { showToast("Admin only", "error"); return; }
+                try { await updateRoomSettings(roomId, { isPrivate: !room.isPrivate } as any); showToast(room.isPrivate ? "Room unlocked" : "Room locked", "success"); }
+                catch { showToast("Failed", "error"); }
+              }, show: true },
+              { icon: "🎨", label: "Room Theme", color: "#a78bfa", onClick: () => { if (!hasControl) { showToast("Admin only", "error"); return; } setShowThemePicker(true); }, show: true },
+              { icon: "🚩", label: "Report Room", color: "#ef4444", onClick: () => setShowReportModal(room.hostId), show: true },
+            ].filter(x => x.show).map((opt, i) => (
+              <button key={i} onClick={() => { opt.onClick(); setShowMoreMenu(false); }} style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 12px", borderRadius: 10, border: "none",
+                background: "transparent", color: "#fff", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 13, fontWeight: 600, textAlign: "left",
+                transition: "background 0.15s",
+              }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(167,139,250,0.12)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              >
+                <span style={{ fontSize: 18 }}>{opt.icon}</span>
+                <span style={{ flex: 1, color: opt.color }}>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── ROOM THEME PICKER ── */}
+      {showThemePicker && (
+        <div onClick={() => setShowThemePicker(false)} style={{
+          position: "fixed", inset: 0, zIndex: 1110,
+          background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: "100%", maxWidth: 340, background: "rgba(20,12,40,0.98)",
+            border: "1px solid rgba(167,139,250,0.5)", borderRadius: 18, padding: 20,
+            boxShadow: "0 16px 48px rgba(0,0,0,0.7)", animation: "popIn 0.2s ease",
+          }}>
+            <h3 style={{ fontSize: 16, fontWeight: 900, color: "#fff", marginBottom: 14, textAlign: "center" }}>
+              🎨 Choose Room Theme
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+              {ROOM_THEMES.map(t => {
+                const active = (room.theme || "galaxy") === t.id;
+                return (
+                  <button key={t.id} onClick={async () => {
+                    try { await updateRoomSettings(roomId, { theme: t.id } as any); showToast(`Theme: ${t.name}`, "success"); setShowThemePicker(false); }
+                    catch { showToast("Failed", "error"); }
+                  }} style={{
+                    padding: 14, borderRadius: 12, border: active ? "2px solid #a78bfa" : "1px solid rgba(255,255,255,0.1)",
+                    background: t.bg, color: "#fff", cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 13, fontWeight: 700, height: 80,
+                    boxShadow: active ? "0 0 20px rgba(167,139,250,0.6)" : "none",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>{t.name}</button>
+                );
+              })}
+            </div>
+            <button onClick={() => setShowThemePicker(false)} style={{
+              marginTop: 14, width: "100%", padding: "10px 0", borderRadius: 10, border: "none",
+              background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)",
+              fontFamily: "inherit", fontSize: 12, cursor: "pointer",
+            }}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── ROOM MODE GRID (More button → game grid) ── */}
+      {showRoomMode && (
+        <div onClick={() => setShowRoomMode(false)} style={{
+          position: "fixed", inset: 0, zIndex: 1100,
+          background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: "100%", maxWidth: 480,
+            background: "linear-gradient(180deg, #1a0f2e, #0d0820)",
+            borderRadius: "20px 20px 0 0", padding: "18px 16px 28px",
+            border: "1px solid rgba(167,139,250,0.3)",
+            boxShadow: "0 -10px 40px rgba(0,0,0,0.7)",
+            animation: "slideUp 0.25s ease",
+          }}>
+            <div style={{ width: 40, height: 4, background: "rgba(255,255,255,0.2)", borderRadius: 2, margin: "0 auto 14px" }} />
+            <h3 style={{ fontSize: 16, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>
+              🎮 Room Mode
+            </h3>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", textAlign: "center", marginBottom: 16 }}>
+              Pick a game to launch in the room
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+              {[
+                { id: "ludo",   name: "3D Ludo",         emoji: "🏰", grad: "linear-gradient(135deg,#8b5cf6,#ec4899)" },
+                { id: "snake",  name: "Snake & Ladders", emoji: "🐍", grad: "linear-gradient(135deg,#10b981,#06b6d4)" },
+                { id: "carrom", name: "Galaxy Carrom",   emoji: "🎱", grad: "linear-gradient(135deg,#7c3aed,#06b6d4)" },
+                { id: "tod",    name: "Truth or Dare",   emoji: "🍾", grad: "linear-gradient(135deg,#f59e0b,#ef4444)" },
+                { id: "dice",   name: "Dice Roll",       emoji: "🎲", grad: "linear-gradient(135deg,#6366f1,#3b82f6)" },
+              ].map(g => (
+                <button key={g.id} onClick={() => {
+                  if (g.id !== "dice" && !hasControl) { showToast("Admin only", "error"); return; }
+                  setShowRoomMode(false); setActiveGame(g.id);
+                }} style={{
+                  padding: 14, borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(255,255,255,0.03)", color: "#fff", cursor: "pointer",
+                  fontFamily: "inherit", display: "flex", flexDirection: "column",
+                  alignItems: "center", gap: 6,
+                }}>
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 14, background: g.grad,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 30, boxShadow: `0 0 14px rgba(108,92,231,0.4)`,
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
+                  }}>{g.emoji}</div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>{g.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── INBOX MODAL ── */}
+      {showInbox && (
+        <div onClick={() => setShowInbox(false)} style={{
+          position: "fixed", inset: 0, zIndex: 1100,
+          background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: "100%", maxWidth: 380, maxHeight: "75vh",
+            background: "rgba(20,12,40,0.98)",
+            border: "1px solid rgba(6,182,212,0.4)", borderRadius: 18, padding: 18,
+            boxShadow: "0 16px 48px rgba(0,0,0,0.7)", animation: "popIn 0.2s ease",
+            display: "flex", flexDirection: "column",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>📥 Inbox</h3>
+              <button onClick={() => setShowInbox(false)} style={{
+                width: 28, height: 28, borderRadius: 14, border: "none",
+                background: "rgba(255,255,255,0.07)", color: "#fff", cursor: "pointer", fontSize: 14,
+              }}>×</button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+              {inboxNotifs.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.4)", fontSize: 12 }}>
+                  📭 No notifications yet
+                </div>
+              ) : inboxNotifs.slice(0, 30).map(n => (
+                <div key={n.id} style={{
+                  padding: "10px 12px", borderRadius: 10,
+                  background: n.read ? "rgba(255,255,255,0.03)" : "rgba(6,182,212,0.08)",
+                  border: n.read ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(6,182,212,0.3)",
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#22d3ee", marginBottom: 2 }}>{(n as any).title || (n as any).type || "Notification"}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", lineHeight: 1.4 }}>{(n as any).message || (n as any).body || ""}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {showSeatSheet !== null && (
@@ -774,24 +1011,39 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
 
       {showCloseMenu && (
         <Overlay onClose={() => setShowCloseMenu(false)}>
-          <div className="card" style={{ width: 280, padding: 24, animation: "popIn 0.2s ease" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 4, textAlign: "center" }}>{"\u{1F6AA}"} Leave Room?</h3>
-            <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", marginBottom: 20, textAlign: "center" }}>
-              {isOwner ? "As the owner, you can leave or end the room for everyone." : "Are you sure you want to leave?"}
+          <div className="card" style={{ width: 300, padding: 26, animation: "popIn 0.2s ease", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{"\u{1F6AA}"}</div>
+            <h3 style={{ fontSize: 17, fontWeight: 900, marginBottom: 6 }}>Leave the room?</h3>
+            <p style={{ fontSize: 12, color: "rgba(162,155,254,0.55)", marginBottom: 22, lineHeight: 1.5 }}>
+              {isOwner ? "Stay in your room or exit. As the owner, you can also end the room for everyone." : "You can stay in the room or exit now."}
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button className="btn btn-ghost btn-full" onClick={() => { setShowCloseMenu(false); handleLeave(); }}>
-                {"\u{1F44B}"} Leave Room
-              </button>
-              {isOwner && (
-                <button className="btn btn-danger btn-full" onClick={() => { setShowCloseMenu(false); handleEndRoom(); }}>
-                  {"\u{1F6D1}"} End Room for Everyone
-                </button>
-              )}
-              <button className="btn btn-ghost btn-full" onClick={() => setShowCloseMenu(false)} style={{ color: "rgba(162,155,254,0.4)" }}>
-                Cancel
-              </button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowCloseMenu(false)}
+                style={{
+                  flex: 1, padding: "13px 0", borderRadius: 16,
+                  background: "linear-gradient(135deg,#6C5CE7,#a78bfa)",
+                  border: "none", color: "#fff", fontSize: 14, fontWeight: 800,
+                  fontFamily: "inherit", cursor: "pointer",
+                  boxShadow: "0 0 16px rgba(108,92,231,0.45)",
+                }}
+              >Keep</button>
+              <button
+                onClick={() => { setShowCloseMenu(false); handleLeave(); }}
+                style={{
+                  flex: 1, padding: "13px 0", borderRadius: 16,
+                  background: "rgba(255,100,130,0.12)", border: "1px solid rgba(255,100,130,0.45)",
+                  color: "#ff6b8a", fontSize: 14, fontWeight: 800,
+                  fontFamily: "inherit", cursor: "pointer",
+                }}
+              >Exit</button>
             </div>
+            {isOwner && (
+              <button className="btn btn-danger btn-full" style={{ marginTop: 10, fontSize: 12 }}
+                onClick={() => { setShowCloseMenu(false); handleEndRoom(); }}>
+                {"\u{1F6D1}"} End Room for Everyone
+              </button>
+            )}
           </div>
         </Overlay>
       )}
@@ -1121,35 +1373,37 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
                     <div style={{
                       width: 64, height: 64, borderRadius: 32, fontSize: 32, overflow: "hidden",
                       background: "rgba(108,92,231,0.12)", border: "2px solid rgba(108,92,231,0.3)",
-                      display: "flex", alignItems: "center", justifyContent: "center", cursor: hasControl ? "pointer" : "default", position: "relative",
-                    }} onClick={() => hasControl && cpDpRef.current?.click()}>
+                      display: "flex", alignItems: "center", justifyContent: "center", cursor: userIsSuperAdmin ? "pointer" : "default", position: "relative",
+                    }} onClick={() => userIsSuperAdmin && cpDpRef.current?.click()}>
                       {cpDpUploading ? (
                         <div style={{ width: 28, height: 28, borderRadius: 14, border: "3px solid rgba(108,92,231,0.2)", borderTopColor: "#6C5CE7", animation: "spin 0.8s linear infinite" }} />
                       ) : (room.roomAvatar || "").startsWith?.("http") ? (
                         <img src={room.roomAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 32 }} />
                       ) : (room.coverEmoji || "\u{1F3A4}")}
-                      {hasControl && (
+                      {userIsSuperAdmin && (
                         <span style={{
                           position: "absolute", bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11,
                           background: "#6C5CE7", border: "2px solid #1A0F2E", color: "#fff",
                           fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center",
                         }}>{"\u{1F4F7}"}</span>
                       )}
-                      <input ref={cpDpRef} type="file" accept="image/*" hidden onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file || !hasControl) return;
-                        setCpDpUploading(true);
-                        try {
-                          const blob = new Blob([await file.arrayBuffer()], { type: file.type });
-                          const result = await uploadWithAppCheck(blob, `rooms/${roomId}/avatar_${Date.now()}.jpg`);
-                          await updateRoomSettings(roomId, { roomAvatar: result.url });
-                          showToast("Room avatar updated!", "success");
-                        } catch (err) {
-                          console.error("Upload error:", err);
-                          showToast("Upload failed", "error");
-                        }
-                        setCpDpUploading(false);
-                      }} />
+                      {userIsSuperAdmin && (
+                        <input ref={cpDpRef} type="file" accept="image/*" hidden onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file || !userIsSuperAdmin) return;
+                          setCpDpUploading(true);
+                          try {
+                            const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+                            const result = await uploadWithAppCheck(blob, `rooms/${roomId}/avatar_${Date.now()}.jpg`);
+                            await updateRoomSettings(roomId, { roomAvatar: result.url });
+                            showToast("Room banner updated!", "success");
+                          } catch (err) {
+                            console.error("Upload error:", err);
+                            showToast("Upload failed", "error");
+                          }
+                          setCpDpUploading(false);
+                        }} />
+                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {hasControl ? (
