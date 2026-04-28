@@ -2832,3 +2832,97 @@ div[role="dialog"] {
 nav, .bottom-nav {
   z-index: 5 !important;
 }
+/* ========================= */
+/* 🔥 GALAXY FINAL UI FIXES */
+/* ========================= */
+
+/* 🌌 Base Theme */
+body {
+  background: #121212;
+  color: white;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* 💎 Glass Effect */
+.glass {
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+/* 🔮 Neon Accent */
+.neon {
+  color: #c084fc;
+}
+
+/* 💬 Chat Fix */
+#chat-container {
+  scroll-behavior: smooth;
+  scroll-padding-bottom: 10px;
+}
+
+/* 🧱 Fix bottom gap */
+.chat-wrapper {
+  padding-bottom: 70px;
+}
+
+/* 💳 Wallet Modal Fix */
+.wallet-modal {
+  z-index: 9999 !important;
+}
+
+.wallet-content {
+  padding-bottom: 90px;
+}
+
+/* 📱 Sticky Bottom Buttons */
+.sticky-bottom {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #121212;
+  padding: 10px;
+  z-index: 999;
+  display: flex;
+  gap: 10px;
+}
+
+/* 🟣 Buttons */
+.btn-primary {
+  background: #7c3aed;
+  color: white;
+  border-radius: 10px;
+  padding: 10px;
+  border: none;
+}
+
+.btn-secondary {
+  background: #db2777;
+  color: white;
+  border-radius: 10px;
+  padding: 10px;
+  border: none;
+}
+
+/* 🧊 Profile Glass Cards */
+.glass-box {
+  backdrop-filter: blur(12px);
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 10px 20px;
+  color: white;
+  text-align: center;
+}
+
+/* 🚫 Hide unwanted buttons (safety backup) */
+.float-btn,
+.event-btn,
+.music-icon,
+.gift-icon {
+  display: none !important;
+}
+* {
+  -webkit-tap-highlight-color: transparent;
+}

@@ -71,6 +71,7 @@ function AppInner() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
   const [chatActive, setChatActive] = useState(false);
+  const [showWallet, setShowWallet] = useState(false);
   const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
   const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
   const presenceCleanup = useRef<(() => void) | null>(null);
@@ -489,3 +490,4 @@ export default function App() {
     </ToastProvider>
   );
 }
+
