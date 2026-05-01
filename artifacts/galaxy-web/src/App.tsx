@@ -384,6 +384,7 @@ function AppInner() {
               onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }}
               onRecharge={() => changePage("recharge")}
               onAdminRecharge={() => changePage("admin-recharge")}
+              onWallet={() => setShowWallet(true)}
             />
           )}
           {page === "recharge" && (
@@ -393,7 +394,9 @@ function AppInner() {
             <AdminRechargePage user={profile} onBack={() => changePage("mine")} />
           )}
         </div>
-        <nav className="bottom-nav" style={{ display: chatActive ? "none" : undefined }}>
+
+        {/* Updated Nav Bar with showWallet check */}
+        <nav className="bottom-nav" style={{ display: (chatActive || showWallet || !["home", "explore", "rooms", "chats", "mine"].includes(page)) ? "none" : "flex" }}>
           {NAV.map(item => (
             <button
               key={item.id}
@@ -490,4 +493,3 @@ export default function App() {
     </ToastProvider>
   );
 }
-
