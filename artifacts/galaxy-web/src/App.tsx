@@ -13,7 +13,6 @@ import HomePage from "./pages/HomePage";
 import RoomsPage from "./pages/RoomsPage";
 import VoiceRoomPage from "./pages/VoiceRoomPage";
 import ChatsPage from "./pages/ChatsPage";
-import MomentPage from "./pages/MomentPage";
 import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import NotificationPage from "./pages/NotificationPage";
@@ -35,13 +34,11 @@ const NAV = [
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [fadeOut, setFadeOut] = useState(false);
-
   useEffect(() => {
     const t1 = setTimeout(() => setFadeOut(true), 2200);
     const t2 = setTimeout(() => onDone(), 2800);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onDone]);
-
   return (
     <div className={`splash-screen${fadeOut ? " splash-fade-out" : ""}`}>
       <div className="stars" />
@@ -71,7 +68,6 @@ function AppInner() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
   const [chatActive, setChatActive] = useState(false);
-  const [showWallet, setShowWallet] = useState(false);
   const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
   const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
   const presenceCleanup = useRef<(() => void) | null>(null);
@@ -384,7 +380,7 @@ function AppInner() {
               onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }}
               onRecharge={() => changePage("recharge")}
               onAdminRecharge={() => changePage("admin-recharge")}
-              onWallet={() => setShowWallet(true)}
+              onWallet={() => changePage("recharge")}
             />
           )}
           {page === "recharge" && (
@@ -395,8 +391,8 @@ function AppInner() {
           )}
         </div>
 
-        {/* Updated Nav Bar with showWallet check */}
-        <nav className="bottom-nav" style={{ display: (chatActive || showWallet || !["home", "explore", "rooms", "chats", "mine"].includes(page)) ? "none" : "flex" }}>
+        {/* Updated Nav Bar: Removed showWallet dependency */}
+        <nav className="bottom-nav" style={{ display: (chatActive || !["home", "explore", "rooms", "chats", "mine"].includes(page)) ? "none" : "flex" }}>
           {NAV.map(item => (
             <button
               key={item.id}
@@ -478,11 +474,9 @@ function ChatBadge({ uid }: { uid: string }) {
 
 function AppContent() {
   const [splashDone, setSplashDone] = useState(false);
-
   if (!splashDone) {
     return <SplashScreen onDone={() => setSplashDone(true)} />;
   }
-
   return <AppInner />;
 }
 

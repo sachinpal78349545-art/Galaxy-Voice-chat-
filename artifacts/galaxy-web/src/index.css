@@ -1,5 +1,12 @@
-*, *::before, 
-
+*, *::before, *::after { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+  -webkit-tap-highlight-color: transparent; 
+  -webkit-touch-callout: none; 
+  -webkit-user-select: none; 
+  user-select: none; 
+}
 :root {
   --bg-top: #1A0F2E;
   --bg-bottom: #0F0F1A;

@@ -55,6 +55,7 @@ const RECHARGE_PACKAGES = [
 const REPORT_REASONS = ["Harassment", "Spam", "Inappropriate Content", "Fake Profile", "Scam", "Other"];
 
 export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, onMessage, onRecharge, onAdminRecharge }: Props) {
+  const [showWallet, setShowWallet] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showDailyTasks, setShowDailyTasks] = useState(false);
@@ -253,6 +254,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
       await addCoins(user.uid, coins);
       await addTransaction(user.uid, { type: "recharge", amount: coins, description: `Recharged ${coins} coins` });
       onUpdate({ ...user, coins: user.coins + coins });
+      setShowWallet(false);
       showToast(`+${coins} coins added!`, "success", "\u{1F48E}");
     } catch {
       showToast("Recharge failed. Try again.", "error");
@@ -460,11 +462,7 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
 
   const handleMenu = (action: string) => {
     if (action === "edit") onEditProfile();
-    if (action === "wallet") {
-      // Instead of opening the wallet popup, call the parent's recharge handler
-      if (onRecharge) onRecharge();
-      return;
-    }
+    if (action === "wallet") setShowWallet(true);
     if (action === "achievements") setShowAchievements(true);
     if (action === "daily") handleDailyReward();
     if (action === "dailyTasks") setShowDailyTasks(true);
@@ -783,7 +781,46 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
         </BottomSheet>
       )}
 
-      {/* REMOVED THE ENTIRE showWallet BOTTOM SHEET */}
+      {showWallet && (
+        <BottomSheet onClose={() => setShowWallet(false)}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>{"\u{1F4B0}"} My Wallet</h2>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setShowHistory(true); setShowWallet(false); }} className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>{"\u{1F4CB}"} History</button>
+              <button onClick={() => setShowWallet(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}>{"\u2715"}</button>
+            </div>
+          </div>
+          {/* Coin balance */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 16, padding: "18px 20px",
+            background: "linear-gradient(135deg,rgba(108,92,231,0.18),rgba(167,139,250,0.08))",
+            border: "1px solid rgba(167,139,250,0.25)", borderRadius: 18, marginBottom: 18,
+          }}>
+            <span style={{ fontSize: 42 }}>{"\u{1F48E}"}</span>
+            <div>
+              <p style={{ fontSize: 12, color: "rgba(162,155,254,0.6)", fontWeight: 600 }}>YOUR BALANCE</p>
+              <p style={{ fontSize: 28, fontWeight: 900, color: "#c4b5fd", lineHeight: 1 }}>{user.coins.toLocaleString()}</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>coins</p>
+            </div>
+          </div>
+          {/* Recharge CTA */}
+          <button
+            onClick={() => { setShowWallet(false); if (onRecharge) onRecharge(); }}
+            style={{
+              width: "100%", padding: "15px 0", borderRadius: 16, border: "none",
+              background: "linear-gradient(135deg,#7c3aed,#a855f7)",
+              color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer",
+              fontFamily: "inherit", marginBottom: 12,
+              boxShadow: "0 0 24px rgba(124,58,237,0.45)",
+            }}
+          >
+            {"\u{1F4B3}"} Recharge via UPI
+          </button>
+          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.35)", textAlign: "center" }}>
+            Pay via GPay, PhonePe or Paytm {"\u2022"} Instant approval
+          </p>
+        </BottomSheet>
+      )}
 
       {showHistory && (
         <BottomSheet onClose={() => setShowHistory(false)}>

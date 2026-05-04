@@ -6,7 +6,7 @@ const BANNERS = [
   {
     id: "portal",
     image: `${basePath}banner1.png`,
-    title: "New Function",
+    title: "Welcome to uiser",
     subtitle: "Discover magical voice rooms",
     badge: "NEW",
     gradient: "linear-gradient(135deg, rgba(255,215,0,0.3), rgba(191,0,255,0.2))",
@@ -14,7 +14,7 @@ const BANNERS = [
   {
     id: "gaming",
     image: `${basePath}banner2.png`,
-    title: "Game Rooms",
+    title: "New Function",
     subtitle: "Play with friends worldwide",
     badge: "HOT",
     gradient: "linear-gradient(135deg, rgba(108,92,231,0.3), rgba(0,230,118,0.15))",
@@ -26,6 +26,23 @@ const BANNERS = [
     subtitle: "Claim coins & gifts every day",
     badge: "REWARDS",
     gradient: "linear-gradient(135deg, rgba(255,100,50,0.3), rgba(255,215,0,0.2))",
+  },
+  // नए बैनर यहाँ से शुरू होते हैं:
+  {
+    id: "event1",
+    image: `${basePath}banner4.png`, // यहाँ अपनी फाइल का नाम डालें
+    title: "Special Event",
+    subtitle: "Join the exclusive party",
+    badge: "EVENT",
+    gradient: "linear-gradient(135deg, rgba(255,0,150,0.3), rgba(0,200,255,0.2))",
+  },
+  {
+    id: "event2",
+    image: `${basePath}banner5.png`, // यहाँ अपनी फाइल का नाम डालें
+    title: "Uiser guide",
+    subtitle: "Climb the leaderboard now",
+    badge: "RANKED",
+    gradient: "linear-gradient(135deg, rgba(50,200,50,0.3), rgba(255,255,0,0.2))",
   },
 ];
 
