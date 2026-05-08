@@ -3395,14 +3395,28 @@ export default function ProfilePage({ user, onUpdate, onLogout, onEditProfile, o
 function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(5px)",
-      display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1100,
-    }} onClick={onClose}>
-      <div className="card" style={{
-        width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",
-        padding: 24, animation: "slide-up 0.3s ease", maxHeight: "80vh", display: "flex", flexDirection: "column",
-        overflowY: "auto",
-      }} onClick={e => e.stopPropagation()}>
+      position: "fixed", inset: 0,
+      background: "linear-gradient(160deg, #0d001a 0%, #1a0030 100%)",
+      zIndex: 1100, display: "flex", flexDirection: "column",
+      animation: "pageSlideIn 0.25s ease",
+      fontFamily: "'Poppins', 'Inter', sans-serif",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "50px 16px 14px",
+        background: "rgba(8,4,24,0.98)",
+        borderBottom: "1px solid rgba(108,92,231,0.12)",
+        flexShrink: 0,
+      }}>
+        <button onClick={onClose} style={{
+          width: 38, height: 38, borderRadius: 19, border: "1px solid rgba(108,92,231,0.2)",
+          background: "rgba(255,255,255,0.06)",
+          color: "rgba(255,255,255,0.85)", fontSize: 20, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          lineHeight: 1, flexShrink: 0,
+        }}>←</button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 48px" }}>
         {children}
       </div>
     </div>

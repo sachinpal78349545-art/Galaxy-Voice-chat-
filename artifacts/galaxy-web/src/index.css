@@ -542,12 +542,14 @@ textarea.input-field { resize: none; line-height: 1.5; }
 .room-container {
   position: fixed; inset: 0;
   max-width: 430px; margin: 0 auto;
-  height: 100vh; height: 100dvh;
+  height: 100%; height: 100vh; height: 100dvh;
   display: flex; flex-direction: column;
   overflow: hidden;
   background: #050310;
   font-family: 'Poppins', 'Inter', sans-serif;
   z-index: 300;
+  transform: translate3d(0,0,0);
+  will-change: transform;
 }
 
 .room-bg {
@@ -2932,4 +2934,9 @@ body {
 }
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes pageSlideIn {
+  from { transform: translateX(100%); opacity: 0.6; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
