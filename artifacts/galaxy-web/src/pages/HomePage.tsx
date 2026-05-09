@@ -1,15 +1,20 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { ref, onValue, off, query, orderByChild, equalTo, limitToFirst, limitToLast } from "firebase/database";
+import { useState, useEffect, useMemo } from "react";
+import { ref, onValue, off, query, limitToLast } from "firebase/database";
 import { db } from "../lib/firebase";
-import { UserProfile, isSuperAdmin } from "../lib/userService";
-import { Room, subscribeRooms, subscribeRoom } from "../lib/roomService";
+import { UserProfile } from "../lib/userService";
+import { Room, subscribeRoom } from "../lib/roomService";
 import Header from "../components/home/Header";
 import BannerCarousel from "../components/home/BannerCarousel";
 import GameSection from "../components/home/GameCard";
-import FriendSection from "../components/home/FriendCard";
+import FriendSection from "../components/home/FriendSection";
 
 interface OnlineUser { uid: string; name: string; avatar: string; level?: number; }
-interface Props { user: UserProfile; onJoinRoom: (room: Room) => void; onCreateRoom?: () => void; }
+interface Props {
+  user: UserProfile;
+  onJoinRoom: (room: Room) => void;
+  onCreateRoom?: () => void;
+  onViewProfile: (profile: UserProfile) => void;   // ✅ profile view ke liye
+}
 
 function StarField() {
   const stars = useMemo(() =>
@@ -44,15 +49,9 @@ function StarField() {
   );
 }
 
-export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
-  const [rooms, setRooms] = useState<Room[]>([]);
+export default function HomePage({ user, onJoinRoom, onCreateRoom, onViewProfile }: Props) {
   const [allUsers, setAllUsers] = useState<OnlineUser[]>([]);
   const [myRoom, setMyRoom] = useState<Room | null>(null);
-
-  useEffect(() => {
-    const unsub = subscribeRooms(r => { setRooms(r); });
-    return unsub;
-  }, []);
 
   useEffect(() => {
     if (user.hasRoom && user.myRoomId) {
@@ -65,14 +64,14 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
 
   useEffect(() => {
     const usersRef = query(ref(db, "users"), limitToLast(50));
-    const handler = onValue(usersRef, snap => {
+    const handler = onValue(usersRef, (snap) => {
       if (!snap.exists()) { setAllUsers([]); return; }
       const val = snap.val();
       const users: OnlineUser[] = [];
       Object.keys(val).forEach(uid => {
         const u = val[uid];
         if (u.name && uid !== user.uid) {
-          users.push({ uid, name: u.name || "User", avatar: u.avatar || "\u{1F464}", level: u.level || 1 });
+          users.push({ uid, name: u.name || "User", avatar: u.avatar || "👤", level: u.level || 1 });
         }
       });
       setAllUsers(users.sort(() => Math.random() - 0.5).slice(0, 10));
@@ -108,12 +107,21 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom }: Props) {
                 <div className="hp-my-room-live-dot" />
                 <span>LIVE</span>
               </div>
-              <span className="hp-my-room-chevron">{"\u203A"}</span>
+              <span className="hp-my-room-chevron">›</span>
             </div>
           </div>
         )}
 
-        <FriendSection users={allUsers} />
+        <FriendSection 
+          users={allUsers} 
+          onUserClick={(onlineUser) => {
+            import("../lib/userService").then(({ getUser }) => {
+              getUser(onlineUser.uid).then(profile => {
+                if (profile) onViewProfile(profile);
+              });
+            });
+          }} 
+        />
 
         <div style={{ height: 120 }} />
       </div>
