@@ -63,17 +63,16 @@ function AppInner() {
   const [chatTargetUid, setChatTargetUid] = useState<string | null>(null);
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
   const [showEdit, setShowEdit] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
+  // 👇 अब authLoading का उपयोग करेंगे – यह तब तक true रहेगा जब तक हमें पक्का पता न चले कि user है या नहीं
+  const [authLoading, setAuthLoading] = useState(true);
   const [pageKey, setPageKey] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [passwordPrompt, setPasswordPrompt] = useState<{ room: Room; pwd: string } | null>(null);
   const [chatActive, setChatActive] = useState(false);
   const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
   const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
-  
-  // 👇 नया स्टेट – जब कोई सब-पेज (Settings, Admin Panel, Recharge) खुला हो
   const [subPage, setSubPage] = useState<string | null>(null);
-  
+
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
   const notifSubCleanup = useRef<(() => void) | null>(null);
@@ -93,12 +92,17 @@ function AppInner() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
-      setFbUser(u);
-      setAuthChecked(true);
+      // अब हम authLoading को तुरंत false नहीं करेंगे – पहले user की पूरी जानकारी लोड करेंगे
       if (u) {
+        // User Firebase से मिला – अब उसकी profile लोड करें
         try {
           const p = await initUser(u.uid, u.displayName || "Space Traveler", u.email || "", u.photoURL || "\u{1F30C}");
           setProfile(p);
+          setFbUser(u);
+          // User पूरी तरह लोड हो गया – अब loading खत्म करें
+          setAuthLoading(false);
+          
+          // बाकी सब्सक्रिप्शन और साइड इफेक्ट्स
           userSubCleanup.current?.();
           userSubCleanup.current = subscribeUser(u.uid, up => { if (up) setProfile(up); });
           presenceCleanup.current = setupOnlinePresence(u.uid);
@@ -107,16 +111,19 @@ function AppInner() {
           alertSubCleanup.current = subscribeGlobalAlerts(setGlobalAlerts);
           maintSubCleanup.current?.();
           maintSubCleanup.current = subscribeMaintenanceMode(setMaintenance);
+          
           const reward = await claimDailyReward(u.uid, p);
           if (reward) {
             showToast(`Daily reward: +${reward.coins} coins! (Day ${reward.streak} streak)`, "success", "\u{1F381}");
           }
+          
           try {
             if (checkSuperAdmin(p)) {
               const { wipeDummyRooms } = await import("./lib/roomService");
               wipeDummyRooms().catch(console.error);
             }
           } catch {}
+          
           try {
             const autoRoom = await getAutoEntryRoom();
             if (autoRoom && !activeRoom) {
@@ -133,8 +140,14 @@ function AppInner() {
         } catch (err) {
           console.error("Init error:", err);
           showToast("Connection error. Some features may be limited.", "error");
+          setAuthLoading(false);
+          setFbUser(null);
+          setProfile(null);
         }
       } else {
+        // User नहीं है – loading खत्म करें और सब कुछ साफ करें
+        setAuthLoading(false);
+        setFbUser(null);
         setProfile(null);
         userSubCleanup.current?.();
         userSubCleanup.current = null;
@@ -161,16 +174,17 @@ function AppInner() {
 
   const changePage = (p: NavPage) => {
     if (p !== "chats") { setChatTargetUid(null); setChatActive(false); }
-    setSubPage(null); // पेज बदलने पर कोई सब-पेज नहीं
+    setSubPage(null);
     setPage(p);
     setPageKey(k => k + 1);
   };
 
-  if (!authChecked) {
+  // 👇 जब तक loading चल रहा है, स्प्लैश स्क्रीन जैसा कुछ दिखाएँ
+  if (authLoading) {
     return (
       <div className="app-wrapper">
         <div className="stars" />
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, color: "rgba(162,155,254,0.7)" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, color: "rgba(162,155,254,0.7)", justifyContent: "center", minHeight: "100vh" }}>
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Galaxy Voice Chat" style={{ width: 64, height: 64, borderRadius: 18, animation: "float 2s ease-in-out infinite, logoGlow 3s ease-in-out infinite" }} />
           <div style={{ width: 36, height: 36, borderRadius: 18, border: "3px solid rgba(108,92,231,0.2)", borderTopColor: "#6C5CE7", animation: "spin 0.8s linear infinite" }} />
           <p style={{ fontSize: 13, fontWeight: 600 }}>Loading Galaxy Voice Chat...</p>
@@ -179,6 +193,7 @@ function AppInner() {
     );
   }
 
+  // Loading खत्म होने के बाद – अब या तो user है या नहीं
   if (!fbUser || !profile) {
     return (
       <div className="app-wrapper">
@@ -385,8 +400,6 @@ function AppInner() {
               onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }}
               onRecharge={() => changePage("recharge")}
               onAdminRecharge={() => changePage("admin-recharge")}
-              onWallet={() => changePage("recharge")}
-              // 👇 सब-पेज खुलने/बंद होने के कॉलबैक
               onOpenSubPage={(sub: string) => setSubPage(sub)}
               onCloseSubPage={() => setSubPage(null)}
             />
@@ -399,10 +412,6 @@ function AppInner() {
           )}
         </div>
 
-        {/* 👇 नेव बार तभी दिखेगी जब:
-             - चैट एक्टिव न हो
-             - पेज पाँच मुख्य टैब्स में से एक हो
-             - और कोई सब-पेज (सेटिंग्स/एडमिन/रिचार्ज आदि) खुला न हो */}
         {!chatActive && ["home", "explore", "rooms", "chats", "mine"].includes(page) && !subPage && (
           <nav className="bottom-nav">
             {NAV.map(item => (
