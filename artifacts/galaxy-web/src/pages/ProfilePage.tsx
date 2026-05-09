@@ -42,30 +42,7 @@ function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose
         fontFamily: "'Poppins', 'Inter', sans-serif",
       }}
     >
-      <div style={{ flex: 1, overflowY: "auto", padding: "52px 16px 48px", position: "relative" }}>
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 14,
-            width: 30,
-            height: 30,
-            borderRadius: 15,
-            border: "none",
-            background: "rgba(255,255,255,0.08)",
-            color: "rgba(255,255,255,0.5)",
-            fontSize: 15,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            lineHeight: 1,
-            zIndex: 10,
-          }}
-        >
-          ✕
-        </button>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 48px" }}>
         {children}
       </div>
     </div>
