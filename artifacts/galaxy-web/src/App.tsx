@@ -70,6 +70,10 @@ function AppInner() {
   const [chatActive, setChatActive] = useState(false);
   const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
   const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
+  
+  // 👇 नया स्टेट – जब कोई सब-पेज (Settings, Admin Panel, Recharge) खुला हो
+  const [subPage, setSubPage] = useState<string | null>(null);
+  
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
   const notifSubCleanup = useRef<(() => void) | null>(null);
@@ -157,6 +161,7 @@ function AppInner() {
 
   const changePage = (p: NavPage) => {
     if (p !== "chats") { setChatTargetUid(null); setChatActive(false); }
+    setSubPage(null); // पेज बदलने पर कोई सब-पेज नहीं
     setPage(p);
     setPageKey(k => k + 1);
   };
@@ -381,32 +386,40 @@ function AppInner() {
               onRecharge={() => changePage("recharge")}
               onAdminRecharge={() => changePage("admin-recharge")}
               onWallet={() => changePage("recharge")}
+              // 👇 सब-पेज खुलने/बंद होने के कॉलबैक
+              onOpenSubPage={(sub: string) => setSubPage(sub)}
+              onCloseSubPage={() => setSubPage(null)}
             />
           )}
           {page === "recharge" && (
-            <RechargePage user={profile} onBack={() => changePage("mine")} />
+            <RechargePage user={profile} onBack={() => { changePage("mine"); setSubPage(null); }} />
           )}
           {page === "admin-recharge" && (
-            <AdminRechargePage user={profile} onBack={() => changePage("mine")} />
+            <AdminRechargePage user={profile} onBack={() => { changePage("mine"); setSubPage(null); }} />
           )}
         </div>
 
-        {/* Updated Nav Bar: Removed showWallet dependency */}
-        <nav className="bottom-nav" style={{ display: (chatActive || !["home", "explore", "rooms", "chats", "mine"].includes(page)) ? "none" : "flex" }}>
-          {NAV.map(item => (
-            <button
-              key={item.id}
-              className={`nav-item ${page === item.id ? "active" : ""}`}
-              onClick={() => changePage(item.id as NavPage)}
-            >
-              <span className="nav-icon" style={{ position: "relative" }}>
-                {item.icon}
-                {item.id === "chats" && profile && <ChatBadge uid={profile.uid} />}
-              </span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
+        {/* 👇 नेव बार तभी दिखेगी जब:
+             - चैट एक्टिव न हो
+             - पेज पाँच मुख्य टैब्स में से एक हो
+             - और कोई सब-पेज (सेटिंग्स/एडमिन/रिचार्ज आदि) खुला न हो */}
+        {!chatActive && ["home", "explore", "rooms", "chats", "mine"].includes(page) && !subPage && (
+          <nav className="bottom-nav">
+            {NAV.map(item => (
+              <button
+                key={item.id}
+                className={`nav-item ${page === item.id ? "active" : ""}`}
+                onClick={() => changePage(item.id as NavPage)}
+              >
+                <span className="nav-icon" style={{ position: "relative" }}>
+                  {item.icon}
+                  {item.id === "chats" && profile && <ChatBadge uid={profile.uid} />}
+                </span>
+                <span className="nav-label">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
 
         {passwordPrompt && (
           <div style={{
