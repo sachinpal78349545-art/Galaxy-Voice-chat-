@@ -14,7 +14,7 @@ export default function CarromGame() {
       physics: {
         default: "matter",
         matter: {
-          gravity: { y: 0 }
+          gravity: { x: 0, y: 0 }
         }
       },
       scene: {
@@ -29,7 +29,7 @@ export default function CarromGame() {
             let dx = striker.position.x - pointer.x;
             let dy = striker.position.y - pointer.y;
 
-            striker.applyForce({
+            (striker as any).applyForce({
               x: dx * 0.0005,
               y: dy * 0.0005
             });

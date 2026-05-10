@@ -83,7 +83,7 @@ export default function ProfileViewModal({
         </div>
 
         <div className="info-row">
-          <span className="info-item">{profile.age || 18}</span>
+          <span className="info-item">{(profile as any).age || 18}</span>
           <span className="info-item">Lv.{profile.level || 1}</span>
           <span className="info-item diamond">💎 Diamond</span>
         </div>
@@ -98,7 +98,7 @@ export default function ProfileViewModal({
             <span className="stat-label">Followers</span>
           </div>
           <div className="stat">
-            <span className="stat-value">{profile.visitors || 0}</span>
+            <span className="stat-value">{(profile as any).visitors || 0}</span>
             <span className="stat-label">Visitors</span>
           </div>
         </div>
@@ -106,17 +106,17 @@ export default function ProfileViewModal({
         <div className="action-list">
           <div className="action-item">
             <button className="action-btn" onClick={() => showToast("Moments coming soon", "info")}>
-              <span>📷</span> Moment <span className="action-number">{profile.momentsCount || 0} &gt;</span>
+              <span>📷</span> Moment <span className="action-number">{(profile as any).momentsCount || 0} &gt;</span>
             </button>
           </div>
           <div className="action-item">
             <button className="action-btn" onClick={() => showToast("Enter effect coming soon", "info")}>
-              <span>✨</span> Enter effect <span className="action-number">{profile.entryEffectsCount || 0} &gt;</span>
+              <span>✨</span> Enter effect <span className="action-number">{(profile as any).entryEffectsCount || 0} &gt;</span>
             </button>
           </div>
           <div className="action-item">
             <button className="action-btn" onClick={() => showToast("Gift coming soon", "info")}>
-              <span>🎁</span> Gift <span className="action-number">{profile.giftsReceived || 0} &gt;</span>
+              <span>🎁</span> Gift <span className="action-number">{(profile as any).giftsReceived || 0} &gt;</span>
             </button>
           </div>
         </div>
