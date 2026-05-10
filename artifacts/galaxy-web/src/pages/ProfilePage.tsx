@@ -344,7 +344,7 @@ export default function ProfilePage({
         amount: coins,
         description: `Recharged ${coins} coins`,
       });
-      onUpdate((prev) => ({ ...prev, coins: prev.coins + coins }));
+      onUpdate({ ...user, coins: user.coins + coins });
       showToast(`+${coins} coins added!`, "success", "💎");
     } catch {
       showToast("Recharge failed. Try again.", "error");
@@ -525,11 +525,7 @@ export default function ProfilePage({
     try {
       const ok = await purchaseItem(user.uid, item.id, user.coins);
       if (ok) {
-        onUpdate((prev) => ({
-          ...prev,
-          coins: prev.coins - item.price,
-          inventory: { ...prev.inventory, [item.id]: { itemId: item.id, purchasedAt: Date.now(), equipped: false } },
-        }));
+        onUpdate({ ...user, coins: user.coins - item.price, inventory: { ...user.inventory, [item.id]: { itemId: item.id, purchasedAt: Date.now(), equipped: false } } });
         showToast(`${item.name} purchased!`, "success");
       } else {
         showToast("Purchase failed", "error");
