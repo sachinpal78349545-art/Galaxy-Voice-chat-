@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UserProfile, searchUsers, followUser, unfollowUser, isBlocked, isSuperAdmin } from "../lib/userService";
+import { UserProfile, searchUsers, followUser, unfollowUser, isBlocked } from "../lib/userService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { sendNotification } from "../lib/notificationService";
 import { Room, fetchRooms } from "../lib/roomService";

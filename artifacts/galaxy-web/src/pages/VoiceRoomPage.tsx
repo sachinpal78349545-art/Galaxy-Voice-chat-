@@ -2,15 +2,15 @@ import React, { useState, useEffect, useRef } from "react";
 import { uploadWithAppCheck } from "../lib/firebase";
 import { getStoreItem } from "../lib/storeService";
 import {
-  Room, RoomSeat, RoomUser, RoomMessage, ROOM_THEMES, ROOM_AVATARS,
+  Room, RoomMessage, ROOM_THEMES, ROOM_AVATARS,
   subscribeRoom, subscribeRoomMessages, sendRoomMessage,
   raiseHand, kickFromSeat, muteUserSeat, toggleLockSeat, toggleMuteSeat,
   leaveSeat, joinSeat, setCoHost, isOwnerOrAdmin, getUserRole,
   joinRoom, leaveRoom, setAdmin, removeAdmin, banUser, unbanUser,
-  kickUserFromRoom, updateRoomSettings, endRoom, deleteRoom,
+  kickUserFromRoom, updateRoomSettings, endRoom,
   followRoom, unfollowRoom, setupPresence,
 } from "../lib/roomService";
-import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser, isOfficialOrAdmin, ensureSuperAdmin, isSuperAdmin, SUPER_ADMIN_USER_ID, getUser } from "../lib/userService";
+import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser, isOfficialOrAdmin, ensureSuperAdmin, isSuperAdmin, getUser } from "../lib/userService";
 import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } from "../lib/giftService";
 import { sendNotification } from "../lib/notificationService";
 import { getOrCreateConversation } from "../lib/chatService";
@@ -19,7 +19,7 @@ import { useToast } from "../lib/toastContext";
 import { musicService } from "../lib/musicService";
 import { openMysteryBox, MYSTERY_BOX_COST, MysteryBoxReward } from "../lib/giftService";
 import { subscribeWaitlist, joinWaitlist, leaveWaitlist, admitFromWaitlist } from "../lib/roomService";
-import { PKBattle, PKInvite, subscribePKBattle, subscribePKInvites, sendPKInvite, respondPKInvite, addPKScore, endPKBattle, getPKDurations } from "../lib/pkBattleService";
+import { PKBattle, PKInvite, subscribePKBattle, subscribePKInvites, sendPKInvite, respondPKInvite, endPKBattle, getPKDurations } from "../lib/pkBattleService";
 import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, ClassicLudo, CarromGame, TruthDareWheel, cleanName, hashCode } from "../components/room";
 import SnakeLadders from "../components/room/SnakeLadders";
 import { subscribeNotifications, Notification } from "../lib/notificationService";
@@ -55,11 +55,10 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
   const [memberSearch, setMemberSearch] = useState("");
   const [showReportModal, setShowReportModal] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
-  const [showDiceGame, setShowDiceGame] = useState(false);
   const [showGameHub, setShowGameHub] = useState(false);
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [isSpeakerOff, setIsSpeakerOff] = useState(false);
-  const [inviteSeatIdx, setInviteSeatIdx] = useState<number | null>(null);
+  const [_inviteSeatIdx, setInviteSeatIdx] = useState<number | null>(null);
   const [equippedFrames, setEquippedFrames] = useState<Record<string, string>>({});
   const [cpDpUploading, setCpDpUploading] = useState(false);
   const cpDpRef = useRef<HTMLInputElement>(null);
@@ -556,7 +555,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
     setCpSubView(null);
   };
 
-  const roomTheme = ROOM_THEMES.find(t => t.id === (room?.theme || "galaxy")) || ROOM_THEMES[0];
   const roomUsers = room?.roomUsers ? Object.values(room.roomUsers) : [];
   roomUsers.sort((a, b) => {
     const ro = { owner: 0, admin: 1, user: 2 };

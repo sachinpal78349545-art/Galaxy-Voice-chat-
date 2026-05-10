@@ -34,7 +34,7 @@ export function subscribeConversations(userId: string, cb: (convs: Conversation[
   let convUnsubs: (() => void)[] = [];
   let currentConvs: Conversation[] = [];
 
-  const handler = onValue(r, async snap => {
+  onValue(r, async snap => {
     convUnsubs.forEach(u => u());
     convUnsubs = [];
 

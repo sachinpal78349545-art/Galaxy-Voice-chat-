@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { UserProfile, incrementStat, getUser, followUser, unfollowUser, subscribeUser, blockUser, isBlocked, canChatSync, isSuperAdmin, SUPER_ADMIN_USER_ID, sendGift } from "../lib/userService";
+import { UserProfile, incrementStat, followUser, unfollowUser, subscribeUser, blockUser, canChatSync, isSuperAdmin, SUPER_ADMIN_USER_ID, sendGift } from "../lib/userService";
 import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, sendVoiceMessage, addReaction, setTyping, subscribeTyping, markRead, clearChat, updateLastSeen } from "../lib/chatService";
 import { sendNotification, subscribeNotifications, Notification as AppNotification, markNotificationRead, markAllNotificationsRead } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
@@ -439,7 +439,7 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
 
   if (active) {
     const otherIdx = active.participants[0] === user.uid ? 1 : 0;
-    const otherId = active.participants[otherIdx];
+    const _otherId = active.participants[otherIdx]; void _otherId;
     const otherIsSuperAdmin = otherProfile ? isSuperAdmin(otherProfile) : false;
     const selfIsSuperAdmin = isSuperAdmin(user);
     const statusText = otherTyping ? "typing..." : otherOnline ? "\u25CF Online" : otherLastSeen ? `Last seen ${formatLastSeen(otherLastSeen)}` : "\u25CB Offline";

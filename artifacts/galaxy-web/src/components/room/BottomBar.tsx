@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Room, UserProfile } from "./types";
 import {
-  Mic, MicOff, Volume2, VolumeX, Smile, MessageCircle,
+  Mic, MicOff, Smile, MessageCircle,
   Gift, MoreHorizontal, Sparkles, Send, Inbox,
 } from "lucide-react";
 
@@ -85,7 +85,6 @@ export default function BottomBar({
 
   // Mic button state
   const micActive   = isOnSeat && !isMuted;
-  const micVariant  = micActive ? "on" : "off";
 
   /* ── tiny round icon button helper ── */
   const RoundBtn = ({

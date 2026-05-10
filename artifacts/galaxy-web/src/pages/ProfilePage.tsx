@@ -2,18 +2,18 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { ref, onValue, off } from "firebase/database";
-import { UserProfile, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, setUserCoins, deleteUserAvatar, resetUserName, deviceBanUser, shadowBanUser, removeShadowBan, setUserLevelXP, transferAccountData, getAllUsers, createVipUserId, addCustomBadge, removeCustomBadge } from "../lib/userService";
-import { sendGlobalAlert, clearGlobalAlerts, sendMassDM } from "../lib/notificationService";
-import { setMaintenanceMode, setStoreOverrides, getStoreOverrides, updateRoomSettings, setRoomSeatCount, wipeDummyRooms, setAutoEntryRoom, getAutoEntryRoom, ensureOfficialRoom, ROOM_THEMES, Room } from "../lib/roomService";
+import { UserProfile, claimDailyReward, getAchievementsList, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser,isUserBanned, setUserCoins, deleteUserAvatar, resetUserName, deviceBanUser, shadowBanUser, removeShadowBan } from "../lib/userService";
+import { sendGlobalAlert, clearGlobalAlerts } from "../lib/notificationService";
+import { updateRoomSettings, setRoomSeatCount, wipeDummyRooms, setAutoEntryRoom, getAutoEntryRoom, ensureOfficialRoom, ROOM_THEMES } from "../lib/roomService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
-import { STORE_ITEMS, StoreItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, isAnimatedFrame } from "../lib/storeService";
+import { STORE_ITEMS, StoreItem, getStoreItem, purchaseItem, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, isAnimatedFrame } from "../lib/storeService";
 import SuperAdminAvatar from "../components/SuperAdminAvatar";
-import FrameAvatar, { FramePreview } from "../components/frames/FrameAvatar";
-import { Language, LANGUAGE_OPTIONS, getCurrentLanguage, setLanguage, isRTL, t } from "../lib/i18n";
-import { Family, createFamily, joinFamily, leaveFamily, getUserFamily, getAllFamilies, searchFamilies, getFamilyIcons, getFamilyLeaderboard, updateFamilySettings, promoteMember, kickMember, transferLeadership, deleteFamily, addFamilyContribution } from "../lib/familyService";
-import { Report, submitReport, getReportQueue, reviewReport, getReportStats, REPORT_CATEGORIES } from "../lib/reportService";
+import { FramePreview } from "../components/frames/FrameAvatar";
+import { Language, LANGUAGE_OPTIONS, getCurrentLanguage, setLanguage } from "../lib/i18n";
+import { Family, createFamily, joinFamily, leaveFamily, getUserFamily, getAllFamilies, getFamilyIcons } from "../lib/familyService";
+import { Report, getReportQueue, reviewReport } from "../lib/reportService";
 
 interface Props {
   user: UserProfile;
@@ -28,7 +28,7 @@ interface Props {
 }
 
 // ✅ BottomSheet को ऊपर रखा (सेफ)
-function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function BottomSheet({ children, onClose: _onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
       style={{
@@ -120,16 +120,15 @@ export default function ProfilePage({
   const [feedbackSubject, setFeedbackSubject] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackSending, setFeedbackSending] = useState(false);
-  const [recharging, setRecharging] = useState<number | null>(null);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendProfiles, setFriendProfiles] = useState<UserProfile[]>([]);
   const [blockedProfiles, setBlockedProfiles] = useState<UserProfile[]>([]);
   const [showFollowersList, setShowFollowersList] = useState(false);
   const [showFollowingList, setShowFollowingList] = useState(false);
-  const [followerProfiles, setFollowerProfiles] = useState<UserProfile[]>([]);
-  const [followingProfiles, setFollowingProfiles] = useState<UserProfile[]>([]);
-  const [followerLoading, setFollowerLoading] = useState(false);
-  const [followingLoading, setFollowingLoading] = useState(false);
+  const [followerProfiles] = useState<UserProfile[]>([]);
+  const [followingProfiles] = useState<UserProfile[]>([]);
+  const [followerLoading] = useState(false);
+  const [followingLoading] = useState(false);
   const [viewingProfile, setViewingProfile] = useState<UserProfile | null>(null);
   const [momentCount, setMomentCount] = useState(0);
   const [reportReason, setReportReason] = useState("");
@@ -147,20 +146,6 @@ export default function ProfilePage({
   const [showGodMode, setShowGodMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [godTab, setGodTab] = useState<string>("deviceBan");
-  const [godUserId, setGodUserId] = useState("");
-  const [godUser, setGodUser] = useState<UserProfile | null>(null);
-  const [godLoading, setGodLoading] = useState(false);
-  const [godLevel, setGodLevel] = useState("");
-  const [godXp, setGodXp] = useState("");
-  const [godTransferTo, setGodTransferTo] = useState("");
-  const [godMassDM, setGodMassDM] = useState("");
-  const [godMaintMsg, setGodMaintMsg] = useState("");
-  const [godMaintOn, setGodMaintOn] = useState(false);
-  const [godVipId, setGodVipId] = useState("");
-  const [godBadgeName, setGodBadgeName] = useState("");
-  const [godBadgeIcon, setGodBadgeIcon] = useState("");
-  const [godStoreItemId, setGodStoreItemId] = useState("");
-  const [godStorePrice, setGodStorePrice] = useState("");
   const [ormRoomName, setOrmRoomName] = useState("");
   const [ormTheme, setOrmTheme] = useState("galaxy");
   const [ormSeatCount, setOrmSeatCount] = useState("12");
@@ -171,7 +156,7 @@ export default function ProfilePage({
   const [showFamily, setShowFamily] = useState(false);
   const [myFamily, setMyFamily] = useState<Family | null>(null);
   const [allFamilies, setAllFamilies] = useState<Family[]>([]);
-  const [familyLoading, setFamilyLoading] = useState(false);
+  const [_familyLoading, setFamilyLoading] = useState(false);
   const [showCreateFamily, setShowCreateFamily] = useState(false);
   const [newFamilyName, setNewFamilyName] = useState("");
   const [newFamilyIcon, setNewFamilyIcon] = useState("👑");
@@ -203,10 +188,6 @@ export default function ProfilePage({
   const achievements = useMemo(() => getAchievementsList(user), [user]);
   const unlockedCount = useMemo(() => achievements.filter((a) => a.unlocked).length, [achievements]);
   const dailyTasks = useMemo(() => getDailyTaskProgress(user), [user]);
-  const transactions = useMemo(() => {
-    const txList: Transaction[] = user.transactions ? Object.values(user.transactions) : [];
-    return txList.sort((a, b) => b.timestamp - a.timestamp);
-  }, [user.transactions]);
   const xpPct = useMemo(() => Math.min(100, (user.xp / (user.level * 1000)) * 100), [user.xp, user.level]);
 
   // ---- open/close helpers for subPage ----
@@ -231,39 +212,6 @@ export default function ProfilePage({
     setFriendProfiles(profiles);
   };
 
-  const loadFollowers = async () => {
-    setFollowerLoading(true);
-    try {
-      const list = user.followersList || [];
-      const profiles: UserProfile[] = [];
-      for (const uid of list.slice(0, 50)) {
-        const p = await getUser(uid);
-        if (p) profiles.push(p);
-      }
-      setFollowerProfiles(profiles);
-    } catch {
-      showToast("Failed to load followers", "error");
-    } finally {
-      setFollowerLoading(false);
-    }
-  };
-
-  const loadFollowing = async () => {
-    setFollowingLoading(true);
-    try {
-      const list = user.followingList || [];
-      const profiles: UserProfile[] = [];
-      for (const uid of list.slice(0, 50)) {
-        const p = await getUser(uid);
-        if (p) profiles.push(p);
-      }
-      setFollowingProfiles(profiles);
-    } catch {
-      showToast("Failed to load following", "error");
-    } finally {
-      setFollowingLoading(false);
-    }
-  };
 
   const loadBlocked = async () => {
     const blocked = user.blockedList || [];
@@ -298,7 +246,7 @@ export default function ProfilePage({
 
   useEffect(() => {
     const momentsRef = ref(db, "moments");
-    const handler = onValue(momentsRef, (snap) => {
+    onValue(momentsRef, (snap) => {
       if (!snap.exists()) {
         setMomentCount(0);
         return;
@@ -334,24 +282,6 @@ export default function ProfilePage({
     onLogout();
   };
 
-  const handleRecharge = async (coins: number, idx: number) => {
-    setRecharging(idx);
-    try {
-      await new Promise((r) => setTimeout(r, 1200));
-      await addCoins(user.uid, coins);
-      await addTransaction(user.uid, {
-        type: "recharge",
-        amount: coins,
-        description: `Recharged ${coins} coins`,
-      });
-      onUpdate({ ...user, coins: user.coins + coins });
-      showToast(`+${coins} coins added!`, "success", "💎");
-    } catch {
-      showToast("Recharge failed. Try again.", "error");
-    } finally {
-      setRecharging(null);
-    }
-  };
 
   const handleDailyReward = async () => {
     const result = await claimDailyReward(user.uid, user);

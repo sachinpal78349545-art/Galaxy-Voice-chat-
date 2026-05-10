@@ -64,7 +64,7 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom, onViewProfile
 
   useEffect(() => {
     const usersRef = query(ref(db, "users"), limitToLast(50));
-    const handler = onValue(usersRef, (snap) => {
+    onValue(usersRef, (snap) => {
       if (!snap.exists()) { setAllUsers([]); return; }
       const val = snap.val();
       const users: OnlineUser[] = [];

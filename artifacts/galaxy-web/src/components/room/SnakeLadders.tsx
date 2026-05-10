@@ -38,10 +38,10 @@ const cellXY = (n: number): [number, number] => {
   return [col, row];
 };
 
-export default function SnakeLadders({ roomId, userId, username, hasControl, onClose }: Props) {
+export default function SnakeLadders({ roomId, userId, username: _username, hasControl, onClose }: Props) {
   const [game, setGame] = useState<SLState | null>(null);
   const [rolling, setRolling] = useState(false);
-  const [moveAnim, setMoveAnim] = useState<{ uid: string; from: number; to: number; via?: "snake" | "ladder" } | null>(null);
+  const [_moveAnim, setMoveAnim] = useState<{ uid: string; from: number; to: number; via?: "snake" | "ladder" } | null>(null);
 
   const gameRef = ref(db, `roomGames/${roomId}/snake`);
 

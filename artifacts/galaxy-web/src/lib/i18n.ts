@@ -1,5 +1,3 @@
-import { ref, onValue, off } from "firebase/database";
-import { db } from "./firebase";
 
 export type Language = "en" | "ar" | "hi" | "ur";
 

@@ -6,7 +6,7 @@ import { playGameStart, playTurnSound, playWinSound, playDiceSound } from "./gam
 
 const C = 24;
 const PC = ["#FF3D6E", "#3DFFAA", "#3DB8FF", "#FFD93D"];
-const CN = ["Red", "Green", "Blue", "Yellow"];
+const _CN = ["Red", "Green", "Blue", "Yellow"]; void _CN;
 const RGB: [number, number, number][] = [[255, 61, 110], [61, 255, 170], [61, 184, 255], [255, 217, 61]];
 const START_ABS = [0, 13, 26, 39];
 const SAFE_SET = new Set([0, 8, 13, 21, 26, 34, 39, 47]);

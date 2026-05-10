@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ref, onValue, off, get, set, push, remove, update } from "firebase/database";
 import { db, uploadWithAppCheck } from "../lib/firebase";
-import { UserProfile, isSuperAdmin, SUPER_ADMIN_USER_ID, isBlocked } from "../lib/userService";
+import { UserProfile, isSuperAdmin } from "../lib/userService";
 import { useToast } from "../lib/toastContext";
 
 interface Comment {
@@ -91,7 +91,7 @@ function VideoPlayer({ src }: { src: string }) {
   );
 }
 
-export default function ExplorePage({ user, onMessage, onNavigate }: Props) {
+export default function ExplorePage({ user, onMessage: _onMessage, onNavigate }: Props) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -136,7 +136,7 @@ export default function ExplorePage({ user, onMessage, onNavigate }: Props) {
     if (!commentingPost) { setComments([]); return; }
     setCommentsLoading(true);
     const r = ref(db, `momentComments/${commentingPost}`);
-    const unsub = onValue(r, snap => {
+    onValue(r, snap => {
       if (!snap.exists()) { setComments([]); setCommentsLoading(false); return; }
       const val = snap.val();
       const list: Comment[] = Object.keys(val).map(k => ({ ...val[k], id: k }));

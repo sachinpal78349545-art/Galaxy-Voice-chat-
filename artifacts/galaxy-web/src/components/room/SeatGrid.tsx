@@ -18,7 +18,7 @@ interface SeatGridProps {
   ghostUids?: Set<string>;
 }
 
-export default function SeatGrid({ room, userUid, hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids, superAdminUids, equippedFrames, ghostUids }: SeatGridProps) {
+export default function SeatGrid({ room, userUid, hasControl: _hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids, superAdminUids, equippedFrames, ghostUids }: SeatGridProps) {
   return (
     <div className="room-seat-area">
       <div className="room-seat-grid-8" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, padding: "6px 0", justifyItems: "center" }}>

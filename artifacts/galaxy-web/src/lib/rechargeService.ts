@@ -1,4 +1,4 @@
-import { ref, push, set, update, get, onValue, off, query, orderByChild } from "firebase/database";
+import { ref, push, set, update, get, onValue, off } from "firebase/database";
 import { db } from "./firebase";
 import { addCoins, addTransaction } from "./userService";
 

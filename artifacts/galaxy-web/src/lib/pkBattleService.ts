@@ -1,4 +1,4 @@
-import { ref, push, set, get, update, remove, onValue, off, runTransaction } from "firebase/database";
+import { ref, push, set, get, update, onValue, off, runTransaction } from "firebase/database";
 import { db } from "./firebase";
 
 export interface PKBattle {
@@ -73,7 +73,7 @@ export async function sendPKInvite(
 
 export function subscribePKInvites(roomId: string, hostId: string, cb: (invites: PKInvite[]) => void): () => void {
   const r = ref(db, "pkInvites");
-  const handler = onValue(r, snap => {
+  onValue(r, snap => {
     if (!snap.exists()) { cb([]); return; }
     const val = snap.val();
     const invites: PKInvite[] = Object.values(val);

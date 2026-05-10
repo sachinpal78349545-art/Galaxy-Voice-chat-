@@ -1,4 +1,4 @@
-import { ref, push, set, get, onValue, off } from "firebase/database";
+import { ref, push, set, get } from "firebase/database";
 import { db } from "./firebase";
 
 export interface GiftRecord {

@@ -39,7 +39,7 @@ export default function FrameAvatar({ frameId, src, size = 56, onClick }: FrameA
   );
 }
 
-function FrameOverlay({ frameId, colors }: { frameId: string; colors: { primary: string; secondary: string; tertiary: string } }) {
+function FrameOverlay({ frameId, colors: _colors }: { frameId: string; colors: { primary: string; secondary: string; tertiary: string } }) {
   const id = frameId.replace("frame_", "");
 
   if (id === "golden_crown") {

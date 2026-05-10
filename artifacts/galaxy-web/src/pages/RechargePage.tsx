@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { UserProfile } from "../lib/userService";
 import {
   RECHARGE_PACKAGES, RechargePackage,

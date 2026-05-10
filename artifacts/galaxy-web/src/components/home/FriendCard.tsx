@@ -10,7 +10,7 @@ interface Props {
   onMessage?: (uid: string) => void;
 }
 
-export default function FriendSection({ users, onMessage }: Props) {
+export default function FriendSection({ users, onMessage: _onMessage }: Props) {
   if (users.length === 0) return null;
 
   return (

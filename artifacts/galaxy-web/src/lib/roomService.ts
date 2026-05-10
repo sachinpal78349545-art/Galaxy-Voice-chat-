@@ -101,7 +101,7 @@ export async function fetchRooms(): Promise<Room[]> {
 
 export function subscribeRooms(cb: (rooms: Room[]) => void): () => void {
   const r = ref(db, "rooms");
-  const handler = onValue(r, snap => {
+  onValue(r, snap => {
     if (!snap.exists()) { cb([]); return; }
     const val = snap.val();
     const rooms: Room[] = Object.keys(val).map(k => {

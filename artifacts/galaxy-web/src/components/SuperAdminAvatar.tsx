@@ -1,5 +1,4 @@
 import React from "react";
-import { SUPER_ADMIN_USER_ID } from "../lib/userService";
 
 interface SuperAdminAvatarProps {
   src: string;

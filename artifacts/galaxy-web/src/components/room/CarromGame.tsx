@@ -46,7 +46,7 @@ const SHOT_RESULTS = [
 const MAX_ROUNDS = 10;
 const COLORS = ["#00ffff", "#bf00ff", "#FFD700", "#FF6B6B"];
 
-export default function CarromGame({ roomId, userId, username, hasControl, onClose }: CarromGameProps) {
+export default function CarromGame({ roomId, userId, username: _username, hasControl, onClose }: CarromGameProps) {
   const [game, setGame] = useState<CarromState | null>(null);
   const [striking, setStriking] = useState(false);
   const [shotAnim, setShotAnim] = useState<string | null>(null);

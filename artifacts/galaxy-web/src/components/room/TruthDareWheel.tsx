@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ref, onValue, off, update, get } from "firebase/database";
+import { ref, onValue, off, update } from "firebase/database";
 import { db } from "../../lib/firebase";
 import { cleanName } from "./types";
 import { playGameStart, playSpinSound, playSpinStop } from "./gameSounds";

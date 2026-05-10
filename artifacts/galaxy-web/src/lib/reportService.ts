@@ -1,6 +1,5 @@
-import { ref, push, set, get, update, remove, onValue, off, query, orderByChild } from "firebase/database";
+import { ref, push, set, get, update, onValue, off } from "firebase/database";
 import { db } from "./firebase";
-import { SUPER_ADMIN_USER_ID } from "./userService";
 
 export interface Report {
   id: string;
@@ -56,7 +55,7 @@ export async function getReportQueue(status?: string): Promise<Report[]> {
 
 export function subscribeReports(cb: (reports: Report[]) => void): () => void {
   const r = ref(db, "reports");
-  const handler = onValue(r, snap => {
+  onValue(r, snap => {
     if (!snap.exists()) { cb([]); return; }
     const val = snap.val();
     const reports: Report[] = Object.values(val);
