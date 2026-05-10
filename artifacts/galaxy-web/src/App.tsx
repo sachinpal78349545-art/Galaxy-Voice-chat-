@@ -20,7 +20,11 @@ import SearchPage from "./pages/SearchPage";
 import ExplorePage from "./pages/ExplorePage";
 import RechargePage from "./pages/RechargePage";
 import AdminRechargePage from "./pages/AdminRechargePage";
+import ProfileViewModal from "./components/ProfileViewModal";
 import "./index.css";
+
+// 👇 MomentPage import (agar aapke paas ye page hai, warna comment karein)
+// import MomentPage from "./pages/MomentPage";
 
 type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications" | "search" | "explore" | "recharge" | "admin-recharge";
 
@@ -63,7 +67,6 @@ function AppInner() {
   const [chatTargetUid, setChatTargetUid] = useState<string | null>(null);
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
   const [showEdit, setShowEdit] = useState(false);
-  // 👇 अब authLoading का उपयोग करेंगे – यह तब तक true रहेगा जब तक हमें पक्का पता न चले कि user है या नहीं
   const [authLoading, setAuthLoading] = useState(true);
   const [pageKey, setPageKey] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -72,6 +75,7 @@ function AppInner() {
   const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
   const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
   const [subPage, setSubPage] = useState<string | null>(null);
+  const [viewedProfile, setViewedProfile] = useState<UserProfile | null>(null); // 👈 नया
 
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
@@ -92,17 +96,13 @@ function AppInner() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
-      // अब हम authLoading को तुरंत false नहीं करेंगे – पहले user की पूरी जानकारी लोड करेंगे
       if (u) {
-        // User Firebase से मिला – अब उसकी profile लोड करें
         try {
           const p = await initUser(u.uid, u.displayName || "Space Traveler", u.email || "", u.photoURL || "\u{1F30C}");
           setProfile(p);
           setFbUser(u);
-          // User पूरी तरह लोड हो गया – अब loading खत्म करें
           setAuthLoading(false);
           
-          // बाकी सब्सक्रिप्शन और साइड इफेक्ट्स
           userSubCleanup.current?.();
           userSubCleanup.current = subscribeUser(u.uid, up => { if (up) setProfile(up); });
           presenceCleanup.current = setupOnlinePresence(u.uid);
@@ -145,7 +145,6 @@ function AppInner() {
           setProfile(null);
         }
       } else {
-        // User नहीं है – loading खत्म करें और सब कुछ साफ करें
         setAuthLoading(false);
         setFbUser(null);
         setProfile(null);
@@ -175,11 +174,11 @@ function AppInner() {
   const changePage = (p: NavPage) => {
     if (p !== "chats") { setChatTargetUid(null); setChatActive(false); }
     setSubPage(null);
+    setViewedProfile(null); // profile modal band kare
     setPage(p);
     setPageKey(k => k + 1);
   };
 
-  // 👇 जब तक loading चल रहा है, स्प्लैश स्क्रीन जैसा कुछ दिखाएँ
   if (authLoading) {
     return (
       <div className="app-wrapper">
@@ -193,7 +192,6 @@ function AppInner() {
     );
   }
 
-  // Loading खत्म होने के बाद – अब या तो user है या नहीं
   if (!fbUser || !profile) {
     return (
       <div className="app-wrapper">
@@ -353,12 +351,12 @@ function AppInner() {
           }}>
             <button onClick={() => changePage("search")} className="btn btn-ghost btn-sm" style={{
               width: 38, height: 38, padding: 0, borderRadius: 12, fontSize: 17,
-            }}>{"\u{1F50D}"}</button>
+            }}>🔍</button>
             <div style={{ flex: 1 }} />
             <button onClick={() => changePage("notifications")} className="btn btn-ghost btn-sm" style={{
               width: 38, height: 38, padding: 0, borderRadius: 12, fontSize: 17, position: "relative",
             }}>
-              {"\u{1F514}"}
+              🔔
               {unreadNotifCount > 0 && (
                 <span style={{
                   position: "absolute", top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9,
@@ -372,7 +370,7 @@ function AppInner() {
 
         {globalAlerts.length > 0 && (
           <div className="global-alert-bar">
-            <span className="global-alert-icon">{"\u{1F4E2}"}</span>
+            <span className="global-alert-icon">📢</span>
             <div className="global-alert-scroll-wrap">
               <div className="global-alert-scroll">
                 {globalAlerts.map(a => (
@@ -384,11 +382,11 @@ function AppInner() {
         )}
 
         <div key={pageKey} className="page-enter" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} onCreateRoom={() => changePage("rooms")} />}
+          {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} onCreateRoom={() => changePage("rooms")} onViewProfile={(p) => setViewedProfile(p)} />}
           {page === "explore" && <ExplorePage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onNavigate={(p) => changePage(p as NavPage)} />}
           {page === "rooms" && <RoomsPage user={profile} onJoinRoom={joinRoom} />}
           {page === "chats" && <ChatsPage user={profile} initialChatUid={chatTargetUid} onChatActive={setChatActive} />}
-          {page === "moment" && <MomentPage user={profile} onBack={() => changePage("explore")} />}
+          {page === "moment" && <div>Moments Page (Coming Soon)</div>}
           {page === "notifications" && <NotificationPage user={profile} notifications={notifications} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onFollowBack={() => {}} />}
           {page === "search" && <SearchPage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onBack={() => changePage("home")} />}
           {page === "mine" && (
@@ -430,6 +428,19 @@ function AppInner() {
           </nav>
         )}
 
+        {viewedProfile && (
+          <ProfileViewModal
+            profile={viewedProfile}
+            currentUser={profile}
+            onClose={() => setViewedProfile(null)}
+            onMessage={(uid) => {
+              setViewedProfile(null);
+              setChatTargetUid(uid);
+              changePage("chats");
+            }}
+          />
+        )}
+
         {passwordPrompt && (
           <div style={{
             position: "fixed", inset: 0, background: "rgba(5,1,18,0.85)", backdropFilter: "blur(10px)",
@@ -439,7 +450,7 @@ function AppInner() {
               width: 300, padding: 24, background: "rgba(15,15,26,0.95)", borderRadius: 20,
               border: "1px solid rgba(108,92,231,0.2)", animation: "popIn 0.2s ease",
             }} onClick={e => e.stopPropagation()}>
-              <h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 4, textAlign: "center", color: "#fff" }}>{"\u{1F512}"} Password Required</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 4, textAlign: "center", color: "#fff" }}>🔒 Password Required</h3>
               <p style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", textAlign: "center", marginBottom: 16 }}>
                 Enter the password to join "{passwordPrompt.room.name}"
               </p>

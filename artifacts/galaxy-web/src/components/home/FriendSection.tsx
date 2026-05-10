@@ -1,4 +1,9 @@
-import { OnlineUser } from "../types"; // या अपने हिसाब से type लें
+interface OnlineUser {
+  uid: string;
+  name: string;
+  avatar: string;
+  level?: number;
+}
 
 interface FriendSectionProps {
   users: OnlineUser[];
@@ -28,7 +33,7 @@ export default function FriendSection({ users, onUserClick }: FriendSectionProps
       <style>{`
         .friend-section { margin: 20px 16px; }
         .friend-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .friend-header h3 { font-size: 18px; font-weight: 700; color: #fff; }
+        .friend-header h3 { font-size: 18px; font-weight: 700; color: #fff; margin: 0; }
         .view-all { background: none; border: none; color: #A29BFE; font-size: 13px; font-weight: 600; cursor: pointer; }
         .friend-list { display: flex; flex-direction: column; gap: 12px; }
         .friend-card { display: flex; align-items: center; gap: 12px; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 16px; cursor: pointer; transition: 0.2s; }
