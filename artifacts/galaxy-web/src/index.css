@@ -1,3 +1,16 @@
+html, body {
+  /* Scroll bilkul band */
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  
+  /* Text select hona band (App feel) */
+  user-select: none;
+  -webkit-user-select: none;
+  
+  /* Mobile touch delays hatane ke liye */
+  touch-action: manipulation;
+}
+
 *, *::before, *::after { 
   box-sizing: border-box; 
   margin: 0; 
@@ -2939,4 +2952,64 @@ body {
 @keyframes pageSlideIn {
   from { transform: translateX(100%); opacity: 0.6; }
   to   { transform: translateX(0);    opacity: 1; }
+}
+/* Keyboard overlap fix */
+html, body, #root, [class*="room-container"] {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Ye ensure karega ki body keyboard ke sath shrink ho */
+body {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+/* --- Keyboard Scroll Fix Start --- */
+
+/* 1. Poore page ko lock karne ke liye */
+html, body {
+  overflow: hidden !important;
+  height: 100% !important;
+  width: 100% !important;
+  position: fixed; /* Sabse zaroori: Isse page scroll hona band ho jayega */
+  margin: 0;
+  padding: 0;
+  touch-action: none; /* Background par touch hile na */
+}
+
+/* 2. React ke root container ko full height dene ke liye */
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* 3. Room container (Jahan background image aur seats hain) */
+/* Note: Agar aapki file mein class ka naam alag hai toh use badal lein */
+.voice-room-container {
+  /* Height ko fix kar dein taaki keyboard isse chota na kar sake */
+  height: 100vh !important;
+  height: 100dvh !important; 
+  width: 100vw;
+  
+  /* Background ko lock karne ke liye */
+  position: fixed;
+  top: 0;
+  left: 0;
+  
+  /* Background image ki settings */
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }

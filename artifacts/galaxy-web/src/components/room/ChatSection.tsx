@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { RoomMessage, cleanName } from "./types";
 
 interface ChatSectionProps {
@@ -8,49 +8,144 @@ interface ChatSectionProps {
 }
 
 export default function ChatSection({ messages, userId, msgEndRef }: ChatSectionProps) {
-  return (
-    <div className="room-chat">
-      {messages.map(msg => (
-        <ChatBubble key={msg.id} msg={msg} isMe={msg.userId === userId} />
-      ))}
-      <div ref={msgEndRef} />
-    </div>
-  );
-}
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-function ChatBubble({ msg, isMe }: { msg: RoomMessage; isMe: boolean }) {
-  const isSystem = msg.type === "system" || msg.type === "join" || msg.type === "leave" || msg.type === "welcome";
-  const isGift = msg.type === "gift";
-  const isWelcome = msg.type === "welcome";
-  const displayName = cleanName(msg.username);
+  useEffect(() => {
+    const handleViewportChange = () => {
+      if (window.visualViewport) {
+        const heightDiff = window.innerHeight - window.visualViewport.height;
+        setKeyboardHeight(heightDiff > 150 ? heightDiff : 0);
+      }
+    };
+    window.visualViewport?.addEventListener("resize", handleViewportChange);
+    return () => window.visualViewport?.removeEventListener("resize", handleViewportChange);
+  }, []);
+
+  useEffect(() => {
+    msgEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, keyboardHeight]);
+
+  const grouped: (RoomMessage & { showHeader: boolean })[] = [];
+  messages.forEach((msg, idx) => {
+    const prev = messages[idx - 1];
+    let showHeader = true;
+    if (prev && prev.userId === msg.userId && msg.type !== "system") {
+      showHeader = false;
+    }
+    grouped.push({ ...msg, showHeader });
+  });
 
   return (
-    <div className="chat-msg" style={isWelcome ? { animation: "welcomeMsg 0.5s ease" } : undefined}>
-      {isSystem ? (
-        <div className={`chat-pill-system ${isWelcome ? "chat-pill-welcome" : ""}`} style={{
-          fontSize: 10, lineHeight: 1.4, fontFamily: "'Poppins', 'Inter', sans-serif",
-          color: isWelcome ? "#c4b5fd" : msg.type === "leave" ? "rgba(255,100,130,0.8)" : "rgba(255,255,255,0.8)",
-          fontWeight: isWelcome ? 600 : 400, fontStyle: "italic",
-          textShadow: isWelcome ? "0 1px 6px rgba(139,92,246,0.5)" : "0 1px 3px rgba(0,0,0,0.5)",
-        }}>{msg.text}</div>
-      ) : (
-        <div className="chat-pill">
-          {msg.avatar?.startsWith?.("http") ? (
-            <img src={msg.avatar} alt="" style={{ width: 18, height: 18, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-          ) : (
-            <span style={{ fontSize: 12, flexShrink: 0 }}>{msg.avatar && msg.avatar.length <= 4 ? msg.avatar : "\u{1F464}"}</span>
-          )}
-          <span className="chat-pill-name" style={{
-            fontSize: 10, color: isMe ? "#2DD4BF" : "rgba(255,255,255,0.7)",
-            fontWeight: 600, flexShrink: 0, fontFamily: "'Poppins', 'Inter', sans-serif",
-          }}>{displayName}</span>
-          <span className="chat-pill-text" style={{
-            fontSize: msg.type === "emoji" ? 20 : 12, lineHeight: 1.3,
-            color: isGift ? "#FFD700" : "#fff",
-            fontWeight: isGift ? 600 : 400, fontFamily: "'Poppins', 'Inter', sans-serif",
-          }}>{msg.text}</span>
+    <div 
+      className="chat-fixed-container" 
+      style={{ 
+        transform: `translateY(-${keyboardHeight > 0 ? keyboardHeight - 20 : 0}px)`,
+      }}
+    >
+      <div className="chat-scroll-box">
+        <div className="chat-content-list">
+          {grouped.map((msg, i) => {
+            // System message types check
+            const isSystem = ["system", "join", "leave", "welcome"].includes(msg.type || "");
+
+            if (isSystem) {
+              return (
+                <div key={i} className="chat-entry system-message">
+                  <div className="chat-main-bubble system-bubble">
+                    <p>{msg.text}</p>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div key={i} className={`chat-entry ${!msg.showHeader ? 'no-header' : ''}`}>
+                {msg.showHeader && (
+                  <div className="chat-user-row">
+                    <div className="chat-avatar-small">
+                      {msg.avatar?.startsWith?.("http") ? <img src={msg.avatar} alt="" /> : <span>👤</span>}
+                    </div>
+                    <span className="chat-name-label">{cleanName(msg.username)}</span>
+                    <span className="chat-lv-badge">Lv.6</span>
+                  </div>
+                )}
+                <div className="chat-bubble-wrapper">
+                  <div className="chat-main-bubble">
+                    <p>{msg.text}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={msgEndRef} />
         </div>
-      )}
+      </div>
+
+      <style>{`
+        .chat-fixed-container {
+          position: fixed;
+          left: 12px;
+          width: 75%;
+          height: 350px; 
+          bottom: 95px; 
+          z-index: 100;
+          pointer-events: none;
+          transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
+        }
+
+        .chat-scroll-box {
+          width: 100%;
+          height: 100%;
+          overflow-y: auto;
+          pointer-events: auto;
+          display: flex;
+          flex-direction: column;
+          mask-image: linear-gradient(to top, black 85%, transparent 100%);
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .chat-content-list {
+          margin-top: auto;
+          padding-bottom: 10px;
+        }
+
+        .chat-entry { display: flex; flex-direction: column; margin-top: 8px; }
+        .chat-entry.no-header { margin-top: 1px; }
+
+        .chat-user-row { display: flex; align-items: center; gap: 5px; }
+        .chat-avatar-small { width: 20px; height: 20px; border-radius: 50%; overflow: hidden; }
+        .chat-avatar-small img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-name-label { font-size: 11px; color: #fff; font-weight: 600; opacity: 0.9; }
+        .chat-lv-badge { background: linear-gradient(90deg, #4facfe, #00f2fe); font-size: 8px; padding: 0 4px; border-radius: 4px; color: #fff; }
+
+        .chat-bubble-wrapper { padding-left: 25px; }
+        
+        .chat-main-bubble {
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(4px);
+          padding: 6px 10px;
+          border-radius: 4px 14px 14px 14px;
+          display: inline-block;
+        }
+        
+        /* SYSTEM MESSAGE STYLE (Yellow Text, No Avatar) */
+        .system-message {
+          margin-top: 4px;
+        }
+        .system-bubble {
+          background: rgba(0, 0, 0, 0.2) !important;
+          border-radius: 10px !important;
+          padding: 4px 8px !important;
+        }
+        .system-bubble p {
+          color: #FFD700 !important; /* Yellow Color */
+          font-size: 12px !important;
+          font-weight: 500;
+        }
+
+        .chat-main-bubble p { font-size: 13.5px; color: #fff; margin: 0; line-height: 1.3; }
+        .chat-scroll-box::-webkit-scrollbar { width: 0px; }
+      `}</style>
     </div>
   );
 }
