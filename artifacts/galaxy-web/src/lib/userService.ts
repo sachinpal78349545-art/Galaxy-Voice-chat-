@@ -34,6 +34,7 @@ export interface Report {
   reportedUid: string;
   reason: string;
   details: string;
+  attachmentUrl?: string;
   timestamp: number;
 }
 
@@ -84,6 +85,7 @@ export interface UserProfile {
   messagesSent?: number;
   giftsGiven?: number;
   totalEarnings?: number;
+  visitors?: number;   // ✅ नया – visitor count
   privacy?: {
     profileVisible: boolean;
     showOnline: boolean;
@@ -130,6 +132,7 @@ export const DEFAULT_PROFILE: Partial<UserProfile> = {
   messagesSent: 0,
   giftsGiven: 0,
   totalEarnings: 0,
+  visitors: 0,
   privacy: {
     profileVisible: true,
     showOnline: true,
@@ -387,7 +390,8 @@ export async function removeFriend(myUid: string, friendUid: string): Promise<vo
   await update(ref(db, `users/${friendUid}`), { friendsList: theirFriends, friends: theirFriends.length });
 }
 
-export async function reportUser(reporterUid: string, reportedUid: string, reason: string, details: string): Promise<void> {
+// ✅ Updated reportUser with attachmentUrl support
+export async function reportUser(reporterUid: string, reportedUid: string, reason: string, details: string, attachmentUrl?: string): Promise<void> {
   const rRef = push(ref(db, "reports"));
   await set(rRef, {
     id: rRef.key,
@@ -395,6 +399,7 @@ export async function reportUser(reporterUid: string, reportedUid: string, reaso
     reportedUid,
     reason,
     details,
+    attachmentUrl,
     timestamp: Date.now(),
   });
 }
@@ -836,4 +841,15 @@ export async function getUserTransactions(targetUid: string): Promise<Transactio
   if (!snap.exists()) return [];
   const val = snap.val();
   return Object.values(val) as Transaction[];
+}
+
+// ✅ Visitor count increment – prevents duplicate counting per session
+export async function incrementVisitor(profileUid: string, viewerUid: string): Promise<void> {
+  const sessionKey = `visited_${profileUid}_${viewerUid}`;
+  if (typeof window !== "undefined" && sessionStorage.getItem(sessionKey)) return;
+  if (typeof window !== "undefined") sessionStorage.setItem(sessionKey, "1");
+  const visitorsRef = ref(db, `users/${profileUid}/visitors`);
+  await runTransaction(visitorsRef, (current: number | null) => {
+    return (current ?? 0) + 1;
+  });
 }

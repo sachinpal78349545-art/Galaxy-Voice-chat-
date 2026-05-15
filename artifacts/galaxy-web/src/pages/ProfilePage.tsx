@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
-import { auth, db } from "../lib/firebase";
+import { auth, db, storage } from "../lib/firebase";
 import { ref, onValue, off } from "firebase/database";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, BanDuration, setUserCoins, deleteUserAvatar, resetUserName, deviceBanUser, shadowBanUser, removeShadowBan, setUserLevelXP, transferAccountData, getAllUsers, createVipUserId, addCustomBadge, removeCustomBadge } from "../lib/userService";
 import { sendGlobalAlert, clearGlobalAlerts, sendMassDM } from "../lib/notificationService";
 import { setMaintenanceMode, setStoreOverrides, getStoreOverrides, updateRoomSettings, setRoomSeatCount, wipeDummyRooms, setAutoEntryRoom, getAutoEntryRoom, ensureOfficialRoom, ROOM_THEMES, Room } from "../lib/roomService";
@@ -27,7 +28,6 @@ interface Props {
   onCloseSubPage?: () => void;
 }
 
-// ✅ BottomSheet को ऊपर रखा (सेफ)
 function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
@@ -42,9 +42,7 @@ function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose
         fontFamily: "'Poppins', 'Inter', sans-serif",
       }}
     >
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 48px" }}>
-        {children}
-      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 48px" }}>{children}</div>
     </div>
   );
 }
@@ -135,6 +133,8 @@ export default function ProfilePage({
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [reportTarget, setReportTarget] = useState("");
+  const [reportAttachment, setReportAttachment] = useState<File | null>(null);
+  const [reportUploading, setReportUploading] = useState(false);
   const [showBanMenu, setShowBanMenu] = useState(false);
   const [banLoading, setBanLoading] = useState(false);
   const [walletEditId, setWalletEditId] = useState("");
@@ -199,7 +199,6 @@ export default function ProfilePage({
 
   const isAdmin = isSuperAdmin(user);
 
-  // ---- useMemo for derived data ----
   const achievements = useMemo(() => getAchievementsList(user), [user]);
   const unlockedCount = useMemo(() => achievements.filter((a) => a.unlocked).length, [achievements]);
   const dailyTasks = useMemo(() => getDailyTaskProgress(user), [user]);
@@ -209,18 +208,10 @@ export default function ProfilePage({
   }, [user.transactions]);
   const xpPct = useMemo(() => Math.min(100, (user.xp / (user.level * 1000)) * 100), [user.xp, user.level]);
 
-  // ---- open/close helpers for subPage ----
-  const openSubPage = useCallback(
-    (id: string) => {
-      if (onOpenSubPage) onOpenSubPage(id);
-    },
-    [onOpenSubPage]
-  );
-  const closeSubPage = useCallback(() => {
-    if (onCloseSubPage) onCloseSubPage();
-  }, [onCloseSubPage]);
+  const openSubPage = useCallback((id: string) => onOpenSubPage?.(id), [onOpenSubPage]);
+  const closeSubPage = useCallback(() => onCloseSubPage?.(), [onCloseSubPage]);
 
-  // ---- load data ----
+  // Load friends
   const loadFriends = async () => {
     const friends = user.friendsList || [];
     const profiles: UserProfile[] = [];
@@ -231,34 +222,40 @@ export default function ProfilePage({
     setFriendProfiles(profiles);
   };
 
+  // Fix: loadFollowers - first get fresh user data to have up-to-date followersList
   const loadFollowers = async () => {
     setFollowerLoading(true);
     try {
-      const list = user.followersList || [];
+      const freshUser = await getUser(user.uid);
+      const list = freshUser?.followersList || [];
       const profiles: UserProfile[] = [];
       for (const uid of list.slice(0, 50)) {
         const p = await getUser(uid);
         if (p) profiles.push(p);
       }
       setFollowerProfiles(profiles);
-    } catch {
+    } catch (err) {
+      console.error(err);
       showToast("Failed to load followers", "error");
     } finally {
       setFollowerLoading(false);
     }
   };
 
+  // Fix: loadFollowing - first get fresh user data to have up-to-date followingList
   const loadFollowing = async () => {
     setFollowingLoading(true);
     try {
-      const list = user.followingList || [];
+      const freshUser = await getUser(user.uid);
+      const list = freshUser?.followingList || [];
       const profiles: UserProfile[] = [];
       for (const uid of list.slice(0, 50)) {
         const p = await getUser(uid);
         if (p) profiles.push(p);
       }
       setFollowingProfiles(profiles);
-    } catch {
+    } catch (err) {
+      console.error(err);
       showToast("Failed to load following", "error");
     } finally {
       setFollowingLoading(false);
@@ -275,7 +272,7 @@ export default function ProfilePage({
     setBlockedProfiles(profiles);
   };
 
-  // ---- effects ----
+  // effects
   useEffect(() => {
     if (isAdmin) ensureSuperAdmin(user.uid).catch(console.error);
     if (isAdmin && !ormLoaded) {
@@ -315,7 +312,7 @@ export default function ProfilePage({
     return unsub;
   }, [user.uid]);
 
-  // ---- handlers ----
+  // handlers
   const handleCopyId = async () => {
     try {
       await navigator.clipboard.writeText(user.userId || user.uid);
@@ -413,22 +410,44 @@ export default function ProfilePage({
     }
   };
 
+  // Updated report handler with attachment upload
   const handleReport = async () => {
     if (!reportReason) {
       showToast("Please select a reason", "warning");
       return;
     }
+    setReportUploading(true);
+    let attachmentUrl = "";
+    if (reportAttachment) {
+      if (reportAttachment.size > 20 * 1024 * 1024) {
+        showToast("File too large (max 20MB)", "warning");
+        setReportUploading(false);
+        return;
+      }
+      try {
+        const fileRef = storageRef(storage, `reports/${user.uid}/${Date.now()}_${reportAttachment.name}`);
+        await uploadBytes(fileRef, reportAttachment);
+        attachmentUrl = await getDownloadURL(fileRef);
+      } catch (err) {
+        console.error(err);
+        showToast("Failed to upload attachment", "error");
+        setReportUploading(false);
+        return;
+      }
+    }
     try {
-      await reportUser(user.uid, reportTarget || "general", reportReason, reportDetails);
+      await reportUser(user.uid, reportTarget || "general", reportReason, reportDetails, attachmentUrl);
       showToast("Report submitted. Thank you!", "success");
       setShowReport(false);
       closeSubPage();
       setReportReason("");
       setReportDetails("");
       setReportTarget("");
+      setReportAttachment(null);
     } catch {
       showToast("Failed to submit report. Try again.", "error");
     }
+    setReportUploading(false);
   };
 
   const handleSearch = async () => {
@@ -726,7 +745,6 @@ export default function ProfilePage({
             <span className="pf-id-text">ID: {user.userId || "N/A"}</span>
             <span style={{ fontSize: 11 }}>📋</span>
           </button>
-          {/* ✅ FIX: Settings button now calls openSubPage */}
           <button
             className="pf-settings-btn"
             onClick={() => {
@@ -790,8 +808,8 @@ export default function ProfilePage({
 
         <div className="pf-stats-row">
           {[
-            { label: "Following", val: user.following || 0, action: () => setShowFollowingList(true) },
-            { label: "Followers", val: user.followers || 0, action: () => setShowFollowersList(true) },
+            { label: "Following", val: user.following || 0, action: () => { setShowFollowingList(true); loadFollowing(); } },
+            { label: "Followers", val: user.followers || 0, action: () => { setShowFollowersList(true); loadFollowers(); } },
             { label: "Visitors", val: momentCount, dot: true },
           ].map((s) => (
             <div key={s.label} className="pf-stat-btn" onClick={s.action}>
@@ -872,7 +890,6 @@ export default function ProfilePage({
         </p>
       </div>
 
-      {/* ---------- MODALS ---------- */}
       {showSettings && (
         <BottomSheet
           onClose={() => {
@@ -1585,111 +1602,109 @@ export default function ProfilePage({
             </button>
           </div>
           <div style={{ flex: 1, overflowY: "auto" }}>
-            {friendProfiles.length === 0 ? (
-              <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No friends yet</p>
-            ) : (
-              friendProfiles.map((fp) => (
+            {friendProfiles.map((fp) => (
+              <div
+                key={fp.uid}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 0",
+                  borderBottom: "1px solid rgba(255,255,255,0.04)",
+                }}
+              >
                 <div
-                  key={fp.uid}
+                  onClick={() => {
+                    setShowFriendsList(false);
+                    closeSubPage();
+                    setViewingProfile(fp);
+                    openSubPage("viewProfile");
+                  }}
                   style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    fontSize: 20,
+                    background: "rgba(108,92,231,0.15)",
+                    border: "2px solid rgba(108,92,231,0.25)",
                     display: "flex",
                     alignItems: "center",
-                    gap: 12,
-                    padding: "12px 0",
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    cursor: "pointer",
                   }}
                 >
-                  <div
-                    onClick={() => {
-                      setShowFriendsList(false);
-                      closeSubPage();
-                      setViewingProfile(fp);
-                      openSubPage("viewProfile");
-                    }}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      fontSize: 20,
-                      background: "rgba(108,92,231,0.15)",
-                      border: "2px solid rgba(108,92,231,0.25)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "hidden",
-                      flexShrink: 0,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {fp.avatar?.startsWith("http") ? (
-                      <img
-                        src={fp.avatar}
-                        alt=""
-                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                          (e.target as HTMLImageElement).parentElement!.textContent = "👤";
-                        }}
-                      />
-                    ) : fp.avatar && fp.avatar.length <= 4 ? (
-                      fp.avatar
-                    ) : (
-                      "👤"
-                    )}
-                  </div>
-                  <div
-                    onClick={() => {
-                      setShowFriendsList(false);
-                      closeSubPage();
-                      setViewingProfile(fp);
-                      openSubPage("viewProfile");
-                    }}
-                    style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
-                  >
-                    <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {fp.name}
-                    </p>
-                    <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>
-                      {fp.online ? "Online" : "Offline"}
-                    </p>
-                  </div>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    style={{ fontSize: 10, padding: "4px 10px", borderRadius: 10 }}
-                    onClick={async () => {
-                      try {
-                        await getOrCreateConversation(
-                          user.uid,
-                          user.name,
-                          user.avatar,
-                          fp.uid,
-                          fp.name,
-                          fp.avatar
-                        );
-                        setShowFriendsList(false);
-                        closeSubPage();
-                        if (onMessage) onMessage(fp.uid);
-                      } catch {
-                        showToast("Could not open chat", "error");
-                      }
-                    }}
-                  >
-                    💬
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    style={{ fontSize: 10, padding: "4px 10px" }}
-                    onClick={() => handleRemoveFriend(fp.uid)}
-                  >
-                    Remove
-                  </button>
+                  {fp.avatar?.startsWith("http") ? (
+                    <img
+                      src={fp.avatar}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                        (e.target as HTMLImageElement).parentElement!.textContent = "👤";
+                      }}
+                    />
+                  ) : fp.avatar && fp.avatar.length <= 4 ? (
+                    fp.avatar
+                  ) : (
+                    "👤"
+                  )}
                 </div>
-              ))
-            )}
+                <div
+                  onClick={() => {
+                    setShowFriendsList(false);
+                    closeSubPage();
+                    setViewingProfile(fp);
+                    openSubPage("viewProfile");
+                  }}
+                  style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+                >
+                  <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {fp.name}
+                  </p>
+                  <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>
+                    {fp.online ? "Online" : "Offline"}
+                  </p>
+                </div>
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ fontSize: 10, padding: "4px 10px", borderRadius: 10 }}
+                  onClick={async () => {
+                    try {
+                      await getOrCreateConversation(
+                        user.uid,
+                        user.name,
+                        user.avatar,
+                        fp.uid,
+                        fp.name,
+                        fp.avatar
+                      );
+                      setShowFriendsList(false);
+                      closeSubPage();
+                      if (onMessage) onMessage(fp.uid);
+                    } catch {
+                      showToast("Could not open chat", "error");
+                    }
+                  }}
+                >
+                  💬
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 10, padding: "4px 10px" }}
+                  onClick={() => handleRemoveFriend(fp.uid)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            {friendProfiles.length === 0 && <p style={{ textAlign: "center", color: "rgba(162,155,254,0.3)", padding: 32 }}>No friends yet</p>}
           </div>
         </BottomSheet>
       )}
 
+      {/* Updated Followers List with click to open profile */}
       {showFollowersList && (
         <BottomSheet
           onClose={() => {
@@ -1752,8 +1767,8 @@ export default function ProfilePage({
                     onClick={() => {
                       setShowFollowersList(false);
                       closeSubPage();
-                      setViewingProfile(fp);
-                      openSubPage("viewProfile");
+                      if (onOpenSubPage) onOpenSubPage("viewProfile");
+                      if (onViewProfile) onViewProfile(fp);
                     }}
                     style={{
                       width: 40,
@@ -1787,23 +1802,15 @@ export default function ProfilePage({
                     )}
                   </div>
                   <div
-                    style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
                     onClick={() => {
                       setShowFollowersList(false);
                       closeSubPage();
-                      setViewingProfile(fp);
-                      openSubPage("viewProfile");
+                      if (onOpenSubPage) onOpenSubPage("viewProfile");
+                      if (onViewProfile) onViewProfile(fp);
                     }}
+                    style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
                   >
-                    <p
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 700,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {fp.name}
                     </p>
                     <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>
@@ -1840,6 +1847,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Updated Following List with click to open profile */}
       {showFollowingList && (
         <BottomSheet
           onClose={() => {
@@ -1902,8 +1910,8 @@ export default function ProfilePage({
                     onClick={() => {
                       setShowFollowingList(false);
                       closeSubPage();
-                      setViewingProfile(fp);
-                      openSubPage("viewProfile");
+                      if (onOpenSubPage) onOpenSubPage("viewProfile");
+                      if (onViewProfile) onViewProfile(fp);
                     }}
                     style={{
                       width: 40,
@@ -1937,23 +1945,15 @@ export default function ProfilePage({
                     )}
                   </div>
                   <div
-                    style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
                     onClick={() => {
                       setShowFollowingList(false);
                       closeSubPage();
-                      setViewingProfile(fp);
-                      openSubPage("viewProfile");
+                      if (onOpenSubPage) onOpenSubPage("viewProfile");
+                      if (onViewProfile) onViewProfile(fp);
                     }}
+                    style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
                   >
-                    <p
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 700,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <p style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {fp.name}
                     </p>
                     <p style={{ fontSize: 10, color: fp.online ? "#00e676" : "rgba(162,155,254,0.35)" }}>
@@ -2693,32 +2693,17 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Updated Report Modal with attachment upload */}
       {showReport && (
         <BottomSheet
           onClose={() => {
             closeSubPage();
             setShowReport(false);
+            setReportAttachment(null);
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900 }}>⚠️ Report Issue</h2>
-            <button
-              onClick={() => {
-                closeSubPage();
-                setShowReport(false);
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 20,
-                color: "rgba(162,155,254,0.5)",
-              }}
-            >
-              ✕
-            </button>
-          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>⚠️ Report Issue</h2>
             <input
               className="input-field"
               placeholder="User ID (optional)"
@@ -2727,7 +2712,7 @@ export default function ProfilePage({
               style={{ borderRadius: 14, padding: "12px 14px" }}
             />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {["Harassment", "Spam", "Inappropriate Content", "Fake Profile", "Scam", "Other"].map((r) => (
+              {["Underage", "Porn", "Spam", "Illegal", "Plagiarism", "Violence", "Other"].map((r) => (
                 <button
                   key={r}
                   onClick={() => setReportReason(r)}
@@ -2749,14 +2734,43 @@ export default function ProfilePage({
             </div>
             <textarea
               className="input-field"
-              placeholder="Describe the issue..."
+              placeholder="Describe your problem you are experiencing..."
               value={reportDetails}
               onChange={(e) => setReportDetails(e.target.value)}
               rows={3}
+              maxLength={200}
               style={{ borderRadius: 14, padding: "12px 14px", resize: "none", fontFamily: "inherit" }}
             />
-            <button className="btn btn-danger btn-full" onClick={handleReport}>
-              Submit Report
+            <p style={{ fontSize: 12, color: "#aaa", textAlign: "right", marginTop: -8 }}>{reportDetails.length}/200</p>
+            <div>
+              <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
+                Attachment (Optional, max 20MB)
+              </label>
+              <input
+                type="file"
+                accept="image/*,video/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file && file.size > 20 * 1024 * 1024) {
+                    showToast("File too large (max 20MB)", "warning");
+                    return;
+                  }
+                  setReportAttachment(file || null);
+                }}
+                style={{ fontSize: 12 }}
+              />
+              {reportAttachment && (
+                <p style={{ fontSize: 11, color: "#00e676", marginTop: 4 }}>
+                  {reportAttachment.name} ({(reportAttachment.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
+            </div>
+            <button
+              className="btn btn-danger btn-full"
+              onClick={handleReport}
+              disabled={reportUploading}
+            >
+              {reportUploading ? "Uploading..." : "Submit Report"}
             </button>
           </div>
         </BottomSheet>

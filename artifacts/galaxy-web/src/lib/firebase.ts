@@ -32,10 +32,31 @@ export async function directUpload(
 ): Promise<UploadResult> {
   const sizeKB = ((fileOrBlob.size || 0) / 1024).toFixed(1);
   console.log("[Upload] Cloudinary upload | size:", sizeKB, "KB");
-
   const url = await uploadToCloudinary(fileOrBlob, onProgress);
   console.log("[Upload] Cloudinary URL:", url.substring(0, 100));
   return { url };
 }
 
 export const uploadWithAppCheck = directUpload;
+
+// ✅ Add storage export for compatibility with ProfilePage.tsx (uses Firebase Storage API but actually uploads via Cloudinary)
+const storageRefs = new Map<string, string>();
+
+export const storage = {
+  ref: (path: string) => ({
+    async uploadBytes(file: File): Promise<{ ref: { toString: () => string }; metadata: { fullPath: string } }> {
+      const { url } = await directUpload(file, path);
+      storageRefs.set(path, url);
+      return {
+        ref: { toString: () => path },
+        metadata: { fullPath: path },
+      };
+    },
+    async getDownloadURL(): Promise<string> {
+      const url = storageRefs.get(path);
+      if (url) return url;
+      throw new Error(`No URL found for path: ${path}. Upload first.`);
+    },
+    toString: () => path,
+  }),
+};

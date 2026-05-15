@@ -1,4 +1,5 @@
-import { UserProfile } from "../lib/userService";
+import { useEffect } from "react";
+import { UserProfile, incrementVisitor } from "../lib/userService";
 import { followUser, unfollowUser, sendFriendRequest, removeFriend } from "../lib/userService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
@@ -23,6 +24,13 @@ export default function ProfileViewModal({
   const { showToast } = useToast();
   const isFollowing = currentUser.followingList?.includes(profile.uid) || false;
   const isFriend = currentUser.friendsList?.includes(profile.uid) || false;
+
+  // ✅ Visitor count increment – जब modal खुले तो call होगा
+  useEffect(() => {
+    if (profile && currentUser) {
+      incrementVisitor(profile.uid, currentUser.uid).catch(console.error);
+    }
+  }, [profile, currentUser]);
 
   const handleFollow = async () => {
     await followUser(currentUser.uid, profile.uid);
@@ -98,7 +106,7 @@ export default function ProfileViewModal({
             <span className="stat-label">Followers</span>
           </div>
           <div className="stat">
-            <span className="stat-value">{(profile as any).visitors || 0}</span>
+            <span className="stat-value">{profile.visitors || 0}</span>
             <span className="stat-label">Visitors</span>
           </div>
         </div>
