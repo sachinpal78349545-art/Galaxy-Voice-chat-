@@ -1,3 +1,4 @@
+// ProfilePage.tsx
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db, storage } from "../lib/firebase";
@@ -15,6 +16,7 @@ import FrameAvatar, { FramePreview } from "../components/frames/FrameAvatar";
 import { Language, LANGUAGE_OPTIONS, getCurrentLanguage, setLanguage, isRTL, t } from "../lib/i18n";
 import { Family, createFamily, joinFamily, leaveFamily, getUserFamily, getAllFamilies, searchFamilies, getFamilyIcons, getFamilyLeaderboard, updateFamilySettings, promoteMember, kickMember, transferLeadership, deleteFamily, addFamilyContribution } from "../lib/familyService";
 import { Report, submitReport, getReportQueue, reviewReport, getReportStats, REPORT_CATEGORIES } from "../lib/reportService";
+import SettingsPage from "./SettingsPage";
 
 interface Props {
   user: UserProfile;
@@ -95,7 +97,7 @@ export default function ProfilePage({
 }: Props) {
   const [showAchievements, setShowAchievements] = useState(false);
   const [showDailyTasks, setShowDailyTasks] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [showFriendsList, setShowFriendsList] = useState(false);
@@ -144,23 +146,7 @@ export default function ProfilePage({
   const [globalAlertText, setGlobalAlertText] = useState("");
   const [alertSending, setAlertSending] = useState(false);
   const [modLoading, setModLoading] = useState(false);
-  const [showGodMode, setShowGodMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [godTab, setGodTab] = useState<string>("deviceBan");
-  const [godUserId, setGodUserId] = useState("");
-  const [godUser, setGodUser] = useState<UserProfile | null>(null);
-  const [godLoading, setGodLoading] = useState(false);
-  const [godLevel, setGodLevel] = useState("");
-  const [godXp, setGodXp] = useState("");
-  const [godTransferTo, setGodTransferTo] = useState("");
-  const [godMassDM, setGodMassDM] = useState("");
-  const [godMaintMsg, setGodMaintMsg] = useState("");
-  const [godMaintOn, setGodMaintOn] = useState(false);
-  const [godVipId, setGodVipId] = useState("");
-  const [godBadgeName, setGodBadgeName] = useState("");
-  const [godBadgeIcon, setGodBadgeIcon] = useState("");
-  const [godStoreItemId, setGodStoreItemId] = useState("");
-  const [godStorePrice, setGodStorePrice] = useState("");
   const [ormRoomName, setOrmRoomName] = useState("");
   const [ormTheme, setOrmTheme] = useState("galaxy");
   const [ormSeatCount, setOrmSeatCount] = useState("12");
@@ -183,18 +169,6 @@ export default function ProfilePage({
   const [reportQueueFilter, setReportQueueFilter] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-  const [privacy, setPrivacy] = useState<NonNullable<UserProfile["privacy"]>>(
-    user.privacy || {
-      profileVisible: true,
-      showOnline: true,
-      allowMessages: "everyone",
-      allowGifts: true,
-      pushNotifications: true,
-      messageNotifications: true,
-      giftNotifications: true,
-      roomInviteNotifications: true,
-    }
-  );
   const { showToast } = useToast();
 
   const isAdmin = isSuperAdmin(user);
@@ -222,7 +196,6 @@ export default function ProfilePage({
     setFriendProfiles(profiles);
   };
 
-  // Fix: loadFollowers - first get fresh user data to have up-to-date followersList
   const loadFollowers = async () => {
     setFollowerLoading(true);
     try {
@@ -242,7 +215,6 @@ export default function ProfilePage({
     }
   };
 
-  // Fix: loadFollowing - first get fresh user data to have up-to-date followingList
   const loadFollowing = async () => {
     setFollowingLoading(true);
     try {
@@ -339,10 +311,10 @@ export default function ProfilePage({
       await addTransaction(user.uid, {
         type: "recharge",
         amount: coins,
-        description: `Recharged ${coins} coins`,
+        description: `Recharged ${coins} diamonds`,
       });
       onUpdate((prev) => ({ ...prev, coins: prev.coins + coins }));
-      showToast(`+${coins} coins added!`, "success", "💎");
+      showToast(`+${coins} diamonds added!`, "success", "💎");
     } catch {
       showToast("Recharge failed. Try again.", "error");
     } finally {
@@ -353,7 +325,7 @@ export default function ProfilePage({
   const handleDailyReward = async () => {
     const result = await claimDailyReward(user.uid, user);
     if (result) {
-      showToast(`Daily reward: +${result.coins} coins! Day ${result.streak} streak! 🔥`, "success", "🎁");
+      showToast(`Daily reward: +${result.coins} diamonds! Day ${result.streak} streak! 🔥`, "success", "🎁");
     } else {
       showToast("Already claimed today! Come back tomorrow", "warning");
     }
@@ -399,18 +371,6 @@ export default function ProfilePage({
     showToast("Friend removed", "info");
   };
 
-  const handleSavePrivacy = async () => {
-    try {
-      await updatePrivacy(user.uid, privacy);
-      showToast("Settings saved", "success");
-      setShowPrivacy(false);
-      closeSubPage();
-    } catch {
-      showToast("Failed to save settings. Try again.", "error");
-    }
-  };
-
-  // Updated report handler with attachment upload
   const handleReport = async () => {
     if (!reportReason) {
       showToast("Please select a reason", "warning");
@@ -532,7 +492,7 @@ export default function ProfilePage({
 
   const handlePurchase = async (item: StoreItem) => {
     if (user.coins < item.price) {
-      showToast("Not enough coins!", "warning");
+      showToast("Not enough diamonds!", "warning");
       return;
     }
     const owned = user.inventory || {};
@@ -616,9 +576,9 @@ export default function ProfilePage({
       openSubPage("dailyTasks");
       setShowDailyTasks(true);
     }
-    if (action === "privacy") {
-      openSubPage("privacy");
-      setShowPrivacy(true);
+    if (action === "privacyPolicy") {
+      openSubPage("privacyPolicy");
+      setShowPrivacyPolicy(true);
     }
     if (action === "blocked") {
       openSubPage("blocked");
@@ -666,6 +626,15 @@ export default function ProfilePage({
       setAdminPromoteId("");
       setAdminLookupResult(null);
     }
+    if (action === "officialRules") {
+      openSubPage("officialRules");
+      setShowOfficialRules(true);
+    }
+    if (action === "reportQueue") {
+      openSubPage("reportQueue");
+      setShowReportQueue(true);
+      getReportQueue(reportQueueFilter).then(setReportQueue).catch(() => {});
+    }
     if (action === "family") {
       openSubPage("family");
       setShowFamily(true);
@@ -682,11 +651,6 @@ export default function ProfilePage({
       openSubPage("language");
       setShowLanguage(true);
     }
-    if (action === "reportQueue") {
-      openSubPage("reportQueue");
-      setShowReportQueue(true);
-      getReportQueue(reportQueueFilter).then(setReportQueue).catch(() => {});
-    }
   };
 
   const PROFILE_FUNCTIONS = [
@@ -696,37 +660,6 @@ export default function ProfilePage({
     { icon: "🎒", label: "Backpack", color: "#ec4899", glow: "rgba(236,72,153,0.35)", action: "backpack" },
     { icon: "💡", label: "Help", color: "#22c55e", glow: "rgba(34,197,94,0.35)", action: "help" },
     { icon: "💬", label: "Feedback", color: "#06b6d4", glow: "rgba(6,182,212,0.35)", action: "feedback" },
-  ];
-
-  const SETTINGS_ITEMS = [
-    { icon: "✏️", label: "Edit Profile", desc: "Name, avatar & bio", action: "edit" },
-    { icon: "🌍", label: "Language", desc: getCurrentLanguage().toUpperCase(), action: "language" },
-    { icon: "🔒", label: "Privacy & Settings", desc: "Control who sees you", action: "privacy" },
-    { icon: "🚫", label: "Blocked Users", desc: `${(user.blockedList || []).length} blocked`, action: "blocked" },
-    { icon: "💰", label: "Wallet", desc: `${user.coins.toLocaleString()} coins`, action: "wallet" },
-    { icon: "🛍️", label: "Store", desc: "Frames, effects & themes", action: "store" },
-    { icon: "✅", label: "Daily Tasks", desc: "Earn bonus coins", action: "dailyTasks" },
-    { icon: "🎒", label: "Backpack", desc: "Equipped items", action: "backpack" },
-    { icon: "👪", label: "Family", desc: "Join or create", action: "family" },
-    {
-      icon: "🤝",
-      label: "Friend Requests",
-      desc: friendRequests.length > 0 ? `${friendRequests.length} pending` : "No pending",
-      action: "friendRequests",
-      badge: friendRequests.length || 0,
-    },
-    { icon: "👥", label: "Friends List", desc: `${user.friends || 0} friends`, action: "friendsList" },
-    { icon: "🔍", label: "Find Users", desc: "Search by ID or name", action: "search" },
-    { icon: "🎁", label: "Daily Reward", desc: "Claim free coins", action: "daily" },
-    {
-      icon: "🏆",
-      label: "Achievements",
-      desc: `${unlockedCount}/${achievements.length} unlocked`,
-      action: "achievements",
-    },
-    { icon: "❓", label: "Help", desc: "FAQs & guides", action: "help" },
-    { icon: "💬", label: "Feedback", desc: "Help us improve", action: "feedback" },
-    { icon: "⚠️", label: "Report a Problem", desc: "Report bugs or issues", action: "report" },
   ];
 
   // ---------- RENDER ----------
@@ -890,328 +823,24 @@ export default function ProfilePage({
         </p>
       </div>
 
+      {/* Settings BottomSheet */}
       {showSettings && (
-        <BottomSheet
+        <SettingsPage
+          user={user}
+          isAdmin={isAdmin}
+          friendRequestsCount={friendRequests.length}
+          unlockedCount={unlockedCount}
+          totalAchievements={achievements.length}
+          onMenuAction={handleMenu}
+          onOpenSubPage={openSubPage}
+          onCloseSubPage={closeSubPage}
+          onLogout={handleLogout}
+          onAdminRecharge={onAdminRecharge}
           onClose={() => {
             closeSubPage();
             setShowSettings(false);
           }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900 }}>⚙️ Settings</h2>
-            <button
-              onClick={() => {
-                closeSubPage();
-                setShowSettings(false);
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 20,
-                color: "rgba(162,155,254,0.5)",
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {SETTINGS_ITEMS.map((item, i) => (
-              <React.Fragment key={item.label}>
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    closeSubPage();
-                    handleMenu(item.action);
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    width: "100%",
-                    padding: "12px 8px",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    transition: "background 0.15s",
-                    borderRadius: 12,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(168,85,247,0.06)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
-                >
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      background: "rgba(168,85,247,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 18,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {item.icon}
-                  </div>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{item.label}</p>
-                    <p style={{ fontSize: 10, color: "rgba(139,122,170,0.4)", marginTop: 1 }}>{item.desc}</p>
-                  </div>
-                  {"badge" in item && (item as any).badge > 0 && (
-                    <span
-                      style={{
-                        minWidth: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        background: "#a855f7",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 9,
-                        fontWeight: 800,
-                        padding: "0 5px",
-                        color: "#fff",
-                      }}
-                    >
-                      {(item as any).badge}
-                    </span>
-                  )}
-                  <span style={{ color: "rgba(139,122,170,0.2)", fontSize: 16, fontWeight: 300 }}>›</span>
-                </button>
-                {i < SETTINGS_ITEMS.length - 1 && (
-                  <div style={{ height: 1, background: "rgba(168,85,247,0.04)", marginLeft: 56 }} />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-
-          {(user.globalRole === "official" || isAdmin) && (
-            <>
-              <div style={{ height: 1, background: "rgba(255,215,0,0.1)", margin: "12px 0" }} />
-              <p
-                style={{
-                  fontSize: 10,
-                  fontWeight: 800,
-                  color: "rgba(255,215,0,0.4)",
-                  textTransform: "uppercase",
-                  letterSpacing: 1.5,
-                  marginBottom: 8,
-                }}
-              >
-                Administration
-              </p>
-              {(user.globalRole === "official" || isAdmin) && (
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    closeSubPage();
-                    setShowOfficialRules(true);
-                    openSubPage("officialRules");
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    width: "100%",
-                    padding: "12px 8px",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    borderRadius: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      background: "rgba(0,255,255,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 18,
-                    }}
-                  >
-                    📜
-                  </div>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <p style={{ fontSize: 14, color: "#00ffff", fontWeight: 600 }}>Official Guidelines</p>
-                  </div>
-                  <span style={{ color: "rgba(0,255,255,0.2)", fontSize: 16 }}>›</span>
-                </button>
-              )}
-              {isAdmin && (
-                <>
-                  <button
-                    onClick={() => {
-                      setShowSettings(false);
-                      closeSubPage();
-                      handleMenu("admin");
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      width: "100%",
-                      padding: "12px 8px",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      borderRadius: 12,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 10,
-                        background: "rgba(255,215,0,0.1)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 18,
-                      }}
-                    >
-                      🛡️
-                    </div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <p style={{ fontSize: 14, color: "#FFD700", fontWeight: 600 }}>Admin Panel</p>
-                    </div>
-                    <span style={{ color: "rgba(255,215,0,0.2)", fontSize: 16 }}>›</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowSettings(false);
-                      closeSubPage();
-                      if (onAdminRecharge) onAdminRecharge();
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      width: "100%",
-                      padding: "12px 8px",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      borderRadius: 12,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 10,
-                        background: "rgba(0,230,118,0.12)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 18,
-                      }}
-                    >
-                      💳
-                    </div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <p style={{ fontSize: 14, color: "#00e676", fontWeight: 600 }}>Recharge Approvals</p>
-                      <p style={{ fontSize: 10, color: "rgba(0,230,118,0.5)" }}>Approve UPI recharge requests</p>
-                    </div>
-                    <span style={{ color: "rgba(0,230,118,0.2)", fontSize: 16 }}>›</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowSettings(false);
-                      closeSubPage();
-                      setShowGodMode(true);
-                      openSubPage("godMode");
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      width: "100%",
-                      padding: "12px 8px",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      borderRadius: 12,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 10,
-                        background: "linear-gradient(135deg, rgba(191,0,255,0.15), rgba(0,255,255,0.08))",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 18,
-                      }}
-                    >
-                      ⚡
-                    </div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <p style={{ fontSize: 14, fontWeight: 600 }}>
-                        <span style={{ color: "#bf00ff" }}>God</span> <span style={{ color: "#00ffff" }}>Mode</span>
-                      </p>
-                    </div>
-                    <span style={{ color: "rgba(191,0,255,0.2)", fontSize: 16 }}>›</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowSettings(false);
-                      closeSubPage();
-                      handleMenu("reportQueue");
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      width: "100%",
-                      padding: "12px 8px",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      borderRadius: 12,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 10,
-                        background: "rgba(255,150,50,0.1)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 18,
-                      }}
-                    >
-                      📋
-                    </div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <p style={{ fontSize: 14, color: "#FFA726", fontWeight: 600 }}>Report Queue</p>
-                    </div>
-                    <span style={{ color: "rgba(255,150,50,0.2)", fontSize: 16 }}>›</span>
-                  </button>
-                </>
-              )}
-            </>
-          )}
-
-          <div style={{ height: 1, background: "rgba(255,100,130,0.08)", margin: "12px 0" }} />
-          <button onClick={handleLogout} className="pf-logout-btn">
-            🚪 Log Out
-          </button>
-        </BottomSheet>
+        />
       )}
 
       {showAchievements && (
@@ -1335,7 +964,7 @@ export default function ProfilePage({
                   <span style={{ fontSize: 13, fontWeight: 800, color: task.completed ? "#00e676" : "#FFD700" }}>
                     {task.completed ? "✅" : `+${task.reward}`}
                   </span>
-                  {!task.completed && <p style={{ fontSize: 8, color: "rgba(162,155,254,0.3)" }}>coins</p>}
+                  {!task.completed && <p style={{ fontSize: 8, color: "rgba(162,155,254,0.3)" }}>diamonds</p>}
                 </div>
               </div>
             ))}
@@ -1346,19 +975,20 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {showPrivacy && (
+      {/* Privacy Policy BottomSheet */}
+      {showPrivacyPolicy && (
         <BottomSheet
           onClose={() => {
             closeSubPage();
-            setShowPrivacy(false);
+            setShowPrivacyPolicy(false);
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900 }}>🔒 Privacy & Settings</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#00ffff" }}>📜 Privacy Policy</h2>
             <button
               onClick={() => {
                 closeSubPage();
-                setShowPrivacy(false);
+                setShowPrivacyPolicy(false);
               }}
               style={{
                 background: "none",
@@ -1371,69 +1001,63 @@ export default function ProfilePage({
               ✕
             </button>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <p style={{ fontSize: 12, fontWeight: 800, color: "rgba(162,155,254,0.5)", textTransform: "uppercase", letterSpacing: 1 }}>
-              Privacy
+          <div style={{ flex: 1, overflowY: "auto", padding: "4px 0 20px 0" }}>
+            <p style={{ fontSize: 11, color: "rgba(0,255,255,0.5)", marginBottom: 12 }}>
+              Effective Date: May 15, 2026<br />
+              Developed by: Galaxy Development Team
             </p>
-            <PrivacyToggle label="Profile Visible" value={privacy.profileVisible} onChange={(v) => setPrivacy({ ...privacy, profileVisible: v })} />
-            <PrivacyToggle label="Show Online Status" value={privacy.showOnline} onChange={(v) => setPrivacy({ ...privacy, showOnline: v })} />
-            <PrivacyToggle label="Allow Gifts" value={privacy.allowGifts} onChange={(v) => setPrivacy({ ...privacy, allowGifts: v })} />
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginBottom: 8 }}>
-                Who can message you
-              </p>
-              <div style={{ display: "flex", gap: 8 }}>
-                {(["everyone", "friends", "nobody"] as const).map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setPrivacy({ ...privacy, allowMessages: opt })}
-                    style={{
-                      flex: 1,
-                      padding: "10px 0",
-                      borderRadius: 12,
-                      border: "none",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      background: privacy.allowMessages === opt ? "rgba(108,92,231,0.3)" : "rgba(255,255,255,0.04)",
-                      color: privacy.allowMessages === opt ? "#A29BFE" : "rgba(162,155,254,0.4)",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      textTransform: "capitalize",
-                    }}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
-            <p style={{ fontSize: 12, fontWeight: 800, color: "rgba(162,155,254,0.5)", textTransform: "uppercase", letterSpacing: 1 }}>
-              Notifications
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginTop: 8, marginBottom: 4 }}>
+              1. Information We Collect
             </p>
-            <PrivacyToggle
-              label="Push Notifications"
-              value={privacy.pushNotifications !== false}
-              onChange={(v) => setPrivacy({ ...privacy, pushNotifications: v })}
-            />
-            <PrivacyToggle
-              label="Message Notifications"
-              value={privacy.messageNotifications !== false}
-              onChange={(v) => setPrivacy({ ...privacy, messageNotifications: v })}
-            />
-            <PrivacyToggle
-              label="Gift Notifications"
-              value={privacy.giftNotifications !== false}
-              onChange={(v) => setPrivacy({ ...privacy, giftNotifications: v })}
-            />
-            <PrivacyToggle
-              label="Room Invite Notifications"
-              value={privacy.roomInviteNotifications !== false}
-              onChange={(v) => setPrivacy({ ...privacy, roomInviteNotifications: v })}
-            />
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, marginBottom: 12 }}>
+              To provide a seamless and secure social experience, we collect the following information:<br />
+              • Account Information: Your mobile number and password provided during registration to secure your identity.<br />
+              • User Profile: Details such as your display name, avatar, gender, and date of birth.<br />
+              • Activity Data: Metadata regarding your interactions, such as which voice rooms you join and the duration of your stay. We do not monitor or record private voice conversations.<br />
+              • Technical Data: For security and anti-spam purposes, we collect device identifiers (Android ID/IMEI), IP addresses, and operating system versions.
+            </p>
+
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
+              2. Permissions & Features
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, marginBottom: 12 }}>
+              The App requires the following system permissions to function:<br />
+              • Microphone Access: To enable real-time voice chat within rooms via the integrated SDK.<br />
+              • Storage/Photo Library: To allow you to upload profile pictures and share media within the community.<br />
+              • Push Notifications: To send alerts regarding room invitations, virtual gifts, and system updates.
+            </p>
+
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
+              3. Data Usage & Security
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, marginBottom: 12 }}>
+              • Service Optimization: We use your data to manage your account level (XP), VIP status, and digital badges.<br />
+              • Security Measures: We utilize secure, encrypted servers to ensure your personal information is protected against unauthorized access.<br />
+              • Third-Party Services: We use high-quality voice streaming SDKs that operate under their own strict privacy standards to ensure data integrity.
+            </p>
+
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
+              4. Safety & Age Restriction
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, marginBottom: 12 }}>
+              Galaxy Voice Chat is strictly for individuals aged 18 and older. We do not knowingly permit minors to use the platform. If we discover that a user is under the age of 18, their account will be terminated immediately.
+            </p>
+
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
+              5. Account Deletion
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, marginBottom: 12 }}>
+              Users may request to delete their account at any time through the App settings. Please ensure that all virtual balances (diamonds) are cleared before deletion, as this data cannot be recovered once the account is removed.
+            </p>
+
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
+              6. Contact Support
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>
+              If you have any questions, technical issues, or wish to appeal an account ban, please contact our official support team at:<br />
+              📧 <span style={{ color: "#00ffff" }}>galaxyvoicechat.support@gmail.com</span>
+            </p>
           </div>
-          <button className="btn btn-primary btn-full" style={{ marginTop: 20 }} onClick={handleSavePrivacy}>
-            Save Settings
-          </button>
         </BottomSheet>
       )}
 
@@ -1704,7 +1328,6 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Updated Followers List with click to open profile */}
       {showFollowersList && (
         <BottomSheet
           onClose={() => {
@@ -1767,8 +1390,8 @@ export default function ProfilePage({
                     onClick={() => {
                       setShowFollowersList(false);
                       closeSubPage();
-                      if (onOpenSubPage) onOpenSubPage("viewProfile");
-                      if (onViewProfile) onViewProfile(fp);
+                      setViewingProfile(fp);
+                      openSubPage("viewProfile");
                     }}
                     style={{
                       width: 40,
@@ -1805,8 +1428,8 @@ export default function ProfilePage({
                     onClick={() => {
                       setShowFollowersList(false);
                       closeSubPage();
-                      if (onOpenSubPage) onOpenSubPage("viewProfile");
-                      if (onViewProfile) onViewProfile(fp);
+                      setViewingProfile(fp);
+                      openSubPage("viewProfile");
                     }}
                     style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
                   >
@@ -1847,7 +1470,6 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Updated Following List with click to open profile */}
       {showFollowingList && (
         <BottomSheet
           onClose={() => {
@@ -1910,8 +1532,8 @@ export default function ProfilePage({
                     onClick={() => {
                       setShowFollowingList(false);
                       closeSubPage();
-                      if (onOpenSubPage) onOpenSubPage("viewProfile");
-                      if (onViewProfile) onViewProfile(fp);
+                      setViewingProfile(fp);
+                      openSubPage("viewProfile");
                     }}
                     style={{
                       width: 40,
@@ -1948,8 +1570,8 @@ export default function ProfilePage({
                     onClick={() => {
                       setShowFollowingList(false);
                       closeSubPage();
-                      if (onOpenSubPage) onOpenSubPage("viewProfile");
-                      if (onViewProfile) onViewProfile(fp);
+                      setViewingProfile(fp);
+                      openSubPage("viewProfile");
                     }}
                     style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
                   >
@@ -2693,7 +2315,6 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Updated Report Modal with attachment upload */}
       {showReport && (
         <BottomSheet
           onClose={() => {
@@ -3261,7 +2882,7 @@ export default function ProfilePage({
             >
               <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: "#00ffc8" }}>💰 Wallet Admin</h3>
               <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginBottom: 10 }}>
-                Edit any user's coin balance
+                Edit any user's diamond balance
               </p>
               <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                 <input
@@ -3385,15 +3006,15 @@ export default function ProfilePage({
                           showToast("Enter a valid amount", "warning");
                           return;
                         }
-                        if (!confirm(`Set ${walletEditUser!.name}'s coins to ${val.toLocaleString()}?`))
+                        if (!confirm(`Set ${walletEditUser!.name}'s diamonds to ${val.toLocaleString()}?`))
                           return;
                         setWalletLoading(true);
                         try {
                           await setUserCoins(walletEditUser!.uid, val);
                           setWalletEditUser({ ...walletEditUser!, coins: val });
-                          showToast(`Coins updated to ${val.toLocaleString()}`, "success");
+                          showToast(`Diamonds updated to ${val.toLocaleString()}`, "success");
                         } catch {
-                          showToast("Failed to update coins", "error");
+                          showToast("Failed to update diamonds", "error");
                         }
                         setWalletLoading(false);
                       }}
@@ -3768,120 +3389,6 @@ export default function ProfilePage({
             </div>
           </div>
         </BottomSheet>
-      )}
-
-      {showGodMode && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1200,
-            background: "#0a0618",
-            display: "flex",
-            flexDirection: "column",
-            maxWidth: 430,
-            margin: "0 auto",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "52px 16px 12px",
-              background: "linear-gradient(180deg, rgba(191,0,255,0.15) 0%, transparent 100%)",
-              borderBottom: "1px solid rgba(191,0,255,0.2)",
-            }}
-          >
-            <button
-              onClick={() => {
-                closeSubPage();
-                setShowGodMode(false);
-              }}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(191,0,255,0.3)",
-                cursor: "pointer",
-                fontSize: 16,
-                color: "#fff",
-              }}
-            >
-              ‹
-            </button>
-            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#00ffff", textShadow: "0 0 12px rgba(0,255,255,0.4)" }}>
-              ⚡ God Mode
-            </h2>
-            <div style={{ width: 36 }} />
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              padding: "12px 12px",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-              overflowX: "auto",
-            }}
-          >
-            {(
-              [
-                ["deviceBan", "📱", "Device Ban"],
-                ["shadowBan", "👻", "Shadow Ban"],
-                ["roomHijack", "🏠", "Room Hijack"],
-                ["coinTracker", "💰", "Coin Tracker"],
-                ["massDM", "📧", "Mass DM"],
-                ["maintenance", "🛠️", "Maintenance"],
-                ["idTransfer", "🔄", "ID Transfer"],
-                ["vipId", "👑", "VIP ID Gen"],
-                ["ghostMode", "👻", "Ghost Mode"],
-                ["storeEditor", "🛍️", "Store Editor"],
-                ["levelBooster", "📊", "Level Boost"],
-                ["badgeTool", "🎖️", "Badges"],
-                ["antiScreenshot", "🛡️", "Anti-SS"],
-                ["vanishChat", "💨", "Vanish Chat"],
-                ["ipTracker", "🌐", "IP Tracker"],
-              ] as const
-            ).map(([id, icon, label]) => (
-              <button
-                key={id}
-                onClick={() => setGodTab(id)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 12,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 3,
-                  minWidth: 68,
-                  background: godTab === id ? "rgba(0,255,255,0.15)" : "rgba(255,255,255,0.04)",
-                  color: godTab === id ? "#00ffff" : "rgba(255,255,255,0.4)",
-                  border: godTab === id ? "1px solid rgba(0,255,255,0.3)" : "1px solid rgba(255,255,255,0.06)",
-                  whiteSpace: "nowrap",
-                  transition: "all 0.2s",
-                }}
-              >
-                <span style={{ fontSize: 18 }}>{icon}</span>
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
-            {/* God Mode content (same as original, too long to duplicate here - keep as is) */}
-            {/* For brevity, we assume the original God Mode JSX stays unchanged */}
-            <p style={{ color: "rgba(255,255,255,0.5)", textAlign: "center" }}>
-              (God mode panels – same as your existing code)
-            </p>
-          </div>
-        </div>
       )}
 
       {showStore && (
@@ -4510,7 +4017,7 @@ export default function ProfilePage({
                           }}
                         >
                           {m.role === "leader" ? "👑 Leader" : m.role === "elder" ? "⭐ Elder" : "Member"} •{" "}
-                          {m.contribution.toLocaleString()} coins
+                          {m.contribution.toLocaleString()} diamonds
                         </p>
                       </div>
                     </div>
