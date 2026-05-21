@@ -1,3 +1,4 @@
+// storeService.ts
 import { ref, get, update, runTransaction } from "firebase/database";
 import { db } from "./firebase";
 import { addTransaction } from "./userService";
@@ -44,6 +45,7 @@ export const ANIMATED_FRAME_IDS = [
   "frame_electric",
   "frame_galaxy",
   "frame_diamond_royal",
+  "fantasy_gold_frame", // ✅ नया फ्रेम
 ] as const;
 
 export function isAnimatedFrame(frameId: string): boolean {
@@ -64,6 +66,9 @@ export const STORE_ITEMS: StoreItem[] = [
   { id: "frame_electric", name: "Electric Storm", icon: "\u26A1", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #00e5ff, #2979ff, #651fff, #00e5ff)", rarity: "epic" },
   { id: "frame_galaxy", name: "Galaxy Vortex", icon: "\u{1F30C}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #6a0dad, #1e90ff, #ff00ff, #6a0dad)", rarity: "legendary" },
   { id: "frame_diamond_royal", name: "Diamond Royal", icon: "\u{1F48E}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #b9f2ff, #e0e0e0, #80deea, #b9f2ff)", rarity: "legendary" },
+
+  // ✅ नया फैंटेसी गोल्ड फ्रेम
+  { id: "fantasy_gold_frame", name: "Fantasy Gold", icon: "👑", category: "frame", price: 800, preview: "linear-gradient(145deg, #FFD700, #FFA500)", rarity: "legendary" },
 
   { id: "entry_lightning", name: "Lightning Strike", icon: "\u26A1", category: "entry", price: 300, preview: "linear-gradient(135deg, #FFD700, #FF6B35)", rarity: "common" },
   { id: "entry_stars", name: "Starfall", icon: "\u2B50", category: "entry", price: 600, preview: "linear-gradient(135deg, #6C5CE7, #A29BFE)", rarity: "rare" },
@@ -107,6 +112,7 @@ export const FRAME_COLORS: Record<string, { primary: string; secondary: string; 
   frame_electric:      { primary: "#00e5ff", secondary: "#2979ff", tertiary: "#651fff" },
   frame_galaxy:        { primary: "#ff00ff", secondary: "#6a0dad", tertiary: "#1e90ff" },
   frame_diamond_royal: { primary: "#b9f2ff", secondary: "#e0e0e0", tertiary: "#80deea" },
+  fantasy_gold_frame:  { primary: "#FFD700", secondary: "#FFF8C4", tertiary: "#B8860B" },
 };
 
 export function getFrameColors(frameId: string) {

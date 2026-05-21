@@ -13,6 +13,8 @@ import { useToast } from "../lib/toastContext";
 import { STORE_ITEMS, StoreItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, isAnimatedFrame } from "../lib/storeService";
 import SuperAdminAvatar from "../components/SuperAdminAvatar";
 import FrameAvatar, { FramePreview } from "../components/frames/FrameAvatar";
+import FantasyFrame from "../components/frames/FantasyFrame";
+import OfficialBadge from "../components/OfficialBadge";
 import { Language, LANGUAGE_OPTIONS, getCurrentLanguage, setLanguage, isRTL, t } from "../lib/i18n";
 import { Family, createFamily, joinFamily, leaveFamily, getUserFamily, getAllFamilies, searchFamilies, getFamilyIcons, getFamilyLeaderboard, updateFamilySettings, promoteMember, kickMember, transferLeadership, deleteFamily, addFamilyContribution } from "../lib/familyService";
 import { Report, submitReport, getReportQueue, reviewReport, getReportStats, REPORT_CATEGORIES } from "../lib/reportService";
@@ -185,7 +187,6 @@ export default function ProfilePage({
   const openSubPage = useCallback((id: string) => onOpenSubPage?.(id), [onOpenSubPage]);
   const closeSubPage = useCallback(() => onCloseSubPage?.(), [onCloseSubPage]);
 
-  // Load friends
   const loadFriends = async () => {
     const friends = user.friendsList || [];
     const profiles: UserProfile[] = [];
@@ -207,8 +208,7 @@ export default function ProfilePage({
         if (p) profiles.push(p);
       }
       setFollowerProfiles(profiles);
-    } catch (err) {
-      console.error(err);
+    } catch {
       showToast("Failed to load followers", "error");
     } finally {
       setFollowerLoading(false);
@@ -226,8 +226,7 @@ export default function ProfilePage({
         if (p) profiles.push(p);
       }
       setFollowingProfiles(profiles);
-    } catch (err) {
-      console.error(err);
+    } catch {
       showToast("Failed to load following", "error");
     } finally {
       setFollowingLoading(false);
@@ -244,7 +243,6 @@ export default function ProfilePage({
     setBlockedProfiles(profiles);
   };
 
-  // effects
   useEffect(() => {
     if (isAdmin) ensureSuperAdmin(user.uid).catch(console.error);
     if (isAdmin && !ormLoaded) {
@@ -284,7 +282,6 @@ export default function ProfilePage({
     return unsub;
   }, [user.uid]);
 
-  // handlers
   const handleCopyId = async () => {
     try {
       await navigator.clipboard.writeText(user.userId || user.uid);
@@ -388,8 +385,7 @@ export default function ProfilePage({
         const fileRef = storageRef(storage, `reports/${user.uid}/${Date.now()}_${reportAttachment.name}`);
         await uploadBytes(fileRef, reportAttachment);
         attachmentUrl = await getDownloadURL(fileRef);
-      } catch (err) {
-        console.error(err);
+      } catch {
         showToast("Failed to upload attachment", "error");
         setReportUploading(false);
         return;
@@ -695,6 +691,27 @@ export default function ProfilePage({
               <div className="pf-avatar-inner">
                 {isAdmin ? (
                   <SuperAdminAvatar src={user.avatar} userId={user.userId || ""} size={92} onClick={onEditProfile} />
+                ) : user.equippedFrame === "fantasy_gold_frame" ? (
+                  <FantasyFrame size={92} variant="gold" animated>
+                    {user.avatar?.startsWith("http") ? (
+                      <img
+                        src={user.avatar}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = "none";
+                          const span = document.createElement("span");
+                          span.style.fontSize = "28px";
+                          span.style.color = "#fff";
+                          span.textContent = user.name?.slice(0, 2).toUpperCase() || "👤";
+                          img.parentElement!.appendChild(span);
+                        }}
+                      />
+                    ) : (
+                      <span className="pf-avatar-text">{user.name?.slice(0, 2).toUpperCase() || "👤"}</span>
+                    )}
+                  </FantasyFrame>
                 ) : user.avatar?.startsWith?.("http") ? (
                   <img
                     src={user.avatar}
@@ -731,9 +748,7 @@ export default function ProfilePage({
           <span className="pf-grey-pill">Diamond</span>
           {user.vip && <span className="pf-verified-pill">👑</span>}
           {!isAdmin && user.globalRole === "official" ? (
-            <span className="official-chat-tag" style={{ fontSize: 8, padding: "2px 8px", marginLeft: "auto" }}>
-              🛡️ OFFICIAL
-            </span>
+            <OfficialBadge size="sm" />
           ) : (
             <span className="pf-home-icon">🏠</span>
           )}
@@ -843,6 +858,7 @@ export default function ProfilePage({
         />
       )}
 
+      {/* Achievements BottomSheet */}
       {showAchievements && (
         <BottomSheet
           onClose={() => {
@@ -899,6 +915,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Daily Tasks BottomSheet */}
       {showDailyTasks && (
         <BottomSheet
           onClose={() => {
@@ -1016,7 +1033,6 @@ export default function ProfilePage({
               • Activity Data: Metadata regarding your interactions, such as which voice rooms you join and the duration of your stay. We do not monitor or record private voice conversations.<br />
               • Technical Data: For security and anti-spam purposes, we collect device identifiers (Android ID/IMEI), IP addresses, and operating system versions.
             </p>
-
             <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
               2. Permissions & Features
             </p>
@@ -1026,7 +1042,6 @@ export default function ProfilePage({
               • Storage/Photo Library: To allow you to upload profile pictures and share media within the community.<br />
               • Push Notifications: To send alerts regarding room invitations, virtual gifts, and system updates.
             </p>
-
             <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
               3. Data Usage & Security
             </p>
@@ -1035,21 +1050,18 @@ export default function ProfilePage({
               • Security Measures: We utilize secure, encrypted servers to ensure your personal information is protected against unauthorized access.<br />
               • Third-Party Services: We use high-quality voice streaming SDKs that operate under their own strict privacy standards to ensure data integrity.
             </p>
-
             <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
               4. Safety & Age Restriction
             </p>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, marginBottom: 12 }}>
               Galaxy Voice Chat is strictly for individuals aged 18 and older. We do not knowingly permit minors to use the platform. If we discover that a user is under the age of 18, their account will be terminated immediately.
             </p>
-
             <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
               5. Account Deletion
             </p>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, marginBottom: 12 }}>
               Users may request to delete their account at any time through the App settings. Please ensure that all virtual balances (diamonds) are cleared before deletion, as this data cannot be recovered once the account is removed.
             </p>
-
             <p style={{ fontSize: 13, fontWeight: 700, color: "#FFD700", marginBottom: 4 }}>
               6. Contact Support
             </p>
@@ -1061,6 +1073,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Friend Requests BottomSheet */}
       {showFriendRequests && (
         <BottomSheet
           onClose={() => {
@@ -1200,6 +1213,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Friends List BottomSheet */}
       {showFriendsList && (
         <BottomSheet
           onClose={() => {
@@ -1328,6 +1342,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Followers List BottomSheet */}
       {showFollowersList && (
         <BottomSheet
           onClose={() => {
@@ -1470,6 +1485,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Following List BottomSheet */}
       {showFollowingList && (
         <BottomSheet
           onClose={() => {
@@ -1612,6 +1628,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Viewing Profile BottomSheet */}
       {viewingProfile && (
         <BottomSheet
           onClose={() => {
@@ -1675,20 +1692,11 @@ export default function ProfilePage({
                 )}
               </div>
               {viewingProfile.globalRole === "official" && !isSuperAdmin(viewingProfile) && (
-                <img
-                  src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.png`}
-                  alt="Official"
-                  style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", height: 18 }}
-                />
+                <OfficialBadge size="sm" />
               )}
             </div>
             <div style={{ textAlign: "center", marginTop: 4 }}>
               <p style={{ fontSize: 18, fontWeight: 900 }}>{viewingProfile.name}</p>
-              {viewingProfile.globalRole === "official" && !isSuperAdmin(viewingProfile) && (
-                <span className="official-chat-tag" style={{ fontSize: 9, padding: "2px 10px", borderRadius: 8 }}>
-                  🛡️ OFFICIAL
-                </span>
-              )}
               <p style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", marginTop: 4 }}>
                 Level {viewingProfile.level} · {viewingProfile.xp} XP
               </p>
@@ -2257,6 +2265,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Blocked Users BottomSheet */}
       {showBlocked && (
         <BottomSheet
           onClose={() => {
@@ -2315,6 +2324,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Report BottomSheet */}
       {showReport && (
         <BottomSheet
           onClose={() => {
@@ -2397,6 +2407,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Search BottomSheet */}
       {showSearch && (
         <BottomSheet
           onClose={() => {
@@ -2476,6 +2487,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Feedback BottomSheet */}
       {showFeedback && (
         <BottomSheet
           onClose={() => {
@@ -2551,6 +2563,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Help BottomSheet */}
       {showHelp && (
         <BottomSheet
           onClose={() => {
@@ -2666,6 +2679,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Admin Panel BottomSheet */}
       {showAdminPanel && (
         <BottomSheet
           onClose={() => {
@@ -3391,6 +3405,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Store BottomSheet */}
       {showStore && (
         <div
           style={{
@@ -3609,6 +3624,7 @@ export default function ProfilePage({
         </div>
       )}
 
+      {/* Backpack BottomSheet */}
       {showBackpack && (
         <div
           style={{
@@ -3820,6 +3836,7 @@ export default function ProfilePage({
         </div>
       )}
 
+      {/* Official Rules BottomSheet */}
       {showOfficialRules && (
         <BottomSheet
           onClose={() => {
@@ -3909,6 +3926,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Family BottomSheet */}
       {showFamily && (
         <BottomSheet
           onClose={() => {
@@ -4182,6 +4200,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Language BottomSheet */}
       {showLanguage && (
         <BottomSheet
           onClose={() => {
@@ -4233,6 +4252,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
+      {/* Report Queue BottomSheet */}
       {showReportQueue && isAdmin && (
         <BottomSheet
           onClose={() => {

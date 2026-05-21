@@ -3,6 +3,7 @@ import { UserProfile, incrementVisitor } from "../lib/userService";
 import { followUser, unfollowUser, sendFriendRequest, removeFriend } from "../lib/userService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
+import OfficialBadge from "./OfficialBadge";
 
 interface ProfileViewModalProps {
   profile: UserProfile;
@@ -25,7 +26,17 @@ export default function ProfileViewModal({
   const isFollowing = currentUser.followingList?.includes(profile.uid) || false;
   const isFriend = currentUser.friendsList?.includes(profile.uid) || false;
 
-  // ✅ Visitor count increment – जब modal खुले तो call होगा
+  // ✅ FIXED: Added globalRole === "official" so that users promoted via Admin Panel show the badge
+  const isOfficialUser = 
+    profile.globalRole === "official" ||   // 👈 यह लाइन जोड़ी गई है
+    (profile as any).isOfficial === true || 
+    (profile as any).official === true ||
+    (profile as any).role === "official" ||
+    (profile as any).status === "Official" ||
+    profile.level >= 10 || 
+    profile.uid === "admin";
+
+  // Visitor count increment
   useEffect(() => {
     if (profile && currentUser) {
       incrementVisitor(profile.uid, currentUser.uid).catch(console.error);
@@ -82,7 +93,12 @@ export default function ProfileViewModal({
 
         <div className="profile-avatar">{renderAvatar()}</div>
 
-        <h2 className="profile-name">{profile.name}</h2>
+        {/* Name + Official Premium Badge */}
+        <div className="name-badge-wrapper">
+          <h2 className="profile-name">{profile.name}</h2>
+          {isOfficialUser && <OfficialBadge size="sm" />}
+        </div>
+
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
 
         <div className="profile-id" onClick={copyId}>
@@ -188,7 +204,14 @@ export default function ProfileViewModal({
           background: rgba(168,85,247,0.15); display: flex; align-items: center; justify-content: center;
           font-size: 48px;
         }
-        .profile-name { font-size: 22px; font-weight: 800; margin: 8px 0 4px; }
+        .name-badge-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin: 8px 0 4px;
+        }
+        .profile-name { font-size: 22px; font-weight: 800; margin: 0; }
         .profile-bio { font-size: 13px; color: #c0b5ff; margin-bottom: 8px; }
         .profile-id {
           display: inline-flex; align-items: center; gap: 8px;

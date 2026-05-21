@@ -18,10 +18,10 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStep, setUploadStep] = useState("");
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  
   const { showToast } = useToast();
 
   const validate = (): boolean => {
@@ -61,28 +61,18 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
       setUploadStep("Uploading...");
 
       const blob = new Blob([compressed], { type: "image/jpeg" });
-      console.log("[DP] Uploading to Cloudinary, size:", blob.size, "bytes");
-
       const url = await uploadToCloudinary(blob, (pct) => {
         setUploadProgress(30 + Math.round(pct * 0.7));
       });
-      console.log("[DP] Cloudinary URL:", url);
 
       setUploadProgress(100);
       setUploadStep("Done!");
       setForm(f => ({ ...f, avatar: url }));
+      
       showToast("Photo uploaded!", "success");
     } catch (err: any) {
       setUploadProgress(0);
       setUploadStep("");
-      console.error("=== DP UPLOAD ERROR ===");
-      console.error("[DP] error.code:", err?.code);
-      console.error("[DP] error.message:", err?.message);
-      console.error("[DP] error.serverResponse:", err?.serverResponse);
-      console.error("[DP] error.name:", err?.name);
-      console.error("[DP] error.customData:", err?.customData);
-      console.error("[DP] Full error:", err);
-      try { console.error("[DP] Stringified:", JSON.stringify(err, Object.getOwnPropertyNames(err))); } catch {}
       showToast(`Upload failed: ${err?.code || err?.message || "Unknown"}`, "error");
     } finally {
       setUploading(false);
@@ -97,11 +87,11 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
     try {
       const updated: UserProfile = { ...user, ...form };
       await updateUser(user.uid, { name: form.name, bio: form.bio, gender: form.gender, birthday: form.birthday, avatar: form.avatar });
+      
       onUpdate(updated);
-      setSaved(true);
-      showToast("Profile saved!", "success", "\u2705");
+      showToast("Profile saved!", "success");
+      
       setTimeout(() => {
-        setSaved(false);
         onBack();
       }, 1500);
     } catch (err) {
@@ -121,37 +111,10 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
           border: "1px solid rgba(255,255,255,0.09)", cursor: "pointer", fontSize: 18, color: "#fff",
         }}>{"\u2039"}</button>
         <h1 style={{ fontSize: 18, fontWeight: 900, flex: 1 }}>Edit Profile {"\u270F\uFE0F"}</h1>
-        <button className="btn btn-primary btn-sm" onClick={save} disabled={saving || saved}>
-          {saved ? "\u2705 Saved!" : saving ? "Saving..." : "Save"}
+        <button className="btn btn-primary btn-sm" onClick={save} disabled={saving}>
+          {saving ? "Saving..." : "Save"}
         </button>
       </div>
-
-      {/* Success overlay */}
-      {saved && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center",
-          background: "rgba(5,1,18,0.6)", backdropFilter: "blur(4px)",
-        }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: 40, background: "rgba(0,230,118,0.15)",
-              border: "3px solid rgba(0,230,118,0.5)", display: "flex", alignItems: "center", justifyContent: "center",
-              animation: "successPulse 0.5s ease",
-            }}>
-              <span style={{ fontSize: 40 }}>{"\u2705"}</span>
-            </div>
-            <p style={{ fontSize: 18, fontWeight: 800, color: "#00e676" }}>Profile Saved!</p>
-            {["\u{1F389}", "\u2728", "\u{1F31F}", "\u{1F4AB}", "\u{1F38A}"].map((c, i) => (
-              <div key={i} style={{
-                position: "absolute",
-                left: `${20 + i * 15}%`, top: "40%",
-                fontSize: 24, animation: `confetti 1.5s ease-out ${i * 0.1}s forwards`,
-                pointerEvents: "none",
-              }}>{c}</div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div style={{ padding: "24px 16px", display: "flex", flexDirection: "column", gap: 22 }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -176,20 +139,6 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
                 <div style={{ width: 26, height: 26, borderRadius: 13, border: "2.5px solid rgba(162,155,254,0.3)", borderTopColor: "#A29BFE", animation: "spin 0.7s linear infinite" }} />
                 <span style={{ fontSize: 12, color: "#fff", fontWeight: 800 }}>{uploadProgress}%</span>
                 <span style={{ fontSize: 8, color: "rgba(162,155,254,0.8)", fontWeight: 600 }}>{uploadStep}</span>
-              </div>
-            )}
-            {uploadProgress > 0 && (
-              <div style={{
-                position: "absolute", bottom: -6, left: 4, right: 4, height: 4, borderRadius: 2,
-                background: "rgba(255,255,255,0.1)",
-              }}>
-                <div style={{
-                  height: "100%", borderRadius: 2, width: `${uploadProgress}%`,
-                  background: uploadProgress === 100
-                    ? "linear-gradient(90deg,#00e676,#00c853)"
-                    : "linear-gradient(90deg,#6C5CE7,#A29BFE)",
-                  transition: "width 0.3s ease",
-                }} />
               </div>
             )}
           </div>
@@ -238,15 +187,16 @@ export default function EditProfilePage({ user, onUpdate, onBack }: Props) {
           <input className="input-field" type="date" value={form.birthday} onChange={e => setForm(f => ({ ...f, birthday: e.target.value }))} />
         </div>
 
-        <button className="btn btn-primary btn-full" style={{ padding: "15px 0", fontSize: 15 }} onClick={save} disabled={saving || saved}>
-          {saved ? "\u2705 Saved!" : saving ? "Saving..." : "\u2713 Save Changes"}
+        <button className="btn btn-primary btn-full" style={{ padding: "15px 0", fontSize: 15 }} onClick={save} disabled={saving}>
+          {saving ? "Saving..." : "\u2713 Save Changes"}
         </button>
       </div>
 
+      {/* Emoji Picker Modal */}
       {showPicker && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(5,1,18,0.88)", backdropFilter: "blur(10px)",
-          display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400,
+          display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 400, // FIXED: justifyComptent -> justifyContent
         }} onClick={() => setShowPicker(false)}>
           <div className="card" style={{
             width: "100%", maxWidth: 400, borderRadius: "24px 24px 0 0",
