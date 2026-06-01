@@ -64,6 +64,12 @@ export interface UserProfile {
   friends: number;
   level: number;
   xp: number;
+  // === ADDED FOR WEALTH & CHARM LEVELS ===
+  wealthLevel: number;
+  wealthXp: number;
+  charmLevel: number;
+  charmXp: number;
+  // ======================================
   vip: boolean;
   online: boolean;
   lastSeen: number;
@@ -85,7 +91,7 @@ export interface UserProfile {
   messagesSent?: number;
   giftsGiven?: number;
   totalEarnings?: number;
-  visitors?: number;   // ✅ नया – visitor count
+  visitors?: number;
   privacy?: {
     profileVisible: boolean;
     showOnline: boolean;
@@ -125,6 +131,12 @@ export const DEFAULT_PROFILE: Partial<UserProfile> = {
   friends: 0,
   level: 1,
   xp: 0,
+  // === ADDED DEFAULT VALUES ===
+  wealthLevel: 1,
+  wealthXp: 0,
+  charmLevel: 1,
+  charmXp: 0,
+  // ============================
   vip: false,
   online: true,
   lastSeen: Date.now(),
@@ -390,7 +402,7 @@ export async function removeFriend(myUid: string, friendUid: string): Promise<vo
   await update(ref(db, `users/${friendUid}`), { friendsList: theirFriends, friends: theirFriends.length });
 }
 
-// ✅ Updated reportUser with attachmentUrl support
+// Updated reportUser with attachmentUrl support
 export async function reportUser(reporterUid: string, reportedUid: string, reason: string, details: string, attachmentUrl?: string): Promise<void> {
   const rRef = push(ref(db, "reports"));
   await set(rRef, {
@@ -783,9 +795,28 @@ export async function removeShadowBan(targetUid: string, callerUid?: string): Pr
   await update(ref(db, `users/${targetUid}`), { shadowBanned: false });
 }
 
-export async function setUserLevelXP(targetUid: string, level: number, xp: number): Promise<void> {
-  await update(ref(db, `users/${targetUid}`), { level, xp, vip: level >= 10 });
+// === MODIFIED: setUserLevelXP now supports active, wealth, and charm ===
+export async function setUserLevelXP(
+  targetUid: string,
+  level: number,
+  xp: number,
+  type: "active" | "wealth" | "charm" = "active"
+): Promise<void> {
+  const updateData: any = {};
+  if (type === "active") {
+    updateData.level = level;
+    updateData.xp = xp;
+    updateData.vip = level >= 10;
+  } else if (type === "wealth") {
+    updateData.wealthLevel = level;
+    updateData.wealthXp = xp;
+  } else if (type === "charm") {
+    updateData.charmLevel = level;
+    updateData.charmXp = xp;
+  }
+  await update(ref(db, `users/${targetUid}`), updateData);
 }
+// =================================================================
 
 export async function transferAccountData(fromUid: string, toUid: string): Promise<void> {
   const fromUser = await getUser(fromUid);
@@ -843,7 +874,7 @@ export async function getUserTransactions(targetUid: string): Promise<Transactio
   return Object.values(val) as Transaction[];
 }
 
-// ✅ Visitor count increment – prevents duplicate counting per session
+// Visitor count increment – prevents duplicate counting per session
 export async function incrementVisitor(profileUid: string, viewerUid: string): Promise<void> {
   const sessionKey = `visited_${profileUid}_${viewerUid}`;
   if (typeof window !== "undefined" && sessionStorage.getItem(sessionKey)) return;

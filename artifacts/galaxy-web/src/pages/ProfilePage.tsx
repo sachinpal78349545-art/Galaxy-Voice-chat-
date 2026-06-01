@@ -1,4 +1,4 @@
-// ProfilePage.tsx
+// ProfilePage.tsx – Full version with LevelPage and StorePage + navigation bar auto-hide (no missing parts)
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db, storage } from "../lib/firebase";
@@ -19,6 +19,8 @@ import { Language, LANGUAGE_OPTIONS, getCurrentLanguage, setLanguage, isRTL, t }
 import { Family, createFamily, joinFamily, leaveFamily, getUserFamily, getAllFamilies, searchFamilies, getFamilyIcons, getFamilyLeaderboard, updateFamilySettings, promoteMember, kickMember, transferLeadership, deleteFamily, addFamilyContribution } from "../lib/familyService";
 import { Report, submitReport, getReportQueue, reviewReport, getReportStats, REPORT_CATEGORIES } from "../lib/reportService";
 import SettingsPage from "./SettingsPage";
+import UserLevelPage from "./UserLevelPage";
+import StorePage from "./StorePage";
 
 interface Props {
   user: UserProfile;
@@ -97,6 +99,8 @@ export default function ProfilePage({
   onOpenSubPage,
   onCloseSubPage,
 }: Props) {
+  const [showLevelPage, setShowLevelPage] = useState(false);
+  const [showStorePage, setShowStorePage] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showDailyTasks, setShowDailyTasks] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
@@ -108,7 +112,6 @@ export default function ProfilePage({
   const [showFeedback, setShowFeedback] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showHelpArticle, setShowHelpArticle] = useState<string | null>(null);
-  const [showStore, setShowStore] = useState(false);
   const [showBackpack, setShowBackpack] = useState(false);
   const [storeCategory, setStoreCategory] = useState<"frame" | "entry" | "theme">("frame");
   const [storeLoading, setStoreLoading] = useState<string | null>(null);
@@ -175,6 +178,59 @@ export default function ProfilePage({
 
   const isAdmin = isSuperAdmin(user);
 
+  // ---------- 🔥 NAVIGATION BAR AUTO-HIDE ON ANY SUB-PAGE ----------
+  const subPageStates = [
+    showLevelPage, showStorePage, showSettings, showAchievements, showDailyTasks,
+    showPrivacyPolicy, showBlocked, showFriendRequests, showFriendsList,
+    showReport, showSearch, showFeedback, showHelp, showBackpack,
+    showAdminPanel, showOfficialRules, showFamily, showLanguage, showReportQueue,
+    viewingProfile, showFollowersList, showFollowingList
+  ];
+
+  useEffect(() => {
+    const anySubPageOpen = subPageStates.some(state => state === true);
+    const styleId = "profile-nav-hider";
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+
+    if (anySubPageOpen) {
+      if (!style) {
+        style = document.createElement("style");
+        style.id = styleId;
+        document.head.appendChild(style);
+      }
+      style.textContent = `
+        .bottom-navigation, .bottom-nav, .tab-bar, .bottom-tabs,
+        .navigation-bar, .nav-bar-bottom, footer, nav.bottom,
+        [class*='BottomNav'], [class*='bottomNav'], [class*='TabBar'],
+        [class*='bottom-bar'], [class*='bottomBar']
+        {
+          display: none !important;
+        }
+      `;
+    } else {
+      if (style) style.remove();
+    }
+  }, subPageStates);
+
+  // Inform parent when level page opens/closes
+  useEffect(() => {
+    if (showLevelPage) {
+      onOpenSubPage?.("level");
+    } else {
+      onCloseSubPage?.();
+    }
+  }, [showLevelPage, onOpenSubPage, onCloseSubPage]);
+
+  // Inform parent when store page opens/closes
+  useEffect(() => {
+    if (showStorePage) {
+      onOpenSubPage?.("store");
+    } else {
+      onCloseSubPage?.();
+    }
+  }, [showStorePage, onOpenSubPage, onCloseSubPage]);
+
+  // ---------- ALL HOOKS AND FUNCTIONS (unchanged from original) ----------
   const achievements = useMemo(() => getAchievementsList(user), [user]);
   const unlockedCount = useMemo(() => achievements.filter((a) => a.unlocked).length, [achievements]);
   const dailyTasks = useMemo(() => getDailyTaskProgress(user), [user]);
@@ -591,9 +647,8 @@ export default function ProfilePage({
       loadFriends();
     }
     if (action === "store") {
-      openSubPage("store");
-      setShowStore(true);
-      setStoreCategory("frame");
+      setShowStorePage(true);
+      return;
     }
     if (action === "backpack") {
       openSubPage("backpack");
@@ -658,7 +713,15 @@ export default function ProfilePage({
     { icon: "💬", label: "Feedback", color: "#06b6d4", glow: "rgba(6,182,212,0.35)", action: "feedback" },
   ];
 
-  // ---------- RENDER ----------
+  // ---------- CONDITIONAL RENDERS ----------
+  if (showLevelPage) {
+    return <UserLevelPage user={user} onBack={() => setShowLevelPage(false)} onUpdate={onUpdate} />;
+  }
+  if (showStorePage) {
+    return <StorePage user={user} onBack={() => setShowStorePage(false)} onUpdate={onUpdate} />;
+  }
+
+  // ---------- MAIN RENDER (original JSX, with old store bottom sheet removed) ----------
   return (
     <div className="page-scroll no-screenshot" style={{ background: "#0a0820" }}>
       <div className="pf-hero">
@@ -744,7 +807,9 @@ export default function ProfilePage({
         <div className="pf-badge-line">
           <span className="pf-pink-badge">18</span>
           <span className="pf-flag">🇮🇳</span>
-          <span className="pf-grey-pill">Lv.{user.level}</span>
+          <span className="pf-grey-pill" onClick={() => setShowLevelPage(true)} style={{ cursor: "pointer" }}>
+            Lv.{user.level}
+          </span>
           <span className="pf-grey-pill">Diamond</span>
           {user.vip && <span className="pf-verified-pill">👑</span>}
           {!isAdmin && user.globalRole === "official" ? (
@@ -768,7 +833,7 @@ export default function ProfilePage({
           ))}
         </div>
 
-        <div className="pf-level-badge-row">
+        <div className="pf-level-badge-row" onClick={() => setShowLevelPage(true)} style={{ cursor: "pointer" }}>
           <div className="pf-level-badge">
             <div className="pf-level-badge-core">{user.level}</div>
             <span className="pf-wing">✦</span>
@@ -3403,225 +3468,6 @@ export default function ProfilePage({
             </div>
           </div>
         </BottomSheet>
-      )}
-
-      {/* Store BottomSheet */}
-      {showStore && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1100,
-            background: "#0F0F1A",
-            display: "flex",
-            flexDirection: "column",
-            maxWidth: 430,
-            margin: "0 auto",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "52px 16px 12px",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
-            <button
-              onClick={() => {
-                closeSubPage();
-                setShowStore(false);
-              }}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.09)",
-                cursor: "pointer",
-                fontSize: 16,
-                color: "#fff",
-              }}
-            >
-              ‹
-            </button>
-            <h2 style={{ fontSize: 18, fontWeight: 900 }}>🛍️ Store</h2>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(255,215,0,0.1)",
-                padding: "6px 12px",
-                borderRadius: 20,
-                border: "1px solid rgba(255,215,0,0.2)",
-              }}
-            >
-              <span style={{ fontSize: 14 }}>💎</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#FFD700" }}>{user.coins.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 0,
-              padding: "0",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
-            {(
-              [
-                ["frame", "🖼️", "Frames"],
-                ["entry", "⚡", "Entry FX"],
-                ["theme", "🎨", "Themes"],
-              ] as const
-            ).map(([cat, ico, label]) => (
-              <button
-                key={cat}
-                onClick={() => setStoreCategory(cat)}
-                style={{
-                  flex: 1,
-                  padding: "14px 0",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  background: storeCategory === cat ? "rgba(108,92,231,0.15)" : "transparent",
-                  borderBottom: storeCategory === cat ? "2px solid #6C5CE7" : "2px solid transparent",
-                  color: storeCategory === cat ? "#A29BFE" : "rgba(162,155,254,0.45)",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  transition: "all 0.2s",
-                }}
-              >
-                {ico} {label}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {STORE_ITEMS.filter((i) => i.category === storeCategory).map((item) => {
-              const owned = !!(user.inventory && user.inventory[item.id]);
-              const equipped = user.inventory?.[item.id]?.equipped;
-              const rc = getRarityColor(item.rarity);
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    border: `1px solid ${rc}30`,
-                    background: "rgba(255,255,255,0.03)",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: 90,
-                      background: isAnimatedFrame(item.id) ? "rgba(15,10,30,0.9)" : item.preview,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 40,
-                      position: "relative",
-                    }}
-                  >
-                    {item.category === "frame" && isAnimatedFrame(item.id) && <FramePreview frameId={item.id} size={50} />}
-                    {item.category === "frame" && !isAnimatedFrame(item.id) &&
-                      (() => {
-                        const pngPath = getPngFramePath(item.id);
-                        return pngPath ? (
-                          <div style={{ position: "relative", width: 60, height: 60 }}>
-                            <div
-                              style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: "50%",
-                                background: "rgba(108,92,231,0.3)",
-                                position: "absolute",
-                                top: "50%",
-                                left: "50%",
-                                transform: "translate(-50%, -50%)",
-                              }}
-                            />
-                            <img
-                              src={pngPath}
-                              alt=""
-                              style={{
-                                position: "absolute",
-                                inset: -4,
-                                width: "calc(100% + 8px)",
-                                height: "calc(100% + 8px)",
-                                objectFit: "contain",
-                                pointerEvents: "none",
-                              }}
-                            />
-                          </div>
-                        ) : null;
-                      })()}
-                    {item.category !== "frame" && item.icon}
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 6,
-                        right: 6,
-                        fontSize: 9,
-                        fontWeight: 800,
-                        padding: "2px 8px",
-                        borderRadius: 8,
-                        background: `${rc}20`,
-                        color: rc,
-                        border: `1px solid ${rc}40`,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {item.rarity}
-                    </span>
-                  </div>
-                  <div style={{ padding: "10px 12px" }}>
-                    <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 4, color: "#fff" }}>{item.name}</p>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      {owned ? (
-                        equipped ? (
-                          <span style={{ fontSize: 11, color: "#00e676", fontWeight: 700 }}>✅ Equipped</span>
-                        ) : (
-                          <span style={{ fontSize: 11, color: "rgba(162,155,254,0.5)", fontWeight: 600 }}>Owned</span>
-                        )
-                      ) : (
-                        <span style={{ fontSize: 13, fontWeight: 800, color: "#FFD700" }}>💎 {item.price}</span>
-                      )}
-                      {!owned && (
-                        <button
-                          onClick={() => handlePurchase(item)}
-                          disabled={storeLoading === item.id || user.coins < item.price}
-                          style={{
-                            padding: "6px 14px",
-                            borderRadius: 10,
-                            border: "none",
-                            cursor: user.coins < item.price ? "not-allowed" : "pointer",
-                            background:
-                              user.coins < item.price
-                                ? "rgba(255,255,255,0.06)"
-                                : "linear-gradient(135deg, #6C5CE7, #8B7CF6)",
-                            color: "#fff",
-                            fontSize: 11,
-                            fontWeight: 800,
-                            fontFamily: "inherit",
-                            opacity: user.coins < item.price ? 0.5 : 1,
-                          }}
-                        >
-                          {storeLoading === item.id ? "..." : "Buy"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       )}
 
       {/* Backpack BottomSheet */}
