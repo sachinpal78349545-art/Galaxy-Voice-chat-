@@ -7,13 +7,17 @@ import Header from "../components/home/Header";
 import BannerCarousel from "../components/home/BannerCarousel";
 import GameSection from "../components/home/GameCard";
 import FriendSection from "../components/home/FriendSection";
+import TasksPanel from "../components/TasksPanel"; // 👈 sahi path
 
 interface OnlineUser { uid: string; name: string; avatar: string; level?: number; }
 interface Props {
   user: UserProfile;
   onJoinRoom: (room: Room) => void;
   onCreateRoom?: () => void;
-  onViewProfile: (profile: UserProfile) => void;   // ✅ profile view ke liye
+  onViewProfile: (profile: UserProfile) => void;
+  onOpenSubPage?: (pageId: string) => void;
+  onCloseSubPage?: () => void;
+  onUpdateUser?: (u: UserProfile) => void;
 }
 
 function StarField() {
@@ -49,9 +53,18 @@ function StarField() {
   );
 }
 
-export default function HomePage({ user, onJoinRoom, onCreateRoom, onViewProfile }: Props) {
+export default function HomePage({ 
+  user, 
+  onJoinRoom, 
+  onCreateRoom, 
+  onViewProfile,
+  onOpenSubPage,
+  onCloseSubPage,
+  onUpdateUser
+}: Props) {
   const [allUsers, setAllUsers] = useState<OnlineUser[]>([]);
   const [myRoom, setMyRoom] = useState<Room | null>(null);
+  const [showTasks, setShowTasks] = useState(false);
 
   useEffect(() => {
     if (user.hasRoom && user.myRoomId) {
@@ -84,7 +97,12 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom, onViewProfile
       <StarField />
       <div className="hp-gradient-bg" />
       <div className="hp-content">
-        <Header user={user} />
+        <Header 
+          user={user} 
+          onOpenSubPage={onOpenSubPage}
+          onCloseSubPage={onCloseSubPage}
+          setShowTasks={setShowTasks}
+        />
 
         <div style={{ padding: "0 16px" }}>
           <BannerCarousel />
@@ -125,6 +143,20 @@ export default function HomePage({ user, onJoinRoom, onCreateRoom, onViewProfile
 
         <div style={{ height: 120 }} />
       </div>
+
+      {/* ✅ TasksPanel render – sahi syntax */}
+      {showTasks && (
+        <TasksPanel
+          user={user}
+          onUpdate={(updatedUser) => {
+            if (onUpdateUser) onUpdateUser(updatedUser);
+          }}
+          onClose={() => {
+            setShowTasks(false);
+            if (onCloseSubPage) onCloseSubPage();
+          }}
+        />
+      )}
     </div>
   );
 }

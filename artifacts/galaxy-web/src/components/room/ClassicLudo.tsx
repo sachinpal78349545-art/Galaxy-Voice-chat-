@@ -4,13 +4,14 @@ import { db } from "../../lib/firebase";
 import { cleanName } from "./types";
 import { playGameStart, playTurnSound, playWinSound, playDiceSound } from "./gameSounds";
 
-const C = 24;
-const PC = ["#FF3D6E", "#3DFFAA", "#3DB8FF", "#FFD93D"];
-const _CN = ["Red", "Green", "Blue", "Yellow"]; void _CN;
-const RGB: [number, number, number][] = [[255, 61, 110], [61, 255, 170], [61, 184, 255], [255, 217, 61]];
+const C = 18; 
+// Unique Cyber-Galaxy Neon Palette (ChaloTalk se bilkul alag)
+const PC = ["#00F0FF", "#FF007A", "#39FF14", "#FFCC00"]; 
+const _CN = ["CyberBlue", "NeonPink", "MatrixGreen", "QuantumGold"]; void _CN;
+const RGB: [number, number, number][] = [[0, 240, 255], [255, 0, 122], [57, 255, 20], [255, 204, 0]];
 const START_ABS = [0, 13, 26, 39];
 const SAFE_SET = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
-const DICE_DOTS: Record<number, string> = { 1: "\u2680", 2: "\u2681", 3: "\u2682", 4: "\u2683", 5: "\u2684", 6: "\u2685" };
+const DICE_DOTS: Record<number, string> = { 1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅" };
 
 function rgba(ci: number, a: number) {
   const [r, g, b] = RGB[ci]; return `rgba(${r},${g},${b},${a})`;
@@ -64,6 +65,7 @@ interface GD {
 
 function absPos(ci: number, steps: number) { return (START_ABS[ci] + steps) % 52; }
 
+// Core coordinate mapping module logic safely untouched
 function tokenXY(ci: number, steps: number, ti: number): [number, number] {
   if (steps < 0) { const [r, c] = BASE_SPOTS[ci][ti]; return [c * C + C / 2, r * C + C / 2]; }
   if (steps >= 52) {
@@ -158,7 +160,7 @@ export default function ClassicLudo({
     if (uids.length < 2) return;
     await update(gRef, {
       phase: "playing", turnOrder: uids, turnUid: uids[0],
-      dice: 0, diceRolled: false, winner: null, lastAction: "Game started!",
+      dice: 0, diceRolled: false, winner: null, lastAction: "Universe portal active!",
     });
     playGameStart();
   };
@@ -201,7 +203,7 @@ export default function ClassicLudo({
               const kt = [...player.tokens];
               kt[t] = -1;
               updates[`players/${uid}/tokens`] = kt;
-              updates.lastAction = `${cleanName(username)} killed ${cleanName(player.name)}'s token!`;
+              updates.lastAction = `${cleanName(username)} atomized ${cleanName(player.name)}!`;
               killed = true;
             }
           }
@@ -213,12 +215,12 @@ export default function ClassicLudo({
     const gotHome = newS === 57 && oldS !== 57;
     if (allHome) {
       updates.winner = userId;
-      updates.lastAction = `${cleanName(username)} WINS! \u{1F3C6}`;
+      updates.lastAction = `${cleanName(username)} conquered the core!`;
       playWinSound();
     } else if (!killed) {
       updates.lastAction = oldS < 0
-        ? `${cleanName(username)} moved a token out!`
-        : `${cleanName(username)} moved +${d}`;
+        ? `${cleanName(username)} spawned a drone!`
+        : `${cleanName(username)} warp +${d}`;
     }
 
     await update(gRef, updates);
@@ -244,7 +246,7 @@ export default function ClassicLudo({
     const me = game.players[userId];
     const valid = validMoves(me, dice);
     if (valid.length === 0) {
-      await update(gRef, { lastAction: `${cleanName(username)} rolled ${dice} - no moves!` });
+      await update(gRef, { lastAction: `Rolled ${dice} - Locked out!` });
       setTimeout(() => nextTurn(dice === 6), 800);
     } else if (valid.length === 1) {
       setLocalDice(dice);
@@ -265,7 +267,7 @@ export default function ClassicLudo({
   const takenColors = game?.players ? Object.values(game.players).map(p => p.colorIndex) : [];
   const myColor = game?.players?.[userId]?.colorIndex;
 
-  // ── Token positions ──
+  // Render tokens calculation
   const tokenRender: { uid: string; ci: number; ti: number; x: number; y: number; steps: number }[] = [];
   if (game?.players) {
     for (const [uid, p] of Object.entries(game.players)) {
@@ -285,13 +287,12 @@ export default function ClassicLudo({
     const k = `${Math.round(tp.x)},${Math.round(tp.y)}`;
     const g = posGroups[k]; const idx = g.indexOf(tp); const n = g.length;
     let ox = 0, oy = 0;
-    if (n === 2) { ox = idx === 0 ? -4 : 4; }
-    else if (n === 3) { ox = [-4, 4, 0][idx]; oy = [0, 0, -4][idx]; }
-    else if (n >= 4) { ox = idx % 2 === 0 ? -4 : 4; oy = idx < 2 ? -4 : 4; }
+    if (n === 2) { ox = idx === 0 ? -3 : 3; }
+    else if (n === 3) { ox = [-3, 3, 0][idx]; oy = [0, 0, -3][idx]; }
+    else if (n >= 4) { ox = idx % 2 === 0 ? -3 : 3; oy = idx < 2 ? -3 : 3; }
     return { ...tp, rx: tp.x + ox, ry: tp.y + oy };
   });
 
-  // ── Board SVG elements ──
   const boardEls: React.ReactNode[] = [];
   const baseCorners: [number, number][] = [[0, 0], [0, 9], [9, 9], [9, 0]];
 
@@ -301,43 +302,27 @@ export default function ClassicLudo({
       <g key={`base${ci}`}
         onClick={() => isJoinable && joinAsColor(ci)}
         style={{ cursor: isJoinable ? "pointer" : "default" }}>
-        {/* Outer base square with neon glow */}
-        <rect x={bc * C} y={br * C} width={6 * C} height={6 * C} rx={10}
+        <rect x={bc * C} y={br * C} width={6 * C} height={6 * C} rx={12}
           fill={`url(#baseGrad${ci})`}
-          stroke={rgba(ci, 0.85)} strokeWidth={2}
-          filter={`url(#glow${ci})`} />
-        {/* Inner cut-out where tokens sit */}
-        <rect x={(bc + 1) * C} y={(br + 1) * C} width={4 * C} height={4 * C} rx={6}
-          fill="rgba(8,4,24,0.85)"
-          stroke={rgba(ci, 0.5)} strokeWidth={1.2} />
-        {/* Token holding spots — 4 circles with depth */}
+          stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
+        <rect x={(bc + 1) * C} y={(br + 1) * C} width={4 * C} height={4 * C} rx={8}
+          fill="#060210"
+          stroke={rgba(ci, 0.4)} strokeWidth={1} />
         {BASE_SPOTS[ci].map(([sr, sc], si) => (
           <g key={`bs${ci}${si}`}>
-            <circle cx={sc * C + C / 2} cy={sr * C + C / 2} r={9}
-              fill="rgba(0,0,0,0.55)"
-              stroke={rgba(ci, 0.7)} strokeWidth={1.2} />
-            <circle cx={sc * C + C / 2 - 1.5} cy={sr * C + C / 2 - 1.5} r={2}
-              fill="rgba(255,255,255,0.18)" />
+            <circle cx={sc * C + C / 2} cy={sr * C + C / 2} r={5}
+              fill={rgba(ci, 0.25)} stroke={PC[ci]} strokeWidth={1} style={{ filter: `drop-shadow(0 0 4px ${PC[ci]})` }} />
           </g>
         ))}
-        {/* "JOIN" badge if open */}
         {isJoinable && (
-          <g>
-            <rect x={(bc + 1.6) * C} y={(br + 2.6) * C} width={2.8 * C} height={0.85 * C} rx={5}
-              fill={rgba(ci, 0.9)} />
-            <text x={(bc + 3) * C} y={(br + 3.05) * C}
-              textAnchor="middle" dominantBaseline="middle"
-              fontSize={11} fontWeight={900} fill="#0d0820"
-              style={{ pointerEvents: "none", letterSpacing: 1 }}>
-              + JOIN
-            </text>
-          </g>
+          <text x={(bc + 3) * C} y={(br + 3) * C + 2}
+            textAnchor="middle" dominantBaseline="middle"
+            fontSize={7} fontWeight={900} fill="#00F0FF" letterSpacing={0.5}>+ DOCK</text>
         )}
       </g>
     );
   });
 
-  // Path cells
   for (let r = 0; r < 15; r++) {
     for (let c = 0; c < 15; c++) {
       const inCross = (r <= 5 && c >= 6 && c <= 8) || (r >= 6 && r <= 8) || (r >= 9 && c >= 6 && c <= 8);
@@ -345,36 +330,25 @@ export default function ClassicLudo({
       if (r >= 6 && r <= 8 && c >= 6 && c <= 8) continue;
       const key = `${r},${c}`;
       const pi = pathIdxMap[key]; const hi = homeColorMap[key];
-      let fill = "rgba(255,255,255,0.05)", stroke = "rgba(167,139,250,0.18)";
-      if (hi !== undefined) { fill = rgba(hi, 0.35); stroke = rgba(hi, 0.7); }
+      let fill = "rgba(255,255,255,0.02)", stroke = "rgba(139,92,246,0.1)";
+      if (hi !== undefined) { fill = rgba(hi, 0.25); stroke = rgba(hi, 0.5); }
       if (pi !== undefined && START_ABS.includes(pi)) {
         const si = START_ABS.indexOf(pi);
-        fill = rgba(si, 0.55); stroke = rgba(si, 0.9);
+        fill = rgba(si, 0.45); stroke = PC[si];
       }
       boardEls.push(
         <rect key={`c${key}`} x={c * C + 1} y={r * C + 1} width={C - 2} height={C - 2} rx={3}
-          fill={fill} stroke={stroke} strokeWidth={0.8} />
+          fill={fill} stroke={stroke} strokeWidth={0.7} />
       );
       if (pi !== undefined && SAFE_SET.has(pi) && !START_ABS.includes(pi)) {
         boardEls.push(
-          <text key={`s${key}`} x={c * C + C / 2} y={r * C + C / 2 + 1.5}
-            textAnchor="middle" dominantBaseline="middle"
-            fontSize={11} fill="rgba(255,255,255,0.55)">{"\u2605"}</text>
-        );
-      }
-      if (pi !== undefined && START_ABS.includes(pi)) {
-        const si = START_ABS.indexOf(pi);
-        const arr = ["\u2192", "\u2193", "\u2190", "\u2191"];
-        boardEls.push(
-          <text key={`a${key}`} x={c * C + C / 2} y={r * C + C / 2 + 1.5}
-            textAnchor="middle" dominantBaseline="middle"
-            fontSize={12} fill="#fff" fontWeight={900}>{arr[si]}</text>
+          <circle key={`s${key}`} cx={c * C + C / 2} cy={r * C + C / 2} r={2.5}
+            fill="#fff" style={{ filter: "drop-shadow(0 0 3px #fff)" }} />
         );
       }
     }
   }
 
-  // Center home with 3D depth
   const cx = 7 * C + C / 2, cy = 7 * C + C / 2;
   const tris: [string, number][] = [
     [`${6 * C},${6 * C} ${6 * C},${9 * C} ${cx},${cy}`, 0],
@@ -385,48 +359,37 @@ export default function ClassicLudo({
   tris.forEach(([pts, ci]) => {
     boardEls.push(
       <polygon key={`tr${ci}`} points={pts}
-        fill={rgba(ci, 0.45)} stroke={rgba(ci, 0.9)} strokeWidth={1.2} />
+        fill={rgba(ci, 0.15)} stroke={rgba(ci, 0.4)} strokeWidth={1} />
     );
   });
   boardEls.push(
-    <circle key="fin-glow" cx={cx} cy={cy} r={16}
-      fill="url(#centerGrad)" filter="url(#centerGlow)" />
-  );
-  boardEls.push(
     <circle key="fin" cx={cx} cy={cy} r={12}
-      fill="rgba(13,8,32,0.95)" stroke="rgba(255,215,0,0.85)" strokeWidth={1.5} />
+      fill="#05010d" stroke="url(#quantumCore)" strokeWidth={1.5} />
   );
   boardEls.push(
-    <text key="fint" x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
-      fontSize={9} fill="#FFD93D" fontWeight={900}>HOME</text>
+    <text key="fint" x={cx} y={cy + 0.5} textAnchor="middle" dominantBaseline="middle"
+      fontSize={6} fill="#00F0FF" fontWeight={900} letterSpacing={0.5}>CORE</text>
   );
 
-  // Tokens with 3D sphere effect
   const tokenEls = tokens.map(tp => {
     const isSel = choosing && tp.uid === userId && selectable.includes(tp.ti);
     const fin = tp.steps === 57;
-    const rad = fin ? 6 : 9;
+    const rad = fin ? 4 : 6.5;
     return (
       <g key={`tk${tp.uid}${tp.ti}`}
         onClick={() => isSel && handleTokenClick(tp.ti)}
         style={{ cursor: isSel ? "pointer" : "default" }}>
-        <circle cx={tp.rx + 0.8} cy={tp.ry + 1.2} r={rad}
-          fill="rgba(0,0,0,0.5)" />
         <circle cx={tp.rx} cy={tp.ry} r={rad}
           fill={`url(#tk${tp.ci})`}
-          stroke={isSel ? "#fff" : "rgba(0,0,0,0.55)"}
-          strokeWidth={isSel ? 2 : 1}
-          className={isSel ? "ludo-selectable" : ""}
-          style={{ filter: `drop-shadow(0 0 ${isSel ? 8 : 3}px ${PC[tp.ci]})`, transition: "all 0.4s ease" }}
+          stroke={isSel ? "#fff" : "rgba(0,0,0,0.4)"}
+          strokeWidth={isSel ? 1.5 : 1}
+          style={{ 
+            filter: isSel ? `drop-shadow(0 0 8px ${PC[tp.ci]})` : `drop-shadow(0 0 4px ${rgba(tp.ci, 0.5)})`, 
+            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)" 
+          }}
         />
-        <circle cx={tp.rx - rad * 0.35} cy={tp.ry - rad * 0.35} r={rad * 0.32}
-          fill="rgba(255,255,255,0.6)" style={{ pointerEvents: "none" }} />
         {!fin && (
-          <text x={tp.rx} y={tp.ry + 0.5} textAnchor="middle" dominantBaseline="middle"
-            fontSize={8} fill="#fff" fontWeight={900}
-            style={{ pointerEvents: "none", textShadow: "0 1px 1px rgba(0,0,0,0.6)" }}>
-            {tp.ti + 1}
-          </text>
+          <circle cx={tp.rx} cy={tp.ry} r={1.5} fill="#fff" opacity={0.9} />
         )}
       </g>
     );
@@ -434,290 +397,189 @@ export default function ClassicLudo({
 
   const players = game?.players ? Object.entries(game.players) : [];
 
-  // ── UI styles ──
-  const NEON_BTN: React.CSSProperties = {
-    padding: "12px 24px", borderRadius: 14, border: "none",
-    background: "linear-gradient(135deg, #bf00ff, #00e6e6)",
-    color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer",
-    fontFamily: "'Poppins','Inter',sans-serif",
-    boxShadow: "0 0 20px rgba(191,0,255,0.5), 0 0 40px rgba(0,230,230,0.25)",
-    letterSpacing: 0.5,
-  };
-
   return (
     <div style={{
-      position: "fixed", inset: 0, zIndex: 1000,
-      background: "radial-gradient(ellipse at center, rgba(15,5,40,0.96) 0%, rgba(5,2,15,0.99) 100%)",
-      backdropFilter: "blur(8px)",
-      display: "flex", flexDirection: "column",
-      maxWidth: 430, margin: "0 auto",
-      overflow: "hidden",
+      background: "linear-gradient(160deg, #0f0726 0%, #05020c 100%)",
+      borderRadius: 24,
+      padding: "14px 12px",
+      border: "1px solid rgba(0, 240, 255, 0.15)",
+      boxShadow: "0 20px 50px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.05)",
     }}>
-      {/* ── TOP BAR ── */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 16px 8px", flexShrink: 0,
-      }}>
+      {/* Dynamic Modern Top Bar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            fontSize: 22,
-            filter: "drop-shadow(0 0 8px rgba(191,0,255,0.8))",
-          }}>{"\u{1F3F0}"}</span>
-          <h3 style={{
-            fontSize: 17, fontWeight: 900, color: "#fff", margin: 0,
-            background: "linear-gradient(90deg,#bf00ff,#00e6e6)",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            letterSpacing: 0.5,
-          }}>3D LUDO</h3>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#00F0FF", boxShadow: "0 0 8px #00F0FF" }} />
+          <span style={{ fontSize: 13, fontWeight: 900, color: "#fff", letterSpacing: "1px", fontStyle: "italic" }}>QUANTUM VECTOR</span>
         </div>
         <button onClick={onClose} style={{
-          width: 34, height: 34, borderRadius: 10,
-          background: "rgba(255,255,255,0.08)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          color: "#fff", fontSize: 14, cursor: "pointer",
-        }}>{"\u2715"}</button>
+          background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20,
+          color: "rgba(255,255,255,0.6)", fontSize: 11, cursor: "pointer", padding: "4px 10px", transition: "0.2s"
+        }}>DISCONNECT</button>
       </div>
 
-      {/* ── MINI VOICE STRIP (minimized seats) ── */}
+      {/* Mic Row */}
       {voiceUsers.length > 0 && (
-        <div style={{
-          display: "flex", gap: 6, overflowX: "auto", padding: "2px 16px 8px",
-          flexShrink: 0, scrollbarWidth: "none",
-        }}>
-          {voiceUsers.slice(0, 12).map(u => {
-            const isSpeaking = speakingUidsHash && hashCode
-              ? speakingUidsHash.has(Math.abs(hashCode(u.uid)) % 1000000)
-              : false;
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 8 }}>
+          {voiceUsers.slice(0, 6).map(u => {
+            const isSpeaking = speakingUidsHash && hashCode ? speakingUidsHash.has(Math.abs(hashCode(u.uid)) % 1000000) : false;
             return (
               <div key={u.uid} style={{
-                position: "relative", flexShrink: 0,
-                width: 36, height: 36, borderRadius: 18,
-                background: "linear-gradient(135deg,#1a0f2e,#0d0820)",
-                border: isSpeaking ? "2px solid #00e6e6" : "1.5px solid rgba(167,139,250,0.4)",
-                boxShadow: isSpeaking ? "0 0 10px rgba(0,230,230,0.7)" : "none",
-                overflow: "hidden",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }} title={cleanName(u.name)}>
-                {u.avatar ? (
-                  <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>
-                    {cleanName(u.name).charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── PLAYER CHIPS ── */}
-      {phase === "playing" && (
-        <div style={{
-          display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap",
-          padding: "0 16px 8px", flexShrink: 0,
-        }}>
-          {players.map(([uid, p]) => {
-            const home = p.tokens.filter(t => t === 57).length;
-            const isTurn = game?.turnUid === uid;
-            return (
-              <div key={uid} style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "5px 10px", borderRadius: 10,
-                background: isTurn ? rgba(p.colorIndex, 0.2) : "rgba(255,255,255,0.04)",
-                border: `1.5px solid ${isTurn ? PC[p.colorIndex] : "rgba(255,255,255,0.08)"}`,
-                boxShadow: isTurn ? `0 0 12px ${rgba(p.colorIndex, 0.6)}` : "none",
+                width: 32, height: 32, borderRadius: "50%",
+                background: "#0c061c",
+                border: isSpeaking ? "2px solid #00F0FF" : "1px solid rgba(255,255,255,0.1)",
+                boxShadow: isSpeaking ? "0 0 8px rgba(0, 240, 255, 0.4)" : "none",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff"
               }}>
-                <span style={{
-                  width: 10, height: 10, borderRadius: 5, background: PC[p.colorIndex],
-                  boxShadow: `0 0 6px ${PC[p.colorIndex]}`,
-                }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>
-                  {cleanName(p.name)}
-                </span>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>
-                  {home}/4
-                </span>
+                {u.avatar ? <img src={u.avatar} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : u.name.charAt(0).toUpperCase()}
               </div>
             );
           })}
         </div>
       )}
 
-      {/* ── BOARD (CENTER, FULL VIEW) ── */}
+      {/* Vector Board Frame */}
       <div style={{
-        flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "8px 12px", minHeight: 0, position: "relative",
+        position: "relative",
+        width: "100%",
+        maxWidth: 290,
+        margin: "0 auto",
+        aspectRatio: "1 / 1",
+        background: "rgba(0,0,0,0.3)",
+        borderRadius: 16,
+        padding: 4,
+        border: "1px solid rgba(255,255,255,0.03)"
       }}>
-        <div style={{
-          position: "relative",
-          width: "100%", maxWidth: 380,
-          aspectRatio: "1 / 1",
-          borderRadius: 22,
-          background: "linear-gradient(160deg,#1a0f2e 0%,#0a0418 100%)",
-          border: "2px solid rgba(167,139,250,0.5)",
-          boxShadow: "0 0 30px rgba(108,92,231,0.4), 0 0 80px rgba(191,0,255,0.25), inset 0 0 30px rgba(0,0,0,0.6)",
-          padding: 8,
-        }}>
-          <svg viewBox={`0 0 ${15 * C} ${15 * C}`} style={{ width: "100%", height: "100%", display: "block" }}>
-            <defs>
-              {/* Base gradients (3D-look) */}
-              {[0, 1, 2, 3].map(ci => (
-                <radialGradient key={`bg${ci}`} id={`baseGrad${ci}`} cx="0.3" cy="0.3" r="0.85">
-                  <stop offset="0%" stopColor={rgba(ci, 1)} />
-                  <stop offset="60%" stopColor={rgba(ci, 0.55)} />
-                  <stop offset="100%" stopColor={rgba(ci, 0.2)} />
-                </radialGradient>
-              ))}
-              {/* Token sphere gradients */}
-              {[0, 1, 2, 3].map(ci => (
-                <radialGradient key={`tk${ci}`} id={`tk${ci}`} cx="0.3" cy="0.3" r="0.85">
-                  <stop offset="0%" stopColor="#ffffff" />
-                  <stop offset="35%" stopColor={PC[ci]} />
-                  <stop offset="100%" stopColor={rgba(ci, 0.6)} />
-                </radialGradient>
-              ))}
-              {/* Glow filters */}
-              {[0, 1, 2, 3].map(ci => (
-                <filter key={`gl${ci}`} id={`glow${ci}`} x="-30%" y="-30%" width="160%" height="160%">
-                  <feGaussianBlur stdDeviation="2.5" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              ))}
-              <radialGradient id="centerGrad" cx="0.5" cy="0.5" r="0.5">
-                <stop offset="0%" stopColor="rgba(255,215,61,0.8)" />
-                <stop offset="100%" stopColor="rgba(255,215,61,0)" />
+        <svg viewBox={`0 0 ${15 * C} ${15 * C}`} style={{ width: "100%", height: "100%" }}>
+          <defs>
+            <linearGradient id="quantumCore" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00F0FF" />
+              <stop offset="100%" stopColor="#FF007A" />
+            </linearGradient>
+            {[0, 1, 2, 3].map(ci => (
+              <radialGradient key={`bg${ci}`} id={`baseGrad${ci}`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor={rgba(ci, 0.25)} />
+                <stop offset="100%" stopColor="rgba(8, 3, 20, 0.95)" />
               </radialGradient>
-              <filter id="centerGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="4" />
-              </filter>
-            </defs>
-            {boardEls}
-            {tokenEls}
-          </svg>
+            ))}
+            {[0, 1, 2, 3].map(ci => (
+              <radialGradient key={`tk${ci}`} id={`tk${ci}`} cx="35%" cy="35%" r="65%">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="40%" stopColor={PC[ci]} />
+                <stop offset="100%" stopColor="#05010d" />
+              </radialGradient>
+            ))}
+          </defs>
+          {boardEls}
+          {tokenEls}
+        </svg>
+      </div>
 
-          {/* ── WAITING-PHASE OVERLAY (no text dialog — instructions on board) ── */}
-          {phase === "waiting" && (
-            <div style={{
-              position: "absolute", left: 0, right: 0, bottom: 14,
-              display: "flex", justifyContent: "center",
-              pointerEvents: "none",
+      {/* Grid Status Track */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", marginTop: 12 }}>
+        {players.map(([uid, p]) => {
+          const home = p.tokens.filter(t => t === 57).length;
+          const isTurn = game?.turnUid === uid;
+          return (
+            <div key={uid} style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20,
+              background: isTurn ? "rgba(255,255,255,0.05)" : "transparent",
+              border: `1px solid ${isTurn ? PC[p.colorIndex] : "rgba(255,255,255,0.05)"}`,
+              boxShadow: isTurn ? `0 0 10px ${rgba(p.colorIndex, 0.2)}` : "none"
             }}>
-              <div style={{
-                background: "rgba(13,8,32,0.85)", backdropFilter: "blur(6px)",
-                border: "1px solid rgba(167,139,250,0.4)",
-                borderRadius: 12, padding: "6px 14px",
-                color: "#fff", fontSize: 11, fontWeight: 700,
-                boxShadow: "0 0 18px rgba(108,92,231,0.4)",
-              }}>
-                {!game?.players[userId]
-                  ? "\u{1F3AF}  Tap a colored corner to join"
-                  : `${players.length}/4 joined  \u00B7  ${hasControl ? "Press Start" : "Waiting for host"}`}
-              </div>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: PC[p.colorIndex], boxShadow: `0 0 6px ${PC[p.colorIndex]}` }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: isTurn ? "#fff" : "rgba(255,255,255,0.6)" }}>{cleanName(p.name)}</span>
+              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)" }}>{home}/4</span>
             </div>
+          );
+        })}
+      </div>
+
+      {/* Actions / Control Terminals */}
+      {!game ? (
+        hasControl ? (
+          <button onClick={createGame} style={{
+            marginTop: 12, width: "100%", padding: "10px 0", borderRadius: 14,
+            background: "linear-gradient(90deg, #00F0FF, #FF007A)",
+            border: "none", color: "#fff", fontWeight: 800, fontSize: 12, letterSpacing: "1px",
+            cursor: "pointer", boxShadow: "0 4px 15px rgba(0,240,255,0.3)"
+          }}>INITIALIZE VECTOR</button>
+        ) : (
+          <p style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 12, letterSpacing: 0.5 }}>AWAITING NODE SYSTEM CREATION...</p>
+        )
+      ) : phase === "waiting" ? (
+        <div>
+          {hasControl && players.length >= 2 && (
+            <button onClick={startPlaying} style={{
+              marginTop: 12, width: "100%", padding: "10px 0", borderRadius: 14,
+              background: "linear-gradient(90deg, #39FF14, #00F0FF)",
+              border: "none", color: "#000", fontWeight: 900, fontSize: 12, letterSpacing: "1px",
+              cursor: "pointer", boxShadow: "0 4px 15px rgba(57,255,20,0.3)"
+            }}>LAUNCH GRID ({players.length} PLUGGED)</button>
+          )}
+          {!game.players[userId] && players.length < 4 && (
+            <p style={{ fontSize: 10, textAlign: "center", color: "#00F0FF", marginTop: 8, letterSpacing: 0.5, animate: "pulse" }}>
+              ⚡ TAP AN EMPTY NODE TO SYNC MATRIX
+            </p>
           )}
         </div>
-      </div>
+      ) : game.winner ? (
+        <div style={{ textAlign: "center", marginTop: 10, background: "rgba(255,204,0,0.05)", padding: "8px", borderRadius: 12, border: "1px solid #FFCC00" }}>
+          <span style={{ fontSize: 12, fontWeight: 900, color: "#FFCC00", letterSpacing: 0.5 }}>👑 CORE CONQUERED BY {cleanName(game.players[game.winner]?.name).toUpperCase()}!</span>
+          {hasControl && (
+            <button onClick={createGame} style={{
+              marginLeft: 10, padding: "4px 12px", borderRadius: 8,
+              background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer"
+            }}>REBOOT</button>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 12 }}>
+          {/* Cybernetic Geometric Dice Box */}
+          <div style={{
+            width: 50, height: 50, borderRadius: 14,
+            background: "#05020a",
+            border: `2px solid ${myColor !== undefined ? PC[myColor] : "#00F0FF"}`,
+            boxShadow: `0 0 12px ${myColor !== undefined ? rgba(myColor, 0.4) : "rgba(0,240,255,0.3)"}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 26, color: myColor !== undefined ? PC[myColor] : "#fff"
+          }}>
+            {DICE_DOTS[diceAnim] || diceAnim}
+          </div>
 
-      {/* ── BOTTOM CONTROLS ── */}
-      <div style={{
-        padding: "10px 16px 18px", flexShrink: 0,
-        background: "linear-gradient(180deg, transparent 0%, rgba(13,8,32,0.6) 50%)",
-      }}>
-        {!game ? (
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            {hasControl ? (
-              <button onClick={createGame} style={NEON_BTN}>
-                {"\u{1F3B2}"} Create Ludo Game
-              </button>
+          <div style={{ flex: 1 }}>
+            {isMyTurn && !game.diceRolled && !choosing ? (
+              <button onClick={rollDice} disabled={rolling}
+                style={{
+                  width: "100%", padding: "10px 0", borderRadius: 14,
+                  background: "linear-gradient(90deg, #00F0FF, #9400D3)",
+                  border: "none", color: "#fff", fontWeight: 800, fontSize: 12, letterSpacing: "1px",
+                  cursor: "pointer", boxShadow: "0 4px 12px rgba(0,240,255,0.3)"
+                }}>{rolling ? "CYCLING..." : "TRIGGER MATRIX"}</button>
+            ) : isMyTurn && choosing ? (
+              <div style={{
+                padding: "8px 0", borderRadius: 12,
+                background: "rgba(255, 0, 122, 0.1)",
+                border: "1px solid #FF007A",
+                color: "#FF007A",
+                fontSize: 10, fontWeight: 800, textAlign: "center", letterSpacing: 0.5,
+                boxShadow: "0 0 8px rgba(255,0,122,0.2)"
+              }}>SELECT DRONE POD!</div>
             ) : (
-              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0, textAlign: "center" }}>
-                Waiting for host to create a game...
-              </p>
+              <div style={{
+                padding: "8px 0", borderRadius: 12,
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.05)",
+                fontSize: 10, color: "rgba(255,255,255,0.5)", textAlign: "center", letterSpacing: 0.5
+              }}>{game.turnUid && game.players[game.turnUid] ? `${cleanName(game.players[game.turnUid].name).toUpperCase()} PROCESSING...` : "SYNCING"}</div>
+            )}
+            {game.lastAction && (
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", textAlign: "center", marginTop: 6, fontFamily: "monospace" }}>
+                &gt; {game.lastAction}
+              </div>
             )}
           </div>
-        ) : phase === "waiting" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
-            {hasControl && players.length >= 2 && (
-              <button onClick={startPlaying} style={NEON_BTN}>
-                {"\u25B6"} Start Game ({players.length} players)
-              </button>
-            )}
-            {!game.players[userId] && players.length < 4 && (
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", margin: 0 }}>
-                Pick any open corner above to enter the game
-              </p>
-            )}
-          </div>
-        ) : game.winner ? (
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 36, filter: "drop-shadow(0 0 10px #FFD93D)" }}>{"\u{1F3C6}"}</div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: "#FFD93D", marginBottom: 10 }}>
-              {cleanName(game.players[game.winner]?.name)} Wins!
-            </div>
-            {hasControl && (
-              <button onClick={createGame} style={NEON_BTN}>Play Again</button>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14 }}>
-            {/* ── BIG NEON DICE ── */}
-            <div className={rolling ? "dice-rolling" : ""} style={{
-              width: 64, height: 64, borderRadius: 14,
-              background: "linear-gradient(135deg,#1a0f2e,#0d0820)",
-              border: `2px solid ${myColor !== undefined ? PC[myColor] : "#00e6e6"}`,
-              boxShadow: `0 0 18px ${myColor !== undefined ? rgba(myColor, 0.8) : "rgba(0,230,230,0.7)"}, inset 0 0 12px rgba(0,0,0,0.5)`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 40, color: "#fff",
-              textShadow: `0 0 10px ${myColor !== undefined ? PC[myColor] : "#00e6e6"}`,
-            }}>
-              {DICE_DOTS[diceAnim] || diceAnim}
-            </div>
-
-            {/* ── ROLL BUTTON / STATUS ── */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, flex: 1 }}>
-              {isMyTurn && !game.diceRolled && !choosing ? (
-                <button onClick={rollDice} disabled={rolling}
-                  style={{ ...NEON_BTN, padding: "12px 18px", fontSize: 14 }}>
-                  {rolling ? "Rolling..." : "\u{1F3B2}  ROLL DICE"}
-                </button>
-              ) : isMyTurn && choosing ? (
-                <div style={{
-                  padding: "10px 14px", borderRadius: 12,
-                  background: "rgba(0,230,230,0.15)",
-                  border: "1.5px solid #00e6e6",
-                  color: "#00e6e6", fontSize: 12, fontWeight: 800, textAlign: "center",
-                }}>
-                  Tap a glowing token to move!
-                </div>
-              ) : (
-                <div style={{
-                  padding: "10px 14px", borderRadius: 12,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 700, textAlign: "center",
-                }}>
-                  {game.turnUid && game.players[game.turnUid]
-                    ? `${cleanName(game.players[game.turnUid].name)}'s turn`
-                    : "Waiting..."}
-                </div>
-              )}
-              {game.lastAction && (
-                <div style={{
-                  fontSize: 10, color: "rgba(255,255,255,0.45)",
-                  textAlign: "center", whiteSpace: "nowrap",
-                  overflow: "hidden", textOverflow: "ellipsis",
-                }}>
-                  {game.lastAction}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

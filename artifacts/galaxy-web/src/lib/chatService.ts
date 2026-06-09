@@ -30,6 +30,12 @@ export interface Conversation {
 }
 
 export function subscribeConversations(userId: string, cb: (convs: Conversation[]) => void): () => void {
+  // 🔥 FIX: Agar userId invalid hai to koi subscription nahi
+  if (!userId) {
+    cb([]);
+    return () => {};
+  }
+
   const r = ref(db, `userConvs/${userId}`);
   let convUnsubs: (() => void)[] = [];
   let currentConvs: Conversation[] = [];
@@ -44,7 +50,7 @@ export function subscribeConversations(userId: string, cb: (convs: Conversation[
 
     for (const cid of convIds) {
       const cSnap = await get(ref(db, `conversations/${cid}`));
-      if (cSnap.exists()) {
+      if (cSnap.exists()) {   // ✅ FIXED: .exist() → .exists()
         convs.push({ ...cSnap.val(), id: cid });
       }
     }

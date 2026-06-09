@@ -1,4 +1,4 @@
-// ProfilePage.tsx – Full version with LevelPage and StorePage + navigation bar auto-hide (no missing parts)
+// ProfilePage.tsx – Full version without old daily tasks bottom sheet (task page code separated)
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db, storage } from "../lib/firebase";
@@ -102,7 +102,6 @@ export default function ProfilePage({
   const [showLevelPage, setShowLevelPage] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
-  const [showDailyTasks, setShowDailyTasks] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
@@ -178,9 +177,9 @@ export default function ProfilePage({
 
   const isAdmin = isSuperAdmin(user);
 
-  // ---------- 🔥 NAVIGATION BAR AUTO-HIDE ON ANY SUB-PAGE ----------
+  // ---------- NAVIGATION BAR AUTO-HIDE ON ANY SUB-PAGE ----------
   const subPageStates = [
-    showLevelPage, showStorePage, showSettings, showAchievements, showDailyTasks,
+    showLevelPage, showStorePage, showSettings, showAchievements,
     showPrivacyPolicy, showBlocked, showFriendRequests, showFriendsList,
     showReport, showSearch, showFeedback, showHelp, showBackpack,
     showAdminPanel, showOfficialRules, showFamily, showLanguage, showReportQueue,
@@ -233,7 +232,6 @@ export default function ProfilePage({
   // ---------- ALL HOOKS AND FUNCTIONS (unchanged from original) ----------
   const achievements = useMemo(() => getAchievementsList(user), [user]);
   const unlockedCount = useMemo(() => achievements.filter((a) => a.unlocked).length, [achievements]);
-  const dailyTasks = useMemo(() => getDailyTaskProgress(user), [user]);
   const transactions = useMemo(() => {
     const txList: Transaction[] = user.transactions ? Object.values(user.transactions) : [];
     return txList.sort((a, b) => b.timestamp - a.timestamp);
@@ -624,10 +622,6 @@ export default function ProfilePage({
       setShowAchievements(true);
     }
     if (action === "daily") handleDailyReward();
-    if (action === "dailyTasks") {
-      openSubPage("dailyTasks");
-      setShowDailyTasks(true);
-    }
     if (action === "privacyPolicy") {
       openSubPage("privacyPolicy");
       setShowPrivacyPolicy(true);
@@ -707,7 +701,6 @@ export default function ProfilePage({
   const PROFILE_FUNCTIONS = [
     { icon: "💰", label: "Wallet", color: "#f59e0b", glow: "rgba(245,158,11,0.35)", action: "wallet" },
     { icon: "🛍️", label: "Store", color: "#a855f7", glow: "rgba(168,85,247,0.35)", action: "store" },
-    { icon: "✅", label: "Task", color: "#3b82f6", glow: "rgba(59,130,246,0.35)", action: "dailyTasks" },
     { icon: "🎒", label: "Backpack", color: "#ec4899", glow: "rgba(236,72,153,0.35)", action: "backpack" },
     { icon: "💡", label: "Help", color: "#22c55e", glow: "rgba(34,197,94,0.35)", action: "help" },
     { icon: "💬", label: "Feedback", color: "#06b6d4", glow: "rgba(6,182,212,0.35)", action: "feedback" },
@@ -977,83 +970,6 @@ export default function ProfilePage({
               </div>
             ))}
           </div>
-        </BottomSheet>
-      )}
-
-      {/* Daily Tasks BottomSheet */}
-      {showDailyTasks && (
-        <BottomSheet
-          onClose={() => {
-            closeSubPage();
-            setShowDailyTasks(false);
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900 }}>✅ Daily Tasks</h2>
-            <button
-              onClick={() => {
-                closeSubPage();
-                setShowDailyTasks(false);
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 20,
-                color: "rgba(162,155,254,0.5)",
-              }}
-            >
-              ✕
-            </button>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {dailyTasks.map((task) => (
-              <div
-                key={task.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "14px 16px",
-                  background: task.completed ? "rgba(0,230,118,0.08)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${task.completed ? "rgba(0,230,118,0.2)" : "rgba(255,255,255,0.06)"}`,
-                  borderRadius: 14,
-                }}
-              >
-                <span style={{ fontSize: 24, filter: task.completed ? "none" : "grayscale(0.5)" }}>{task.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: task.completed ? "#00e676" : "#fff" }}>
-                    {task.title}
-                  </p>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                    <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.07)" }}>
-                      <div
-                        style={{
-                          height: "100%",
-                          borderRadius: 2,
-                          width: `${Math.min(100, (task.progress / task.target) * 100)}%`,
-                          background: task.completed ? "#00e676" : "linear-gradient(90deg,#6C5CE7,#A29BFE)",
-                          transition: "width 0.3s",
-                        }}
-                      />
-                    </div>
-                    <span style={{ fontSize: 10, color: "rgba(162,155,254,0.45)", whiteSpace: "nowrap" }}>
-                      {task.progress}/{task.target}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: task.completed ? "#00e676" : "#FFD700" }}>
-                    {task.completed ? "✅" : `+${task.reward}`}
-                  </span>
-                  {!task.completed && <p style={{ fontSize: 8, color: "rgba(162,155,254,0.3)" }}>diamonds</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p style={{ fontSize: 11, color: "rgba(162,155,254,0.3)", textAlign: "center", marginTop: 14 }}>
-            Tasks reset daily at midnight
-          </p>
         </BottomSheet>
       )}
 
