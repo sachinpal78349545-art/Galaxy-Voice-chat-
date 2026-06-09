@@ -48,6 +48,8 @@ interface BottomBarProps {
   onShare: () => void;
   showToast: (msg: string, type?: string, icon?: string) => void;
   onOpenMenu?: () => void;
+  onOpenInbox?: () => void;
+  inboxBadge?: number;
   onFloatEmoji?: (emoji: string) => void; 
   className?: string;            
 }
@@ -57,7 +59,7 @@ export default function BottomBar({
   isMuted, isOnSeat,
   inputText, setInputText, onSendChat,
   onSendEmoji, onHandleGift, onHandleReaction,
-  onMicToggle, onOpenMenu,
+  onMicToggle, onOpenMenu: _onOpenMenu,
   className = "",
 }: BottomBarProps) {
   const [showEmoji,     setShowEmoji]     = useState(false);

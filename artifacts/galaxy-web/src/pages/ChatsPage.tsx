@@ -5,7 +5,7 @@ import { UserProfile, incrementStat, followUser, unfollowUser, subscribeUser, bl
 import { Conversation, ChatMessage, subscribeConversations, subscribeMessages, sendMessage, sendImageMessage, sendVoiceMessage, addReaction, setTyping, subscribeTyping, markRead, clearChat, updateLastSeen } from "../lib/chatService";
 import { sendNotification, subscribeNotifications, Notification as AppNotification, markNotificationRead, markAllNotificationsRead } from "../lib/notificationService";
 import { useToast } from "../lib/toastContext";
-import { ensureSystemConversations, getOrCreateSystemConversation, SYSTEM_USERS, ASSISTANT_UID, ASSISTANT_NAME, ASSISTANT_AVATAR } from "../lib/systemChatService";
+import { ensureSystemConversations, getOrCreateSystemConversation, SYSTEM_USERS, ASSISTANT_UID } from "../lib/systemChatService";
 
 interface Props { user: UserProfile; initialChatUid?: string | null; onChatActive?: (active: boolean) => void; }
 
@@ -301,10 +301,9 @@ export default function ChatsPage({ user, initialChatUid, onChatActive }: Props)
   const getStatusColor = (s?: string) => s === "seen" ? "#00bfff" : s === "delivered" ? "rgba(162,155,254,0.5)" : "rgba(162,155,254,0.35)";
   const formatLastSeen = (ts: number | null) => { if (!ts) return ""; const diff = Date.now() - ts; if (diff < 60000) return "just now"; if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`; if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`; return `${Math.floor(diff / 86400000)}d ago`; };
   const formatMessageTime = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const unreadNotifCount = notifications.filter(n => !n.read && n.type !== "message").length;
 
   // Get mutual count (random for demo)
-  const getMutualCount = (targetId: string): number => {
+  const getMutualCount = (_targetId: string): number => {
     return Math.floor(Math.random() * 100);
   };
 

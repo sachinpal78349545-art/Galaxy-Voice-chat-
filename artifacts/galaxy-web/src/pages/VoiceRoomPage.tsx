@@ -15,10 +15,8 @@ import { UserProfile, gainXP, sendGift, incrementStat, followUser, reportUser, i
 import { recordGift, getGiftLeaderboard, LeaderboardEntry, LeaderboardPeriod } from "../lib/giftService";
 import { sendNotification } from "../lib/notificationService";
 import { getOrCreateConversation } from "../lib/chatService";
-import { voiceService, VOICE_EFFECTS, VoiceEffect } from "../lib/voiceService";
+import { voiceService } from "../lib/voiceService";
 import { useToast } from "../lib/toastContext";
-import { musicService } from "../lib/musicService";
-import { openMysteryBox, MYSTERY_BOX_COST, MysteryBoxReward } from "../lib/giftService";
 import { subscribeWaitlist, joinWaitlist, leaveWaitlist, admitFromWaitlist } from "../lib/roomService";
 import { PKBattle, PKInvite, subscribePKBattle, subscribePKInvites, sendPKInvite, respondPKInvite, endPKBattle, getPKDurations } from "../lib/pkBattleService";
 import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, ClassicLudo, CarromGame, TruthDareWheel, cleanName, hashCode } from "../components/room";
@@ -703,8 +701,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
         onRaiseHand={handleRaiseHand}
         onShare={shareRoom}
         showToast={showToast}
-        onOpenGame={() => setShowGameHub(true)}
-        onOpenMenu={() => setShowRoomMode(true)}
+        onOpenMenu={() => setShowGameHub(true)}
         onOpenInbox={() => setShowInbox(true)}
         onFloatEmoji={spawnFloatAtSeat}
         inboxBadge={inboxNotifs.filter(n => !n.read).length}

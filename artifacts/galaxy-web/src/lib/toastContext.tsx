@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useRef } from "react";
 
 interface Toast {
   id: number;
@@ -9,7 +9,7 @@ interface Toast {
 
 interface ToastContextType {
   toasts: Toast[];
-  showToast: (message: string, type?: Toast["type"], duration?: number) => void;
+  showToast: (message: string, type?: Toast["type"], icon?: string) => void;
 }
 
 const ToastContext = createContext<ToastContextType>({
@@ -28,9 +28,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback((
     message: string,
     type: Toast["type"] = "info",
-    duration: number = 2500
+    _icon?: string
   ) => {
     const id = idRef.current++;
+    const duration = 2500;
     setToasts(prev => [...prev, { id, message, type, duration }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));

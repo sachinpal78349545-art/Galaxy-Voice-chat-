@@ -3,21 +3,20 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db, storage } from "../lib/firebase";
 import { ref, onValue, off } from "firebase/database";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { UserProfile, updateUser, addCoins, claimDailyReward, addTransaction, getAchievementsList, Transaction, Achievement, DAILY_TASKS, getDailyTaskProgress, blockUser, unblockUser, getUser, reportUser, updatePrivacy, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, BanDuration, setUserCoins, deleteUserAvatar, resetUserName, deviceBanUser, shadowBanUser, removeShadowBan, setUserLevelXP, transferAccountData, getAllUsers, createVipUserId, addCustomBadge, removeCustomBadge } from "../lib/userService";
-import { sendGlobalAlert, clearGlobalAlerts, sendMassDM } from "../lib/notificationService";
-import { setMaintenanceMode, setStoreOverrides, getStoreOverrides, updateRoomSettings, setRoomSeatCount, wipeDummyRooms, setAutoEntryRoom, getAutoEntryRoom, ensureOfficialRoom, ROOM_THEMES, Room } from "../lib/roomService";
+import { UserProfile, claimDailyReward, getAchievementsList, blockUser, unblockUser, getUser, reportUser, subscribeFriendRequests, respondFriendRequest, FriendRequest, sendFriendRequest, removeFriend, searchUsers, isSuperAdmin, setOfficialRole, removeOfficialRole, getUserByUserId, ensureSuperAdmin, followUser, banUser, unbanUser, isUserBanned, setUserCoins, deleteUserAvatar, resetUserName, deviceBanUser, shadowBanUser, removeShadowBan } from "../lib/userService";
+import { sendGlobalAlert, clearGlobalAlerts } from "../lib/notificationService";
+import { updateRoomSettings, setRoomSeatCount, wipeDummyRooms, setAutoEntryRoom, getAutoEntryRoom, ensureOfficialRoom, ROOM_THEMES } from "../lib/roomService";
 import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
-import { STORE_ITEMS, StoreItem, getStoreItem, purchaseItem, getInventory, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, isAnimatedFrame } from "../lib/storeService";
+import { getStoreItem, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, isAnimatedFrame } from "../lib/storeService";
 import SuperAdminAvatar from "../components/SuperAdminAvatar";
-import FrameAvatar, { FramePreview } from "../components/frames/FrameAvatar";
+import { FramePreview } from "../components/frames/FrameAvatar";
 import FantasyFrame from "../components/frames/FantasyFrame";
 import OfficialBadge from "../components/OfficialBadge";
-import { Language, LANGUAGE_OPTIONS, getCurrentLanguage, setLanguage, isRTL, t } from "../lib/i18n";
-import { Family, createFamily, joinFamily, leaveFamily, getUserFamily, getAllFamilies, searchFamilies, getFamilyIcons, getFamilyLeaderboard, updateFamilySettings, promoteMember, kickMember, transferLeadership, deleteFamily, addFamilyContribution } from "../lib/familyService";
-import { Report, submitReport, getReportQueue, reviewReport, getReportStats, REPORT_CATEGORIES } from "../lib/reportService";
+import { Language, LANGUAGE_OPTIONS, getCurrentLanguage, setLanguage } from "../lib/i18n";
+import { Family, createFamily, joinFamily, leaveFamily, getUserFamily, getAllFamilies, getFamilyIcons } from "../lib/familyService";
+import { Report, getReportQueue, reviewReport } from "../lib/reportService";
 import SettingsPage from "./SettingsPage";
 import UserLevelPage from "./UserLevelPage";
 import StorePage from "./StorePage";
@@ -34,7 +33,7 @@ interface Props {
   onCloseSubPage?: () => void;
 }
 
-function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function BottomSheet({ children, onClose: _onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
       style={{
@@ -53,40 +52,6 @@ function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose
   );
 }
 
-function PrivacyToggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>{label}</span>
-      <button
-        onClick={() => onChange(!value)}
-        style={{
-          width: 48,
-          height: 26,
-          borderRadius: 13,
-          border: "none",
-          cursor: "pointer",
-          background: value ? "rgba(108,92,231,0.6)" : "rgba(255,255,255,0.1)",
-          position: "relative",
-          transition: "background 0.2s",
-        }}
-      >
-        <div
-          style={{
-            width: 20,
-            height: 20,
-            borderRadius: 10,
-            background: "#fff",
-            position: "absolute",
-            top: 3,
-            left: value ? 25 : 3,
-            transition: "left 0.2s",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-          }}
-        />
-      </button>
-    </div>
-  );
-}
 
 export default function ProfilePage({
   user,
@@ -112,7 +77,7 @@ export default function ProfilePage({
   const [showHelp, setShowHelp] = useState(false);
   const [showHelpArticle, setShowHelpArticle] = useState<string | null>(null);
   const [showBackpack, setShowBackpack] = useState(false);
-  const [storeCategory, setStoreCategory] = useState<"frame" | "entry" | "theme">("frame");
+  const [_storeCategory, setStoreCategory] = useState<"frame" | "entry" | "theme">("frame");
   const [storeLoading, setStoreLoading] = useState<string | null>(null);
   const [backpackCategory, setBackpackCategory] = useState<"frame" | "entry" | "theme">("frame");
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -124,7 +89,6 @@ export default function ProfilePage({
   const [feedbackSubject, setFeedbackSubject] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackSending, setFeedbackSending] = useState(false);
-  const [recharging, setRecharging] = useState<number | null>(null);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendProfiles, setFriendProfiles] = useState<UserProfile[]>([]);
   const [blockedProfiles, setBlockedProfiles] = useState<UserProfile[]>([]);
@@ -161,7 +125,7 @@ export default function ProfilePage({
   const [showFamily, setShowFamily] = useState(false);
   const [myFamily, setMyFamily] = useState<Family | null>(null);
   const [allFamilies, setAllFamilies] = useState<Family[]>([]);
-  const [familyLoading, setFamilyLoading] = useState(false);
+  const [_familyLoading, setFamilyLoading] = useState(false);
   const [showCreateFamily, setShowCreateFamily] = useState(false);
   const [newFamilyName, setNewFamilyName] = useState("");
   const [newFamilyIcon, setNewFamilyIcon] = useState("👑");
@@ -232,10 +196,6 @@ export default function ProfilePage({
   // ---------- ALL HOOKS AND FUNCTIONS (unchanged from original) ----------
   const achievements = useMemo(() => getAchievementsList(user), [user]);
   const unlockedCount = useMemo(() => achievements.filter((a) => a.unlocked).length, [achievements]);
-  const transactions = useMemo(() => {
-    const txList: Transaction[] = user.transactions ? Object.values(user.transactions) : [];
-    return txList.sort((a, b) => b.timestamp - a.timestamp);
-  }, [user.transactions]);
   const xpPct = useMemo(() => Math.min(100, (user.xp / (user.level * 1000)) * 100), [user.xp, user.level]);
 
   const openSubPage = useCallback((id: string) => onOpenSubPage?.(id), [onOpenSubPage]);
@@ -319,7 +279,7 @@ export default function ProfilePage({
 
   useEffect(() => {
     const momentsRef = ref(db, "moments");
-    const handler = onValue(momentsRef, (snap) => {
+    onValue(momentsRef, (snap) => {
       if (!snap.exists()) {
         setMomentCount(0);
         return;
@@ -354,24 +314,6 @@ export default function ProfilePage({
     onLogout();
   };
 
-  const handleRecharge = async (coins: number, idx: number) => {
-    setRecharging(idx);
-    try {
-      await new Promise((r) => setTimeout(r, 1200));
-      await addCoins(user.uid, coins);
-      await addTransaction(user.uid, {
-        type: "recharge",
-        amount: coins,
-        description: `Recharged ${coins} diamonds`,
-      });
-      onUpdate((prev) => ({ ...prev, coins: prev.coins + coins }));
-      showToast(`+${coins} diamonds added!`, "success", "💎");
-    } catch {
-      showToast("Recharge failed. Try again.", "error");
-    } finally {
-      setRecharging(null);
-    }
-  };
 
   const handleDailyReward = async () => {
     const result = await claimDailyReward(user.uid, user);
@@ -436,9 +378,9 @@ export default function ProfilePage({
         return;
       }
       try {
-        const fileRef = storageRef(storage, `reports/${user.uid}/${Date.now()}_${reportAttachment.name}`);
-        await uploadBytes(fileRef, reportAttachment);
-        attachmentUrl = await getDownloadURL(fileRef);
+        const fileRef = storage.ref(`reports/${user.uid}/${Date.now()}_${reportAttachment.name}`);
+        await fileRef.uploadBytes(reportAttachment);
+        attachmentUrl = await fileRef.getDownloadURL();
       } catch {
         showToast("Failed to upload attachment", "error");
         setReportUploading(false);
@@ -540,34 +482,6 @@ export default function ProfilePage({
     setAdminLoading(false);
   };
 
-  const handlePurchase = async (item: StoreItem) => {
-    if (user.coins < item.price) {
-      showToast("Not enough diamonds!", "warning");
-      return;
-    }
-    const owned = user.inventory || {};
-    if (owned[item.id]) {
-      showToast("Already owned!", "info");
-      return;
-    }
-    setStoreLoading(item.id);
-    try {
-      const ok = await purchaseItem(user.uid, item.id, user.coins);
-      if (ok) {
-        onUpdate((prev) => ({
-          ...prev,
-          coins: prev.coins - item.price,
-          inventory: { ...prev.inventory, [item.id]: { itemId: item.id, purchasedAt: Date.now(), equipped: false } },
-        }));
-        showToast(`${item.name} purchased!`, "success");
-      } else {
-        showToast("Purchase failed", "error");
-      }
-    } catch {
-      showToast("Purchase failed", "error");
-    }
-    setStoreLoading(null);
-  };
 
   const handleEquip = async (itemId: string) => {
     setStoreLoading(itemId);
@@ -902,8 +816,7 @@ export default function ProfilePage({
           user={user}
           isAdmin={isAdmin}
           friendRequestsCount={friendRequests.length}
-          unlockedCount={unlockedCount}
-          totalAchievements={achievements.length}
+
           onMenuAction={handleMenu}
           onOpenSubPage={openSubPage}
           onCloseSubPage={closeSubPage}
@@ -3484,7 +3397,7 @@ export default function ProfilePage({
                       style={{ marginTop: 12 }}
                       onClick={() => {
                         setShowBackpack(false);
-                        setShowStore(true);
+                        setShowStorePage(true);
                         setStoreCategory(backpackCategory);
                       }}
                     >

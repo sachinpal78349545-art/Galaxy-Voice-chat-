@@ -77,6 +77,9 @@ export interface UserProfile {
   isSuperAdmin?: boolean;
   globalRole?: "official" | "user";
   frame?: string;
+  friendsCount?: number;
+  fansCount?: number;
+  visitorsCount?: number;
   dailyReward?: {
     lastClaimed: number;
     streak: number;

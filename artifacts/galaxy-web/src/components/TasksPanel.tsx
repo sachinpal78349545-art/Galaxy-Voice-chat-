@@ -10,6 +10,8 @@ interface UserProfile {
 
 interface TasksPanelProps {
   user: UserProfile;
+  onClose?: () => void;
+  onUpdate?: (user: any) => void;
 }
 
 export default function TasksPanel({ user }: TasksPanelProps) {
@@ -17,9 +19,9 @@ export default function TasksPanel({ user }: TasksPanelProps) {
   const [isSignedUp, setIsSignedUp] = useState(false);
 
   // Safe Fallbacks to prevent crash errors
-  const roomsCreated = user?.roomsCreated || [];
-  const followingList = user?.followingList || [];
-  const followersList = user?.followersList || [];
+  void user?.roomsCreated;
+  void user?.followingList;
+  void user?.followersList;
 
   // Static tasks data matching your layout setup
   const dailyTasks = [

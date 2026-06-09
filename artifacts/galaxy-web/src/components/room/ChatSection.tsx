@@ -7,7 +7,7 @@ interface ChatSectionProps {
   msgEndRef: React.RefObject<HTMLDivElement>;
 }
 
-export default function ChatSection({ messages, userId, msgEndRef }: ChatSectionProps) {
+export default function ChatSection({ messages, userId: _userId, msgEndRef }: ChatSectionProps) {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {

@@ -34,8 +34,9 @@ export async function getOrCreateSystemConversation(
   // कौन सा system user है?
   let sysUser = null;
   for (const key in SYSTEM_USERS) {
-    if (SYSTEM_USERS[key].uid === systemUserId) {
-      sysUser = SYSTEM_USERS[key];
+    const su = (SYSTEM_USERS as Record<string, typeof SYSTEM_USERS[keyof typeof SYSTEM_USERS]>)[key];
+    if (su.uid === systemUserId) {
+      sysUser = su;
       break;
     }
   }

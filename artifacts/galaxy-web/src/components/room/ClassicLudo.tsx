@@ -517,7 +517,7 @@ export default function ClassicLudo({
             }}>LAUNCH GRID ({players.length} PLUGGED)</button>
           )}
           {!game.players[userId] && players.length < 4 && (
-            <p style={{ fontSize: 10, textAlign: "center", color: "#00F0FF", marginTop: 8, letterSpacing: 0.5, animate: "pulse" }}>
+            <p style={{ fontSize: 10, textAlign: "center", color: "#00F0FF", marginTop: 8, letterSpacing: 0.5 }}>
               ⚡ TAP AN EMPTY NODE TO SYNC MATRIX
             </p>
           )}

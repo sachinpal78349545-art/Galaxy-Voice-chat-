@@ -22,6 +22,7 @@ export interface Conversation {
   participants: string[];
   participantNames: string[];
   participantAvatars: string[];
+  participantIsSystem?: Record<number, boolean>;
   lastMessage: string;
   lastTime: number;
   unread: Record<string, number>;
