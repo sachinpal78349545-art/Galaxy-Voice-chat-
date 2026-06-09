@@ -82,6 +82,10 @@ function AppInner() {
   const notifSubCleanup = useRef<(() => void) | null>(null);
   const alertSubCleanup = useRef<(() => void) | null>(null);
   const maintSubCleanup = useRef<(() => void) | null>(null);
+  const authResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialized = useRef(false);
+  const pageHistoryRef = useRef<NavPage[]>(["home"]);
+  const [isOnline, setIsOnline] = useState(true);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -95,8 +99,44 @@ function AppInner() {
   }, []);
 
   useEffect(() => {
+    let offValue: (() => void) | null = null;
+    Promise.all([import("firebase/database"), import("./lib/firebase")]).then(([{ ref: dbRef, onValue }, { db }]) => {
+      const connRef = dbRef(db, ".info/connected");
+      offValue = onValue(connRef, snap => setIsOnline(snap.val() === true)) as unknown as () => void;
+    });
+    return () => { if (offValue) offValue(); };
+  }, []);
+
+  useEffect(() => {
+    window.history.pushState({ page: "home" }, "");
+    const handlePop = () => {
+      const hist = pageHistoryRef.current;
+      if (hist.length > 1) {
+        hist.pop();
+        const prev = hist[hist.length - 1];
+        setPage(prev);
+        setSubPage(null);
+        setViewedProfile(null);
+        setPageKey(k => k + 1);
+      }
+      window.history.pushState({ page: hist[hist.length - 1] ?? "home" }, "");
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
       if (u) {
+        if (authResetTimer.current) {
+          clearTimeout(authResetTimer.current);
+          authResetTimer.current = null;
+        }
+        if (isInitialized.current) {
+          setFbUser(u);
+          return;
+        }
+        isInitialized.current = true;
         try {
           const p = await initUser(u.uid, u.displayName || "Space Traveler", u.email || "", u.photoURL || "\u{1F30C}");
           setProfile(p);
@@ -141,26 +181,30 @@ function AppInner() {
           console.error("Init error:", err);
           showToast("Connection error. Some features may be limited.", "error");
           setAuthLoading(false);
-          setFbUser(null);
-          setProfile(null);
+          isInitialized.current = false;
         }
       } else {
+        authResetTimer.current = setTimeout(() => {
+          isInitialized.current = false;
+          setAuthLoading(false);
+          setFbUser(null);
+          setProfile(null);
+          userSubCleanup.current?.();
+          userSubCleanup.current = null;
+          presenceCleanup.current?.();
+          notifSubCleanup.current?.();
+          notifSubCleanup.current = null;
+          alertSubCleanup.current?.();
+          alertSubCleanup.current = null;
+          maintSubCleanup.current?.();
+          maintSubCleanup.current = null;
+        }, 5000);
         setAuthLoading(false);
-        setFbUser(null);
-        setProfile(null);
-        userSubCleanup.current?.();
-        userSubCleanup.current = null;
-        presenceCleanup.current?.();
-        notifSubCleanup.current?.();
-        notifSubCleanup.current = null;
-        alertSubCleanup.current?.();
-        alertSubCleanup.current = null;
-        maintSubCleanup.current?.();
-        maintSubCleanup.current = null;
       }
     });
     return () => {
       unsub();
+      if (authResetTimer.current) clearTimeout(authResetTimer.current);
       userSubCleanup.current?.();
       presenceCleanup.current?.();
       notifSubCleanup.current?.();
@@ -174,9 +218,11 @@ function AppInner() {
   const changePage = (p: NavPage) => {
     if (p !== "chats") { setChatTargetUid(null); setChatActive(false); }
     setSubPage(null);
-    setViewedProfile(null); // profile modal band kare
+    setViewedProfile(null);
     setPage(p);
     setPageKey(k => k + 1);
+    pageHistoryRef.current.push(p);
+    window.history.pushState({ page: p }, "");
   };
 
   if (authLoading) {
@@ -342,6 +388,18 @@ function AppInner() {
     <div className="app-wrapper">
       <div className="stars" />
       <div className="app-container">
+        {!isOnline && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999,
+            background: "linear-gradient(90deg, #1a0030, #2d0050)",
+            borderBottom: "1px solid rgba(255,100,100,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 8, padding: "8px 16px", maxWidth: 400, margin: "0 auto",
+          }}>
+            <span style={{ fontSize: 14 }}>📡</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#ff9999" }}>No internet connection — reconnecting…</span>
+          </div>
+        )}
         {(page === "home" || page === "rooms" || (page === "chats" && !chatActive)) && (
           <div style={{
             position: "fixed", top: 0, left: 0, right: 0, maxWidth: 400, margin: "0 auto",
