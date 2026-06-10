@@ -10,6 +10,7 @@ import { submitFeedback, HELP_ARTICLES } from "../lib/supportService";
 import { getOrCreateConversation } from "../lib/chatService";
 import { useToast } from "../lib/toastContext";
 import { getStoreItem, equipItem, unequipItem, getRarityColor, isPngFrame, getPngFramePath, isAnimatedFrame } from "../lib/storeService";
+import TasksPanel from "../components/TasksPanel";
 import SuperAdminAvatar from "../components/SuperAdminAvatar";
 import { FramePreview } from "../components/frames/FrameAvatar";
 import FantasyFrame from "../components/frames/FantasyFrame";
@@ -64,6 +65,7 @@ export default function ProfilePage({
   onOpenSubPage,
   onCloseSubPage,
 }: Props) {
+  const [showTasksPanel, setShowTasksPanel] = useState(false);
   const [showLevelPage, setShowLevelPage] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -535,7 +537,7 @@ export default function ProfilePage({
       openSubPage("achievements");
       setShowAchievements(true);
     }
-    if (action === "daily") handleDailyReward();
+    if (action === "daily") setShowTasksPanel(true);
     if (action === "privacyPolicy") {
       openSubPage("privacyPolicy");
       setShowPrivacyPolicy(true);
@@ -4026,6 +4028,14 @@ export default function ProfilePage({
             )}
           </div>
         </BottomSheet>
+      )}
+
+      {showTasksPanel && (
+        <TasksPanel
+          user={user}
+          onClose={() => setShowTasksPanel(false)}
+          onUpdate={(updated) => onUpdate(updated as typeof user)}
+        />
       )}
     </div>
   );

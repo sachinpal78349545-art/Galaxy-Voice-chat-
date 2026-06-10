@@ -1,246 +1,219 @@
-import { useState } from "react";
-
-interface UserProfile {
-  name?: string;
-  roomsCreated?: any[];
-  followingList?: any[];
-  followersList?: any[];
-  posts?: any[];
-}
+import { useState, useCallback } from "react";
+import { UserProfile, claimDailyReward } from "../lib/userService";
 
 interface TasksPanelProps {
   user: UserProfile;
   onClose?: () => void;
-  onUpdate?: (user: any) => void;
+  onUpdate?: (user: UserProfile) => void;
 }
 
-export default function TasksPanel({ user }: TasksPanelProps) {
-  const [showDailyRewards, setShowDailyRewards] = useState(false);
-  const [isSignedUp, setIsSignedUp] = useState(false);
+const DAILY_TASKS = [
+  { id: 1, title: "Play five rounds of Ludo", progress: "0/5", reward: "x5", type: "diamond" },
+  { id: 2, title: "Take the mic for 15 mins", progress: "0/15", reward: "x10", type: "diamond" },
+  { id: 3, title: "Received 3 diamond gifts", progress: "0/3", reward: "x1", type: "rose" },
+  { id: 4, title: "Play 5 rounds of Truth or Dare", progress: "0/5", reward: "x5", type: "diamond" },
+  { id: 5, title: "Like a post in moments", progress: "0/1", reward: "x1", type: "rose" },
+];
 
-  // Safe Fallbacks to prevent crash errors
-  void user?.roomsCreated;
-  void user?.followingList;
-  void user?.followersList;
+export default function TasksPanel({ user, onClose, onUpdate }: TasksPanelProps) {
+  const [showDailyModal, setShowDailyModal] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [claimSuccess, setClaimSuccess] = useState(false);
 
-  // Static tasks data matching your layout setup
-  const dailyTasks = [
-    { id: 1, title: "Play five rounds of Ludo", progress: "0/5", reward: "x5", type: "diamond" },
-    { id: 2, title: "Take the mic for 15 mins", progress: "0/15", reward: "x10", type: "diamond" },
-    { id: 3, title: "Received 3 diamond gifts", progress: "0/3", reward: "x1", type: "rose" },
-    { id: 4, title: "Play 5 rounds of Truth or Dare", progress: "0/5", reward: "x5", type: "diamond" },
-    { id: 5, title: "Like a post in moments", progress: "0/1", reward: "x1", type: "rose" },
-  ];
+  const daily = user.dailyReward || { lastClaimed: 0, streak: 0 };
+  const lastDate = new Date(daily.lastClaimed).toDateString();
+  const today = new Date().toDateString();
+  const canClaim = lastDate !== today;
+  const streak = daily.streak || 0;
+
+  const handleClaim = useCallback(async () => {
+    if (!canClaim || claiming) return;
+    setClaiming(true);
+    try {
+      const result = await claimDailyReward(user.uid, user);
+      if (result) {
+        setClaimSuccess(true);
+        if (onUpdate) onUpdate({ ...user, dailyReward: { lastClaimed: Date.now(), streak: result.streak } });
+        setTimeout(() => setClaimSuccess(false), 3000);
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setClaiming(false);
+    }
+  }, [canClaim, claiming, user, onUpdate]);
 
   return (
-    <div style={{ 
-      backgroundColor: "#0d0926", 
-      color: "#fff", 
-      padding: "32px 16px 80px 16px", // Added extra 32px top padding to push content away from header/back button
-      fontFamily: "sans-serif",
-      minHeight: "100vh",
-      boxSizing: "border-box"
-    }}>
-      
-      {/* Premium Daily Rewards Header Card */}
-      <div style={{
-        background: "linear-gradient(135deg, #2e1a47 0%, #1c143c 100%)",
-        borderRadius: "20px",
-        padding: "20px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        border: "1px solid rgba(162, 155, 254, 0.15)",
-        marginBottom: "28px",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
-      }}>
-        <div>
-          <h2 style={{ margin: "0 0 6px 0", fontSize: "20px", fontWeight: "bold", color: "#fff" }}>Daily Rewards</h2>
-          <p style={{ margin: 0, fontSize: "13px", color: "rgba(162, 155, 254, 0.7)" }}>Sign in for 7 days to get a surprise</p>
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 3000,
+        backgroundColor: "rgba(5,1,18,0.85)", backdropFilter: "blur(10px)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end",
+      }}
+      onClick={onClose}
+    >
+      <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+      <div
+        style={{
+          width: "100%", maxWidth: 400,
+          background: "linear-gradient(180deg,#1a0d36 0%,#0d0926 100%)",
+          borderRadius: "28px 28px 0 0",
+          border: "1px solid rgba(162,155,254,0.15)",
+          maxHeight: "90vh", overflowY: "auto",
+          animation: "slideUp 0.3s ease",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px 0" }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(162,155,254,0.3)" }} />
         </div>
-        <button 
-          onClick={() => setShowDailyRewards(true)}
-          style={{
-            background: "linear-gradient(90deg, #f1c40f 0%, #f39c12 100%)",
-            color: "#000",
-            border: "none",
-            borderRadius: "20px",
-            padding: "10px 24px",
-            fontWeight: "bold",
-            fontSize: "14px",
-            cursor: "pointer",
-            boxShadow: "0 0 12px rgba(241, 196, 15, 0.4)"
-          }}
-        >
-          Sign in
-        </button>
-      </div>
 
-      {/* Title Section */}
-      <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "16px", color: "#fff", letterSpacing: "0.02em" }}>Daily tasks</h3>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px 14px 20px" }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: "#fff" }}>Tasks & Rewards</h2>
+          <button onClick={onClose} style={{
+            background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(162,155,254,0.7)",
+            width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>✕</button>
+        </div>
 
-      {/* Tasks Render List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-        {dailyTasks.map((task) => (
-          <div key={task.id} style={{
-            backgroundColor: "rgba(255, 255, 255, 0.04)",
-            border: "1px solid rgba(255, 255, 255, 0.05)",
-            borderRadius: "20px",
-            padding: "16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between"
+        <div style={{ padding: "0 16px 40px 16px" }}>
+          {/* Daily Login Rewards Card */}
+          <div style={{
+            background: "linear-gradient(135deg,#2e1a47,#1c143c)", borderRadius: 20, padding: 20,
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            border: "1px solid rgba(162,155,254,0.15)", marginBottom: 24,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              {/* Dynamic Task Emote Container */}
-              <div style={{
-                width: "48px",
-                height: "48px",
-                backgroundColor: "rgba(108, 92, 231, 0.15)",
-                borderRadius: "14px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "22px"
-              }}>
-                {task.type === "diamond" ? "🎲" : "🌹"}
-              </div>
-              
-              {/* Meta details text */}
-              <div>
-                <h4 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: "600", color: "#fff" }}>{task.title}</h4>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.3)" }}>({task.progress})</span>
-                  <span style={{ fontSize: "13px", color: task.type === "diamond" ? "#60a5fa" : "#f43f5e", display: "flex", alignItems: "center", gap: "2px" }}>
-                    {task.type === "diamond" ? "💎" : "🌹"} {task.reward}
-                  </span>
-                </div>
-              </div>
+            <div>
+              <h3 style={{ margin: "0 0 4px 0", fontSize: 18, fontWeight: 900, color: "#fff" }}>Daily Rewards</h3>
+              <p style={{ margin: 0, fontSize: 12, color: canClaim ? "#f1c40f" : "rgba(162,155,254,0.7)" }}>
+                {claimSuccess ? "Claimed! 🎉 Come back tomorrow" : canClaim ? "Reward ready — claim now! 🎁" : `Day ${streak} streak — come back tomorrow`}
+              </p>
             </div>
-
-            {/* Premium CTA Button */}
-            <button style={{
-              backgroundColor: "#6c5ce7",
-              color: "#fff",
-              border: "none",
-              borderRadius: "18px",
-              padding: "8px 20px",
-              fontSize: "13px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              transition: "transform 0.2s"
+            <button onClick={() => setShowDailyModal(true)} style={{
+              background: canClaim ? "linear-gradient(90deg,#f1c40f,#f39c12)" : "rgba(255,255,255,0.08)",
+              color: canClaim ? "#000" : "rgba(255,255,255,0.4)",
+              border: "none", borderRadius: 20, padding: "10px 20px",
+              fontWeight: 800, fontSize: 13, cursor: "pointer",
+              boxShadow: canClaim ? "0 0 14px rgba(241,196,15,0.4)" : "none",
             }}>
-              Go
+              {canClaim ? "Claim" : `Day ${streak}`}
             </button>
           </div>
-        ))}
+
+          {/* Daily Tasks list */}
+          <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, color: "#fff" }}>Daily Tasks</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {DAILY_TASKS.map(task => (
+              <div key={task.id} style={{
+                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 18, padding: "14px 16px",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{
+                    width: 46, height: 46, background: "rgba(108,92,231,0.15)",
+                    borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
+                  }}>
+                    {task.type === "diamond" ? "🎲" : "🌹"}
+                  </div>
+                  <div>
+                    <p style={{ margin: "0 0 3px 0", fontSize: 14, fontWeight: 700, color: "#fff" }}>{task.title}</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>{task.progress}</span>
+                      <span style={{ fontSize: 12, color: task.type === "diamond" ? "#60a5fa" : "#f43f5e" }}>
+                        {task.type === "diamond" ? "💎" : "🌹"} {task.reward}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button style={{
+                  background: "#6c5ce7", color: "#fff", border: "none",
+                  borderRadius: 16, padding: "8px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                }}>Go</button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* 7 Days Daily Rewards Modal Layer */}
-      {showDailyRewards && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.85)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 2000000,
-          padding: "20px"
-        }}>
-          <div style={{
-            background: "linear-gradient(180deg, #322361 0%, #150f2e 100%)",
-            width: "100%",
-            maxWidth: "380px",
-            borderRadius: "28px",
-            padding: "24px",
-            position: "relative",
-            border: "1px solid rgba(162, 155, 254, 0.2)",
-            boxShadow: "0 12px 40px rgba(0,0,0,0.6)"
-          }}>
-            {/* Close Overlay Icon */}
-            <button 
-              onClick={() => setShowDailyRewards(false)}
-              style={{
-                position: "absolute",
-                top: "16px",
-                right: "16px",
-                background: "rgba(255,255,255,0.1)",
-                border: "none",
-                color: "#fff",
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                cursor: "pointer",
-                fontSize: "16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-            >
-              ✕
-            </button>
+      {/* 7-Day Streak Modal */}
+      {showDailyModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 4000,
+            background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+          }}
+          onClick={() => setShowDailyModal(false)}
+        >
+          <div
+            style={{
+              background: "linear-gradient(180deg,#322361,#150f2e)",
+              width: "100%", maxWidth: 360, borderRadius: 28, padding: 24,
+              border: "1px solid rgba(162,155,254,0.2)", boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
+              position: "relative",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button onClick={() => setShowDailyModal(false)} style={{
+              position: "absolute", top: 16, right: 16,
+              background: "rgba(255,255,255,0.1)", border: "none", color: "#fff",
+              width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>✕</button>
 
-            <h3 style={{ textTransform: "none", textAlign: "center", color: "#f1c40f", fontSize: "24px", fontWeight: "900", margin: "10px 0 4px 0" }}>
-              Daily Rewards
+            <h3 style={{ textAlign: "center", color: "#f1c40f", fontSize: 22, fontWeight: 900, margin: "8px 0 4px 0" }}>
+              Daily Rewards 🏆
             </h3>
-            <p style={{ textAlign: "center", color: "rgba(255,255,255,0.6)", fontSize: "13px", margin: "0 0 20px 0" }}>
-              Sign in for 7 days to get a surprise
+            <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 12, margin: "0 0 18px 0" }}>
+              {streak > 0 ? `Current streak: ${streak} day${streak !== 1 ? "s" : ""} 🔥` : "Start your streak today!"}
             </p>
 
-            {/* Streak Grid Track list */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "320px", overflowY: "auto", paddingRight: "4px" }}>
-              {[1, 2, 3, 4, 5, 6, 7].map((day) => {
-                const isCompleted = day < 5;
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
+              {[1,2,3,4,5,6,7].map(day => {
+                const done = day <= streak;
+                const isToday = day === (streak + 1) && canClaim;
                 return (
                   <div key={day} style={{
-                    backgroundColor: isCompleted ? "rgba(255,255,255,0.05)" : "rgba(108, 92, 231, 0.1)",
-                    border: isCompleted ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(108, 92, 231, 0.2)",
-                    borderRadius: "16px",
-                    padding: "12px 16px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
+                    background: done ? "rgba(46,204,113,0.1)" : isToday ? "rgba(108,92,231,0.15)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${done ? "rgba(46,204,113,0.3)" : isToday ? "rgba(108,92,231,0.4)" : "rgba(255,255,255,0.06)"}`,
+                    borderRadius: 14, padding: "11px 14px",
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <span style={{ color: isCompleted ? "#2ecc71" : "#a29bfe", fontWeight: "bold" }}>
-                        {isCompleted ? "✓" : "◦"}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: done ? "#2ecc71" : isToday ? "#a29bfe" : "rgba(255,255,255,0.25)" }}>
+                        {done ? "✓" : isToday ? "◆" : "◦"}
                       </span>
-                      <span style={{ fontWeight: "bold", fontSize: "14px", color: isCompleted ? "rgba(255,255,255,0.5)" : "#fff" }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: done ? "rgba(255,255,255,0.5)" : "#fff" }}>
                         Day {day}
                       </span>
                     </div>
-                    <span>🎁</span>
+                    <span style={{ fontSize: 16 }}>{done ? "✅" : isToday ? "🎁" : "🎁"}</span>
                   </div>
                 );
               })}
             </div>
 
-            {/* Bottom Claim Action Button */}
-            <button 
-              onClick={() => {
-                setIsSignedUp(true);
-                setShowDailyRewards(false);
-              }}
+            <button
+              onClick={handleClaim}
+              disabled={!canClaim || claiming}
               style={{
-                width: "100%",
-                background: "linear-gradient(90deg, #e2e2e2 0%, #b5b5b5 100%)",
-                color: "#111",
-                border: "none",
-                borderRadius: "24px",
-                padding: "14px",
-                fontWeight: "bold",
-                fontSize: "15px",
-                marginTop: "20px",
-                cursor: "pointer"
+                width: "100%", marginTop: 18,
+                background: canClaim ? "linear-gradient(90deg,#f1c40f,#f39c12)" : "rgba(255,255,255,0.08)",
+                color: canClaim ? "#111" : "rgba(255,255,255,0.3)",
+                border: "none", borderRadius: 22, padding: "14px 0",
+                fontWeight: 800, fontSize: 15, cursor: canClaim ? "pointer" : "default",
+                boxShadow: canClaim ? "0 0 16px rgba(241,196,15,0.4)" : "none",
+                transition: "all 0.2s",
               }}
             >
-              {isSignedUp ? "Signed in today" : "Claim Day 5 Reward"}
+              {claiming ? "Claiming..." : claimSuccess ? "Claimed! 🎉" : canClaim ? `Claim Day ${streak + 1} Reward` : "Already claimed today ✓"}
             </button>
           </div>
         </div>
       )}
-
     </div>
   );
 }

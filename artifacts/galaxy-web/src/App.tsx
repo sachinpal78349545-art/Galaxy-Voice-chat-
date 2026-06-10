@@ -3,7 +3,7 @@ import { onAuthStateChanged, User as FBUser, getRedirectResult, signOut } from "
 import { auth } from "./lib/firebase";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UserProfile, initUser, subscribeUser, setupOnlinePresence, claimDailyReward, isUserBanned, getBanTimeRemaining } from "./lib/userService";
-import { Room, subscribeMaintenanceMode, getAutoEntryRoom } from "./lib/roomService";
+import { Room, subscribeMaintenanceMode, getAutoEntryRoom, createRoom } from "./lib/roomService";
 import { subscribeConversations, Conversation } from "./lib/chatService";
 import { Notification, subscribeNotifications, GlobalAlert, subscribeGlobalAlerts } from "./lib/notificationService";
 import { isSuperAdmin as checkSuperAdmin } from "./lib/userService";
@@ -86,6 +86,7 @@ function AppInner() {
   const isInitialized = useRef(false);
   const pageHistoryRef = useRef<NavPage[]>(["home"]);
   const [isOnline, setIsOnline] = useState(true);
+  const [isPipMode, setIsPipMode] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -215,6 +216,29 @@ function AppInner() {
 
   const unreadNotifCount = notifications.filter(n => !n.read).length;
 
+  const handleCreateRoom = async () => {
+    if (!profile) return;
+    try {
+      showToast("Creating room...", "info", "🎙️");
+      const room = await createRoom(
+        profile.uid,
+        profile.name || "User",
+        profile.avatar || "🎙️",
+        `${profile.name || "User"}'s Room`,
+        "Music"
+      );
+      setActiveRoom(room);
+      setIsPipMode(false);
+    } catch (err: any) {
+      if (err?.message === "ALREADY_HAS_ROOM") {
+        showToast("You already have an active room!", "info", "🎙️");
+        changePage("rooms");
+      } else {
+        showToast("Couldn't create room. Try again!", "error");
+      }
+    }
+  };
+
   const changePage = (p: NavPage) => {
     if (p !== "chats") { setChatTargetUid(null); setChatActive(false); }
     setSubPage(null);
@@ -328,24 +352,19 @@ function AppInner() {
     );
   }
 
-  if (activeRoom) {
-    const handleRoomLeave = () => { setActiveRoom(null); changePage("rooms"); };
+  const handleRoomLeave = () => { setActiveRoom(null); setIsPipMode(false); changePage("rooms"); };
+
+  if (activeRoom && !isPipMode) {
     return (
       <div className="app-wrapper">
         <div className="stars" />
         <ErrorBoundary
           fallback={
             <div style={{
-              minHeight: "100vh",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
+              minHeight: "100vh", display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg,#0d001a,#1a0030)",
-              color: "#fff",
-              fontFamily: "'Poppins','Inter',sans-serif",
-              textAlign: "center",
-              padding: 24,
+              color: "#fff", fontFamily: "'Poppins','Inter',sans-serif", textAlign: "center", padding: 24,
             }}>
               <div style={{ fontSize: 52, marginBottom: 12 }}>🎙️</div>
               <h2 style={{ fontSize: 20, fontWeight: 700, color: "#a78bfa", marginBottom: 8 }}>Room error — connection lost</h2>
@@ -360,6 +379,7 @@ function AppInner() {
             roomId={activeRoom.id}
             user={profile}
             onLeave={handleRoomLeave}
+            onMinimize={() => setIsPipMode(true)}
             enteredPassword={(activeRoom as any)._enteredPassword}
             onMessage={(uid) => { setActiveRoom(null); setChatTargetUid(uid); changePage("chats"); }}
           />
@@ -440,7 +460,7 @@ function AppInner() {
         )}
 
         <div key={pageKey} className="page-enter" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} onCreateRoom={() => changePage("rooms")} onViewProfile={(p) => setViewedProfile(p)} />}
+          {page === "home" && <HomePage user={profile} onJoinRoom={joinRoom} onCreateRoom={handleCreateRoom} onViewProfile={(p) => setViewedProfile(p)} />}
           {page === "explore" && <ExplorePage user={profile} onMessage={(uid) => { setChatTargetUid(uid); changePage("chats"); }} onNavigate={(p) => changePage(p as NavPage)} />}
           {page === "rooms" && <RoomsPage user={profile} onJoinRoom={joinRoom} />}
           {page === "chats" && <ChatsPage user={profile} initialChatUid={chatTargetUid} onChatActive={setChatActive} />}
@@ -538,6 +558,51 @@ function AppInner() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeRoom && isPipMode && (
+          <>
+            <div style={{ position: "fixed", left: "-200vw", top: 0, width: 400, height: "100vh", zIndex: -1, pointerEvents: "none", opacity: 0 }}>
+              <VoiceRoomPage
+                roomId={activeRoom.id}
+                user={profile}
+                onLeave={handleRoomLeave}
+                onMinimize={() => {}}
+                enteredPassword={(activeRoom as any)._enteredPassword}
+                onMessage={(uid) => { setActiveRoom(null); setIsPipMode(false); setChatTargetUid(uid); changePage("chats"); }}
+              />
+            </div>
+            <div
+              onClick={() => setIsPipMode(false)}
+              style={{
+                position: "fixed", bottom: 90, right: 16, zIndex: 998,
+                background: "linear-gradient(135deg,#2d1b69,#1a0d36)",
+                border: "2px solid rgba(108,92,231,0.6)",
+                borderRadius: 20, padding: "10px 14px",
+                display: "flex", alignItems: "center", gap: 10,
+                boxShadow: "0 4px 24px rgba(108,92,231,0.45), 0 0 0 1px rgba(162,155,254,0.15)",
+                cursor: "pointer", minWidth: 140, maxWidth: 200,
+                animation: "float 3s ease-in-out infinite",
+              }}
+            >
+              <div style={{
+                width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+                background: "rgba(108,92,231,0.2)", border: "1.5px solid rgba(108,92,231,0.4)",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
+              }}>
+                {activeRoom.coverEmoji || "🎙️"}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {activeRoom.name}
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: 3, background: "#2ecc71", animation: "pulse 1.5s ease-in-out infinite" }} />
+                  <span style={{ fontSize: 10, color: "rgba(162,155,254,0.8)", fontWeight: 600 }}>Live — tap to return</span>
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

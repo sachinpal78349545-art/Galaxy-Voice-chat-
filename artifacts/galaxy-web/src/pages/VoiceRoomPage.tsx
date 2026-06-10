@@ -23,9 +23,9 @@ import { RoomHeader, SeatGrid, ChatSection, BottomBar, DiceGame, GameHub, Classi
 import SnakeLadders from "../components/room/SnakeLadders";
 import { subscribeNotifications, Notification } from "../lib/notificationService";
 
-interface Props { roomId: string; user: UserProfile; onLeave: () => void; enteredPassword?: string; onMessage?: (uid: string) => void; }
+interface Props { roomId: string; user: UserProfile; onLeave: () => void; onMinimize?: () => void; enteredPassword?: string; onMessage?: (uid: string) => void; }
 
-export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, onMessage }: Props) {
+export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enteredPassword, onMessage }: Props) {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [isMuted, setIsMuted] = useState(true);
@@ -994,38 +994,32 @@ export default function VoiceRoomPage({ roomId, user, onLeave, enteredPassword, 
       {showCloseMenu && (
         <Overlay onClose={() => setShowCloseMenu(false)}>
           <div className="card" style={{ width: 300, padding: 26, animation: "popIn 0.2s ease", textAlign: "center" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>{"\u{1F6AA}"}</div>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>🎙️</div>
             <h3 style={{ fontSize: 17, fontWeight: 900, marginBottom: 6 }}>Leave the room?</h3>
             <p style={{ fontSize: 12, color: "rgba(162,155,254,0.55)", marginBottom: 22, lineHeight: 1.5 }}>
-              {isOwner ? "Stay in your room or exit. As the owner, you can also end the room for everyone." : "You can stay in the room or exit now."}
+              Minimize to keep listening in the background, or exit the room completely.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button
-                onClick={() => setShowCloseMenu(false)}
+                onClick={() => { setShowCloseMenu(false); if (onMinimize) onMinimize(); }}
                 style={{
                   flex: 1, padding: "13px 0", borderRadius: 16,
                   background: "linear-gradient(135deg,#6C5CE7,#a78bfa)",
-                  border: "none", color: "#fff", fontSize: 14, fontWeight: 800,
+                  border: "none", color: "#fff", fontSize: 13, fontWeight: 800,
                   fontFamily: "inherit", cursor: "pointer",
                   boxShadow: "0 0 16px rgba(108,92,231,0.45)",
                 }}
-              >Keep</button>
+              >🔵 Minimize</button>
               <button
                 onClick={() => { setShowCloseMenu(false); handleLeave(); }}
                 style={{
                   flex: 1, padding: "13px 0", borderRadius: 16,
                   background: "rgba(255,100,130,0.12)", border: "1px solid rgba(255,100,130,0.45)",
-                  color: "#ff6b8a", fontSize: 14, fontWeight: 800,
+                  color: "#ff6b8a", fontSize: 13, fontWeight: 800,
                   fontFamily: "inherit", cursor: "pointer",
                 }}
               >Exit</button>
             </div>
-            {isOwner && (
-              <button className="btn btn-danger btn-full" style={{ marginTop: 10, fontSize: 12 }}
-                onClick={() => { setShowCloseMenu(false); handleEndRoom(); }}>
-                {"\u{1F6D1}"} End Room for Everyone
-              </button>
-            )}
           </div>
         </Overlay>
       )}
