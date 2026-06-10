@@ -93,6 +93,8 @@ export default function ProfilePage({
   const [feedbackSending, setFeedbackSending] = useState(false);
   const [feedbackCategory, setFeedbackCategory] = useState("");
   const [feedbackAttachments, setFeedbackAttachments] = useState<File[]>([]);
+  const [showFeedbackAttachPicker, setShowFeedbackAttachPicker] = useState(false);
+  const [showReportAttachPicker, setShowReportAttachPicker] = useState(false);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendProfiles, setFriendProfiles] = useState<UserProfile[]>([]);
   const [blockedProfiles, setBlockedProfiles] = useState<UserProfile[]>([]);
@@ -2297,7 +2299,7 @@ export default function ProfilePage({
               </div>
             </div>
 
-            {/* Multi-media picker — max 3 */}
+            {/* Evidence Picker */}
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: 0 }}>Evidence (Optional)</p>
@@ -2332,39 +2334,106 @@ export default function ProfilePage({
                 </div>
               )}
               {reportAttachments.length < 3 && (
-                <label style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "11px 14px",
-                  background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,100,130,0.25)",
-                  borderRadius: 12, cursor: "pointer",
-                }}>
-                  <span style={{ fontSize: 18 }}>📎</span>
-                  <span style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", fontWeight: 600 }}>
-                    Add evidence · Max 3 items · Videos under 20MB
+                <button
+                  onClick={() => setShowReportAttachPicker(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "13px 16px",
+                    background: "rgba(255,255,255,0.04)", border: "1.5px dashed rgba(255,100,130,0.28)",
+                    borderRadius: 14, cursor: "pointer", width: "100%", fontFamily: "inherit",
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>📎</span>
+                  <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "rgba(162,155,254,0.5)", textAlign: "left" }}>
+                    Add evidence · Max 3 photos OR 1 video + 2 photos
                   </span>
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    multiple
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      const remaining = 3 - reportAttachments.length;
-                      if (files.length > remaining) showToast("Select up to 3 items", "warning");
-                      const toAdd: File[] = [];
-                      for (const f of files.slice(0, remaining)) {
-                        if (f.type.startsWith("video/") && f.size > 20 * 1024 * 1024) {
-                          showToast("Size of a single video cannot exceed 20 MB", "warning");
-                          continue;
-                        }
-                        toAdd.push(f);
-                      }
-                      setReportAttachments(prev => [...prev, ...toAdd]);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
+                  <span style={{ fontSize: 22, color: "rgba(255,100,130,0.35)", fontWeight: 300, lineHeight: 1 }}>+</span>
+                </button>
               )}
             </div>
+
+            {/* Report Attachment Drawer */}
+            {showReportAttachPicker && (
+              <div
+                style={{ position: "fixed", inset: 0, zIndex: 6000, background: "rgba(0,0,0,0.72)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
+                onClick={() => setShowReportAttachPicker(false)}
+              >
+                <div
+                  style={{
+                    background: "linear-gradient(180deg,#1e0f1e,#0d0926)",
+                    borderRadius: "24px 24px 0 0", padding: "20px 16px 40px",
+                    border: "1px solid rgba(255,100,130,0.12)", maxWidth: 400, width: "100%", margin: "0 auto",
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+                    <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(255,100,130,0.3)" }} />
+                  </div>
+                  <p style={{ textAlign: "center", fontSize: 15, fontWeight: 800, color: "#fff", margin: "0 0 18px 0" }}>Add Evidence</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <label style={{
+                      display: "flex", alignItems: "center", gap: 14, padding: "15px 18px",
+                      background: "rgba(255,70,110,0.08)", border: "1px solid rgba(255,100,130,0.2)",
+                      borderRadius: 16, cursor: "pointer",
+                    }}>
+                      <span style={{ fontSize: 26 }}>📷</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: 15, color: "#fff" }}>Picture</p>
+                        <p style={{ margin: 0, fontSize: 12, color: "rgba(162,155,254,0.5)" }}>Select photos from gallery</p>
+                      </div>
+                      <input type="file" accept="image/*" multiple style={{ display: "none" }}
+                        onChange={(e) => {
+                          setShowReportAttachPicker(false);
+                          const files = Array.from(e.target.files || []);
+                          const photoCount = reportAttachments.filter(f => f.type.startsWith("image/")).length;
+                          const videoCount = reportAttachments.filter(f => f.type.startsWith("video/")).length;
+                          const toAdd: File[] = [];
+                          for (const f of files) {
+                            const curPhoto = photoCount + toAdd.length;
+                            const canAdd = videoCount === 0 ? curPhoto < 3 : curPhoto < 2;
+                            if (!canAdd) { showToast("Select up to 3 items: Max 3 photos OR 1 video + 2 photos", "warning"); break; }
+                            toAdd.push(f);
+                          }
+                          if (toAdd.length) setReportAttachments(prev => [...prev, ...toAdd]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <label style={{
+                      display: "flex", alignItems: "center", gap: 14, padding: "15px 18px",
+                      background: "rgba(255,70,110,0.08)", border: "1px solid rgba(255,100,130,0.2)",
+                      borderRadius: 16, cursor: "pointer",
+                    }}>
+                      <span style={{ fontSize: 26 }}>🎬</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: 15, color: "#fff" }}>Video</p>
+                        <p style={{ margin: 0, fontSize: 12, color: "rgba(162,155,254,0.5)" }}>Max 20MB · 1 video per submission</p>
+                      </div>
+                      <input type="file" accept="video/*" style={{ display: "none" }}
+                        onChange={(e) => {
+                          setShowReportAttachPicker(false);
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          if (f.size > 20 * 1024 * 1024) { showToast("Size of a single video cannot exceed 20 MB", "warning"); e.target.value = ""; return; }
+                          const videoCount = reportAttachments.filter(x => x.type.startsWith("video/")).length;
+                          const photoCount = reportAttachments.filter(x => x.type.startsWith("image/")).length;
+                          if (videoCount >= 1 || photoCount > 2) { showToast("Select up to 3 items: Max 3 photos OR 1 video + 2 photos", "warning"); e.target.value = ""; return; }
+                          setReportAttachments(prev => [...prev, f]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      onClick={() => setShowReportAttachPicker(false)}
+                      style={{
+                        padding: "15px 0", borderRadius: 16, border: "none",
+                        background: "rgba(255,255,255,0.06)", color: "rgba(162,155,254,0.7)",
+                        fontFamily: "inherit", fontSize: 15, fontWeight: 700, cursor: "pointer",
+                      }}
+                    >Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <button
               style={{
@@ -2532,7 +2601,7 @@ export default function ProfilePage({
               </div>
             </div>
 
-            {/* Media Picker — max 3 items */}
+            {/* Attachment Picker */}
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: 0 }}>Attachments (Optional)</p>
@@ -2569,39 +2638,106 @@ export default function ProfilePage({
               )}
 
               {feedbackAttachments.length < 3 && (
-                <label style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "11px 14px",
-                  background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(162,155,254,0.25)",
-                  borderRadius: 12, cursor: "pointer",
-                }}>
-                  <span style={{ fontSize: 18 }}>📎</span>
-                  <span style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", fontWeight: 600 }}>
-                    Add photo/video · Max 3 items · Videos under 20MB
+                <button
+                  onClick={() => setShowFeedbackAttachPicker(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "13px 16px",
+                    background: "rgba(255,255,255,0.04)", border: "1.5px dashed rgba(162,155,254,0.28)",
+                    borderRadius: 14, cursor: "pointer", width: "100%", fontFamily: "inherit",
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>📎</span>
+                  <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "rgba(162,155,254,0.5)", textAlign: "left" }}>
+                    Add photo/video · Max 3 photos OR 1 video + 2 photos
                   </span>
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    multiple
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      const remaining = 3 - feedbackAttachments.length;
-                      if (files.length > remaining) showToast("Select up to 3 items", "warning");
-                      const toAdd: File[] = [];
-                      for (const f of files.slice(0, remaining)) {
-                        if (f.type.startsWith("video/") && f.size > 20 * 1024 * 1024) {
-                          showToast("Size of a single video cannot exceed 20 MB", "warning");
-                          continue;
-                        }
-                        toAdd.push(f);
-                      }
-                      setFeedbackAttachments(prev => [...prev, ...toAdd]);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
+                  <span style={{ fontSize: 22, color: "rgba(162,155,254,0.35)", fontWeight: 300, lineHeight: 1 }}>+</span>
+                </button>
               )}
             </div>
+
+            {/* Feedback Attachment Drawer */}
+            {showFeedbackAttachPicker && (
+              <div
+                style={{ position: "fixed", inset: 0, zIndex: 6000, background: "rgba(0,0,0,0.72)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
+                onClick={() => setShowFeedbackAttachPicker(false)}
+              >
+                <div
+                  style={{
+                    background: "linear-gradient(180deg,#1e1040,#0d0926)",
+                    borderRadius: "24px 24px 0 0", padding: "20px 16px 40px",
+                    border: "1px solid rgba(162,155,254,0.12)", maxWidth: 400, width: "100%", margin: "0 auto",
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+                    <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(162,155,254,0.3)" }} />
+                  </div>
+                  <p style={{ textAlign: "center", fontSize: 15, fontWeight: 800, color: "#fff", margin: "0 0 18px 0" }}>Add Attachment</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <label style={{
+                      display: "flex", alignItems: "center", gap: 14, padding: "15px 18px",
+                      background: "rgba(108,92,231,0.1)", border: "1px solid rgba(108,92,231,0.25)",
+                      borderRadius: 16, cursor: "pointer",
+                    }}>
+                      <span style={{ fontSize: 26 }}>📷</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: 15, color: "#fff" }}>Picture</p>
+                        <p style={{ margin: 0, fontSize: 12, color: "rgba(162,155,254,0.5)" }}>Select photos from gallery</p>
+                      </div>
+                      <input type="file" accept="image/*" multiple style={{ display: "none" }}
+                        onChange={(e) => {
+                          setShowFeedbackAttachPicker(false);
+                          const files = Array.from(e.target.files || []);
+                          const photoCount = feedbackAttachments.filter(f => f.type.startsWith("image/")).length;
+                          const videoCount = feedbackAttachments.filter(f => f.type.startsWith("video/")).length;
+                          const toAdd: File[] = [];
+                          for (const f of files) {
+                            const curPhoto = photoCount + toAdd.length;
+                            const canAdd = videoCount === 0 ? curPhoto < 3 : curPhoto < 2;
+                            if (!canAdd) { showToast("Select up to 3 items: Max 3 photos OR 1 video + 2 photos", "warning"); break; }
+                            toAdd.push(f);
+                          }
+                          if (toAdd.length) setFeedbackAttachments(prev => [...prev, ...toAdd]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <label style={{
+                      display: "flex", alignItems: "center", gap: 14, padding: "15px 18px",
+                      background: "rgba(108,92,231,0.1)", border: "1px solid rgba(108,92,231,0.25)",
+                      borderRadius: 16, cursor: "pointer",
+                    }}>
+                      <span style={{ fontSize: 26 }}>🎬</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: 15, color: "#fff" }}>Video</p>
+                        <p style={{ margin: 0, fontSize: 12, color: "rgba(162,155,254,0.5)" }}>Max 20MB · 1 video per submission</p>
+                      </div>
+                      <input type="file" accept="video/*" style={{ display: "none" }}
+                        onChange={(e) => {
+                          setShowFeedbackAttachPicker(false);
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          if (f.size > 20 * 1024 * 1024) { showToast("Size of a single video cannot exceed 20 MB", "warning"); e.target.value = ""; return; }
+                          const videoCount = feedbackAttachments.filter(x => x.type.startsWith("video/")).length;
+                          const photoCount = feedbackAttachments.filter(x => x.type.startsWith("image/")).length;
+                          if (videoCount >= 1 || photoCount > 2) { showToast("Select up to 3 items: Max 3 photos OR 1 video + 2 photos", "warning"); e.target.value = ""; return; }
+                          setFeedbackAttachments(prev => [...prev, f]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      onClick={() => setShowFeedbackAttachPicker(false)}
+                      style={{
+                        padding: "15px 0", borderRadius: 16, border: "none",
+                        background: "rgba(255,255,255,0.06)", color: "rgba(162,155,254,0.7)",
+                        fontFamily: "inherit", fontSize: 15, fontWeight: 700, cursor: "pointer",
+                      }}
+                    >Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Premium Submit Button */}
             <button

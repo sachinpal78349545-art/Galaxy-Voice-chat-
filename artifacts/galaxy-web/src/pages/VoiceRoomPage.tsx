@@ -1195,7 +1195,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
 
         return (
           <div style={{
-            position: "fixed", inset: 0, zIndex: 700, maxWidth: 400, margin: "0 auto",
+            position: "fixed", inset: 0, zIndex: 1900, maxWidth: 400, margin: "0 auto",
             background: "linear-gradient(160deg, #1A0F2E, #0F0F1A)",
             display: "flex", flexDirection: "column",
             animation: "slide-up 0.3s ease",

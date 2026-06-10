@@ -77,7 +77,7 @@ export default function TasksPanel({ user, onClose, onUpdate }: TasksPanelProps)
       </div>
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 40px 16px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 120px 16px" }}>
         {/* Daily Login Rewards Card */}
         <div style={{
           background: "linear-gradient(135deg,#2e1a47,#1c143c)", borderRadius: 20, padding: 20,
