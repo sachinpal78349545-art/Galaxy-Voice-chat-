@@ -44,97 +44,103 @@ export default function TasksPanel({ user, onClose, onUpdate }: TasksPanelProps)
   }, [canClaim, claiming, user, onUpdate]);
 
   return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 3000,
-        backgroundColor: "rgba(5,1,18,0.85)", backdropFilter: "blur(10px)",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end",
-      }}
-      onClick={onClose}
-    >
-      <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
-      <div
-        style={{
-          width: "100%", maxWidth: 400,
-          background: "linear-gradient(180deg,#1a0d36 0%,#0d0926 100%)",
-          borderRadius: "28px 28px 0 0",
-          border: "1px solid rgba(162,155,254,0.15)",
-          maxHeight: "90vh", overflowY: "auto",
-          animation: "slideUp 0.3s ease",
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px 0" }}>
-          <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(162,155,254,0.3)" }} />
-        </div>
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 3000,
+      background: "linear-gradient(180deg, #120826 0%, #0d0926 100%)",
+      display: "flex", flexDirection: "column",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "env(safe-area-inset-top, 12px) 20px 14px 20px",
+        paddingTop: "max(env(safe-area-inset-top, 0px), 12px)",
+        borderBottom: "1px solid rgba(162,155,254,0.1)",
+        flexShrink: 0,
+        background: "rgba(18,8,38,0.95)",
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            background: "rgba(255,255,255,0.08)", border: "none",
+            color: "#a29bfe", width: 38, height: 38, borderRadius: "50%",
+            cursor: "pointer", fontSize: 18, display: "flex",
+            alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}
+        >
+          ←
+        </button>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: "#fff", flex: 1 }}>
+          Tasks & Rewards
+        </h2>
+        <span style={{ fontSize: 22 }}>🏆</span>
+      </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px 14px 20px" }}>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: "#fff" }}>Tasks & Rewards</h2>
-          <button onClick={onClose} style={{
-            background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(162,155,254,0.7)",
-            width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>✕</button>
-        </div>
-
-        <div style={{ padding: "0 16px 40px 16px" }}>
-          {/* Daily Login Rewards Card */}
-          <div style={{
-            background: "linear-gradient(135deg,#2e1a47,#1c143c)", borderRadius: 20, padding: 20,
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            border: "1px solid rgba(162,155,254,0.15)", marginBottom: 24,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          }}>
-            <div>
-              <h3 style={{ margin: "0 0 4px 0", fontSize: 18, fontWeight: 900, color: "#fff" }}>Daily Rewards</h3>
-              <p style={{ margin: 0, fontSize: 12, color: canClaim ? "#f1c40f" : "rgba(162,155,254,0.7)" }}>
-                {claimSuccess ? "Claimed! 🎉 Come back tomorrow" : canClaim ? "Reward ready — claim now! 🎁" : `Day ${streak} streak — come back tomorrow`}
-              </p>
-            </div>
-            <button onClick={() => setShowDailyModal(true)} style={{
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 40px 16px" }}>
+        {/* Daily Login Rewards Card */}
+        <div style={{
+          background: "linear-gradient(135deg,#2e1a47,#1c143c)", borderRadius: 20, padding: 20,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          border: "1px solid rgba(162,155,254,0.15)", marginBottom: 28,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+        }}>
+          <div>
+            <h3 style={{ margin: "0 0 4px 0", fontSize: 18, fontWeight: 900, color: "#fff" }}>Daily Rewards</h3>
+            <p style={{ margin: 0, fontSize: 12, color: canClaim ? "#f1c40f" : "rgba(162,155,254,0.7)" }}>
+              {claimSuccess
+                ? "Claimed! 🎉 Come back tomorrow"
+                : canClaim
+                ? "Reward ready — claim now! 🎁"
+                : `Day ${streak} streak — come back tomorrow`}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowDailyModal(true)}
+            style={{
               background: canClaim ? "linear-gradient(90deg,#f1c40f,#f39c12)" : "rgba(255,255,255,0.08)",
               color: canClaim ? "#000" : "rgba(255,255,255,0.4)",
               border: "none", borderRadius: 20, padding: "10px 20px",
               fontWeight: 800, fontSize: 13, cursor: "pointer",
               boxShadow: canClaim ? "0 0 14px rgba(241,196,15,0.4)" : "none",
-            }}>
-              {canClaim ? "Claim" : `Day ${streak}`}
-            </button>
-          </div>
+            }}
+          >
+            {canClaim ? "Claim" : `Day ${streak}`}
+          </button>
+        </div>
 
-          {/* Daily Tasks list */}
-          <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, color: "#fff" }}>Daily Tasks</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {DAILY_TASKS.map(task => (
-              <div key={task.id} style={{
-                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 18, padding: "14px 16px",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{
-                    width: 46, height: 46, background: "rgba(108,92,231,0.15)",
-                    borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
-                  }}>
-                    {task.type === "diamond" ? "🎲" : "🌹"}
-                  </div>
-                  <div>
-                    <p style={{ margin: "0 0 3px 0", fontSize: 14, fontWeight: 700, color: "#fff" }}>{task.title}</p>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>{task.progress}</span>
-                      <span style={{ fontSize: 12, color: task.type === "diamond" ? "#60a5fa" : "#f43f5e" }}>
-                        {task.type === "diamond" ? "💎" : "🌹"} {task.reward}
-                      </span>
-                    </div>
+        {/* Daily Tasks section */}
+        <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, color: "#fff" }}>Daily Tasks</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {DAILY_TASKS.map(task => (
+            <div key={task.id} style={{
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: 18, padding: "14px 16px",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{
+                  width: 46, height: 46, background: "rgba(108,92,231,0.15)",
+                  borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
+                }}>
+                  {task.type === "diamond" ? "🎲" : "🌹"}
+                </div>
+                <div>
+                  <p style={{ margin: "0 0 3px 0", fontSize: 14, fontWeight: 700, color: "#fff" }}>{task.title}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>{task.progress}</span>
+                    <span style={{ fontSize: 12, color: task.type === "diamond" ? "#60a5fa" : "#f43f5e" }}>
+                      {task.type === "diamond" ? "💎" : "🌹"} {task.reward}
+                    </span>
                   </div>
                 </div>
-                <button style={{
-                  background: "#6c5ce7", color: "#fff", border: "none",
-                  borderRadius: 16, padding: "8px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                }}>Go</button>
               </div>
-            ))}
-          </div>
+              <button style={{
+                background: "#6c5ce7", color: "#fff", border: "none",
+                borderRadius: 16, padding: "8px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+              }}>Go</button>
+            </div>
+          ))}
         </div>
       </div>
 

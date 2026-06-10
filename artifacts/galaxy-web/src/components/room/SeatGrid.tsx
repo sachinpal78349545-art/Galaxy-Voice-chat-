@@ -133,9 +133,9 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   const seatClass = [
     "seat-bubble",
     isSuperAdmin && isActive ? "" : (hasAnimFrame ? "" : (hasPngFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty"))),
-    isOwner && isActive && !hasPngFrame && !hasAnimFrame && !isSuperAdmin ? "seat-owner" : "",
+    isOwner && isActive && !hasPngFrame && !hasAnimFrame && !isSuperAdmin && !isMe ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
-    !hasPngFrame && !hasAnimFrame && !isSuperAdmin && isOfficial && isActive ? "seat-official" : "",
+    !hasPngFrame && !hasAnimFrame && !isSuperAdmin && isOfficial && isActive && !isMe ? "seat-official" : "",
   ].filter(Boolean).join(" ");
 
   const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
@@ -163,7 +163,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
             <div className="sa-seat-crown" style={{ fontSize: "11px", top: "-10px" }}>{"\u{1F451}"}</div>
           </>
         )}
-        {!isSuperAdmin && !hasPngFrame && !hasAnimFrame && isOfficial && isActive && (
+        {!isSuperAdmin && !hasPngFrame && !hasAnimFrame && isOfficial && isActive && !isMe && (
           <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" className="official-phoenix-frame" style={{ width: 78, height: 78 }} />
         )}
         {pngPath && isActive && (
@@ -217,7 +217,7 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
         {isSuperAdmin && isActive && (
           <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_badge.svg`} alt="Super Admin" className="super-admin-seat-badge" style={{ width: "32px", bottom: "-4px" }} />
         )}
-        {isOfficial && !isSuperAdmin && isActive && (
+        {isOfficial && !isSuperAdmin && isActive && !isMe && (
           <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.png`} alt="Official" className="official-badge-label" style={{ width: "34px", bottom: "-4px" }} />
         )}
         {role === "owner" && isActive && !isSpecial && (

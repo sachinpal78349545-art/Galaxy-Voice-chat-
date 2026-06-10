@@ -64,6 +64,7 @@ export interface Room {
   mode?: "voice" | "chat";
   initialGame?: string;
   country?: string;
+  chatClearedAt?: number;
 }
 
 const ROOM_COVERS: Record<string, string> = {
@@ -364,14 +365,15 @@ export function getUserRole(room: Room, userId: string): "owner" | "admin" | "us
   return "user";
 }
 
-export function subscribeRoomMessages(roomId: string, cb: (msgs: RoomMessage[]) => void): () => void {
+export function subscribeRoomMessages(roomId: string, cb: (msgs: RoomMessage[]) => void, since = 0): () => void {
   const r = ref(db, `roomMessages/${roomId}`);
   onValue(r, snap => {
     if (!snap.exists()) { cb([]); return; }
     const val = snap.val();
     const msgs: RoomMessage[] = Object.keys(val).map(k => ({ ...val[k], id: k }));
     msgs.sort((a, b) => a.timestamp - b.timestamp);
-    cb(msgs.slice(-100));
+    const filtered = since > 0 ? msgs.filter(m => m.timestamp >= since) : msgs;
+    cb(filtered.slice(-100));
   });
   return () => off(r);
 }
@@ -450,6 +452,7 @@ export async function endRoom(roomId: string): Promise<void> {
 
 export async function clearRoomChat(roomId: string): Promise<void> {
   await remove(ref(db, `roomMessages/${roomId}`));
+  await update(ref(db, `rooms/${roomId}`), { chatClearedAt: Date.now() });
 }
 
 export async function setMaintenanceMode(enabled: boolean, message?: string): Promise<void> {

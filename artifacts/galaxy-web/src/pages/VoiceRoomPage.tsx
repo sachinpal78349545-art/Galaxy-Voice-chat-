@@ -79,6 +79,8 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
   const joinedRef = useRef(false);
   const voiceInitRef = useRef(false);
   const presenceCleanupRef = useRef<(() => void) | null>(null);
+  const joinTimestampRef = useRef(Date.now());
+  const chatClearedAtRef = useRef(0);
 
   useEffect(() => {
     const unsub1 = subscribeRoom(roomId, r => {
@@ -120,9 +122,22 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
         });
       }
     });
-    const unsub2 = subscribeRoomMessages(roomId, setMessages);
+    const since = joinTimestampRef.current;
+    const unsub2 = subscribeRoomMessages(roomId, (msgs) => {
+      const cutoff = Math.max(since, chatClearedAtRef.current);
+      setMessages(cutoff > 0 ? msgs.filter(m => m.timestamp >= cutoff) : msgs);
+    }, since);
     return () => { unsub1(); unsub2(); presenceCleanupRef.current?.(); };
   }, [roomId]);
+
+  useEffect(() => {
+    if (!room?.chatClearedAt) return;
+    const clearedAt = room.chatClearedAt as number;
+    if (clearedAt > chatClearedAtRef.current) {
+      chatClearedAtRef.current = clearedAt;
+      setMessages(prev => prev.filter(m => m.timestamp >= clearedAt));
+    }
+  }, [room?.chatClearedAt]);
 
   useEffect(() => {
     if (!room) return;

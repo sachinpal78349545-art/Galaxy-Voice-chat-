@@ -91,6 +91,8 @@ export default function ProfilePage({
   const [feedbackSubject, setFeedbackSubject] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackSending, setFeedbackSending] = useState(false);
+  const [feedbackCategory, setFeedbackCategory] = useState("");
+  const [feedbackAttachments, setFeedbackAttachments] = useState<File[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendProfiles, setFriendProfiles] = useState<UserProfile[]>([]);
   const [blockedProfiles, setBlockedProfiles] = useState<UserProfile[]>([]);
@@ -106,6 +108,7 @@ export default function ProfilePage({
   const [reportDetails, setReportDetails] = useState("");
   const [reportTarget, setReportTarget] = useState("");
   const [reportAttachment, setReportAttachment] = useState<File | null>(null);
+  const [reportAttachments, setReportAttachments] = useState<File[]>([]);
   const [reportUploading, setReportUploading] = useState(false);
   const [showBanMenu, setShowBanMenu] = useState(false);
   const [banLoading, setBanLoading] = useState(false);
@@ -373,15 +376,16 @@ export default function ProfilePage({
     }
     setReportUploading(true);
     let attachmentUrl = "";
-    if (reportAttachment) {
-      if (reportAttachment.size > 20 * 1024 * 1024) {
-        showToast("File too large (max 20MB)", "warning");
+    const primaryAttachment = reportAttachments[0] || reportAttachment;
+    if (primaryAttachment) {
+      if (primaryAttachment.size > 20 * 1024 * 1024) {
+        showToast("Size of a single video cannot exceed 20 MB", "warning");
         setReportUploading(false);
         return;
       }
       try {
-        const fileRef = storage.ref(`reports/${user.uid}/${Date.now()}_${reportAttachment.name}`);
-        await fileRef.uploadBytes(reportAttachment);
+        const fileRef = storage.ref(`reports/${user.uid}/${Date.now()}_${primaryAttachment.name}`);
+        await fileRef.uploadBytes(primaryAttachment);
         attachmentUrl = await fileRef.getDownloadURL();
       } catch {
         showToast("Failed to upload attachment", "error");
@@ -398,6 +402,7 @@ export default function ProfilePage({
       setReportDetails("");
       setReportTarget("");
       setReportAttachment(null);
+      setReportAttachments([]);
     } catch {
       showToast("Failed to submit report. Try again.", "error");
     }
@@ -416,8 +421,12 @@ export default function ProfilePage({
   };
 
   const handleSubmitFeedback = async () => {
-    if (!feedbackSubject.trim() || !feedbackMessage.trim()) {
-      showToast("Please fill in all fields", "warning");
+    if (!feedbackCategory) {
+      showToast("Please select a category", "warning");
+      return;
+    }
+    if (!feedbackMessage.trim()) {
+      showToast("Please describe your feedback", "warning");
       return;
     }
     setFeedbackSending(true);
@@ -426,13 +435,14 @@ export default function ProfilePage({
         user.uid,
         user.name,
         feedbackType,
-        feedbackSubject.trim(),
+        feedbackCategory,
         feedbackMessage.trim()
       );
       showToast("Thank you for your feedback!", "success");
       setShowFeedback(false);
       closeSubPage();
-      setFeedbackSubject("");
+      setFeedbackCategory("");
+      setFeedbackAttachments([]);
       setFeedbackMessage("");
       setFeedbackType("feedback");
     } catch {
@@ -537,7 +547,7 @@ export default function ProfilePage({
       openSubPage("achievements");
       setShowAchievements(true);
     }
-    if (action === "daily") setShowTasksPanel(true);
+    if (action === "daily") { openSubPage("tasks"); setShowTasksPanel(true); }
     if (action === "privacyPolicy") {
       openSubPage("privacyPolicy");
       setShowPrivacyPolicy(true);
@@ -2227,10 +2237,18 @@ export default function ProfilePage({
             closeSubPage();
             setShowReport(false);
             setReportAttachment(null);
+            setReportAttachments([]);
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
             <h2 style={{ fontSize: 18, fontWeight: 900 }}>⚠️ Report Issue</h2>
+            <button
+              onClick={() => { closeSubPage(); setShowReport(false); setReportAttachment(null); setReportAttachments([]); }}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}
+            >✕</button>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <input
               className="input-field"
               placeholder="User ID (optional)"
@@ -2238,62 +2256,125 @@ export default function ProfilePage({
               onChange={(e) => setReportTarget(e.target.value)}
               style={{ borderRadius: 14, padding: "12px 14px" }}
             />
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {["Underage", "Porn", "Spam", "Illegal", "Plagiarism", "Violence", "Other"].map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setReportReason(r)}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 20,
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    background: reportReason === r ? "rgba(255,100,130,0.2)" : "rgba(255,255,255,0.04)",
-                    color: reportReason === r ? "#ff6482" : "rgba(162,155,254,0.5)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-            <textarea
-              className="input-field"
-              placeholder="Describe your problem you are experiencing..."
-              value={reportDetails}
-              onChange={(e) => setReportDetails(e.target.value)}
-              rows={3}
-              maxLength={200}
-              style={{ borderRadius: 14, padding: "12px 14px", resize: "none", fontFamily: "inherit" }}
-            />
-            <p style={{ fontSize: 12, color: "#aaa", textAlign: "right", marginTop: -8 }}>{reportDetails.length}/200</p>
+
+            {/* Category chips */}
             <div>
-              <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
-                Attachment (Optional, max 20MB)
-              </label>
-              <input
-                type="file"
-                accept="image/*,video/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file && file.size > 20 * 1024 * 1024) {
-                    showToast("File too large (max 20MB)", "warning");
-                    return;
-                  }
-                  setReportAttachment(file || null);
-                }}
-                style={{ fontSize: 12 }}
-              />
-              {reportAttachment && (
-                <p style={{ fontSize: 11, color: "#00e676", marginTop: 4 }}>
-                  {reportAttachment.name} ({(reportAttachment.size / 1024 / 1024).toFixed(2)} MB)
-                </p>
+              <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: "0 0 8px 0" }}>Select Reason</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {["Underage", "Abuse", "Spam", "Illegal", "App issues", "Room violations", "Violence", "Other"].map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setReportReason(r)}
+                    style={{
+                      padding: "8px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontFamily: "inherit",
+                      background: reportReason === r ? "rgba(255,70,110,0.25)" : "rgba(255,255,255,0.04)",
+                      color: reportReason === r ? "#ff6482" : "rgba(162,155,254,0.5)",
+                      fontSize: 12, fontWeight: 600,
+                      boxShadow: reportReason === r ? "0 0 8px rgba(255,100,130,0.3)" : "none",
+                      transition: "all 0.2s",
+                    }}
+                  >{r}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Details textarea */}
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: "0 0 6px 0" }}>Details</p>
+              <div style={{ position: "relative" }}>
+                <textarea
+                  className="input-field"
+                  placeholder="Describe the issue you are experiencing..."
+                  value={reportDetails}
+                  onChange={(e) => { if (e.target.value.length <= 200) setReportDetails(e.target.value); }}
+                  rows={3}
+                  style={{ borderRadius: 14, padding: "12px 14px 28px 14px", resize: "none", fontFamily: "inherit", width: "100%", boxSizing: "border-box" }}
+                />
+                <span style={{
+                  position: "absolute", bottom: 8, right: 12, fontSize: 11, pointerEvents: "none",
+                  color: reportDetails.length >= 180 ? "#f43f5e" : "rgba(162,155,254,0.4)",
+                }}>{reportDetails.length}/200</span>
+              </div>
+            </div>
+
+            {/* Multi-media picker — max 3 */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: 0 }}>Evidence (Optional)</p>
+                <span style={{ fontSize: 11, color: "rgba(162,155,254,0.4)" }}>{reportAttachments.length}/3</span>
+              </div>
+              {reportAttachments.length > 0 && (
+                <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                  {reportAttachments.map((file, i) => (
+                    <div key={i} style={{ position: "relative" }}>
+                      <div style={{
+                        width: 60, height: 60, borderRadius: 10,
+                        background: "rgba(255,70,110,0.1)", border: "1px solid rgba(255,100,130,0.2)",
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                        fontSize: 20, gap: 2,
+                      }}>
+                        <span>{file.type.startsWith("image/") ? "🖼️" : "🎬"}</span>
+                        <span style={{ fontSize: 9, color: "rgba(255,100,130,0.6)" }}>
+                          {(file.size / 1024 / 1024).toFixed(1)}MB
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setReportAttachments(prev => prev.filter((_, j) => j !== i))}
+                        style={{
+                          position: "absolute", top: -6, right: -6, width: 18, height: 18,
+                          background: "#ff4757", border: "none", borderRadius: "50%", color: "#fff",
+                          cursor: "pointer", fontSize: 10, display: "flex", alignItems: "center",
+                          justifyContent: "center", padding: 0,
+                        }}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {reportAttachments.length < 3 && (
+                <label style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "11px 14px",
+                  background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,100,130,0.25)",
+                  borderRadius: 12, cursor: "pointer",
+                }}>
+                  <span style={{ fontSize: 18 }}>📎</span>
+                  <span style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", fontWeight: 600 }}>
+                    Add evidence · Max 3 items · Videos under 20MB
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      const remaining = 3 - reportAttachments.length;
+                      if (files.length > remaining) showToast("Select up to 3 items", "warning");
+                      const toAdd: File[] = [];
+                      for (const f of files.slice(0, remaining)) {
+                        if (f.type.startsWith("video/") && f.size > 20 * 1024 * 1024) {
+                          showToast("Size of a single video cannot exceed 20 MB", "warning");
+                          continue;
+                        }
+                        toAdd.push(f);
+                      }
+                      setReportAttachments(prev => [...prev, ...toAdd]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
               )}
             </div>
+
             <button
-              className="btn btn-danger btn-full"
+              style={{
+                width: "100%", padding: "15px 0", borderRadius: 22, border: "none",
+                background: "linear-gradient(90deg, #ff4757, #c0392b)",
+                color: "#fff", fontWeight: 800, fontSize: 15, cursor: reportUploading ? "default" : "pointer",
+                opacity: reportUploading ? 0.6 : 1,
+                boxShadow: "0 0 18px rgba(255,71,87,0.4)",
+                transition: "all 0.2s", fontFamily: "inherit",
+              }}
               onClick={handleReport}
               disabled={reportUploading}
             >
@@ -2389,69 +2470,153 @@ export default function ProfilePage({
           onClose={() => {
             closeSubPage();
             setShowFeedback(false);
+            setFeedbackCategory("");
+            setFeedbackAttachments([]);
+            setFeedbackMessage("");
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexShrink: 0 }}>
             <h2 style={{ fontSize: 18, fontWeight: 900 }}>💬 Send Feedback</h2>
             <button
               onClick={() => {
                 closeSubPage();
                 setShowFeedback(false);
+                setFeedbackCategory("");
+                setFeedbackAttachments([]);
+                setFeedbackMessage("");
               }}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 20,
-                color: "rgba(162,155,254,0.5)",
-              }}
-            >
-              ✕
-            </button>
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}
+            >✕</button>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              {(["feedback", "bug", "suggestion"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setFeedbackType(t)}
-                  style={{
-                    flex: 1,
-                    padding: "10px 0",
-                    borderRadius: 12,
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    background: feedbackType === t ? "rgba(108,92,231,0.3)" : "rgba(255,255,255,0.04)",
-                    color: feedbackType === t ? "#A29BFE" : "rgba(162,155,254,0.4)",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {t === "feedback" ? "📝" : t === "bug" ? "🐛" : "💡"} {t}
-                </button>
-              ))}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Category Chips */}
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: "0 0 10px 0" }}>Select Category</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {["Underage", "App problems", "Suggestion", "Hashtag", "Recharge", "Room", "Login", "Others"].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setFeedbackCategory(cat)}
+                    style={{
+                      padding: "8px 14px", borderRadius: 20, border: "none", cursor: "pointer",
+                      fontFamily: "inherit", fontSize: 12, fontWeight: 600,
+                      background: feedbackCategory === cat
+                        ? "linear-gradient(90deg, #C084FC, #818CF8)"
+                        : "rgba(255,255,255,0.05)",
+                      color: feedbackCategory === cat ? "#fff" : "rgba(162,155,254,0.55)",
+                      boxShadow: feedbackCategory === cat ? "0 0 10px rgba(192,132,252,0.4)" : "none",
+                      transition: "all 0.2s",
+                    }}
+                  >{cat}</button>
+                ))}
+              </div>
             </div>
-            <input
-              className="input-field"
-              placeholder="Subject"
-              value={feedbackSubject}
-              onChange={(e) => setFeedbackSubject(e.target.value)}
-              style={{ borderRadius: 14, padding: "12px 14px" }}
-            />
-            <textarea
-              className="input-field"
-              placeholder="Tell us what's on your mind..."
-              value={feedbackMessage}
-              onChange={(e) => setFeedbackMessage(e.target.value)}
-              rows={4}
-              style={{ borderRadius: 14, padding: "12px 14px", resize: "none", fontFamily: "inherit" }}
-            />
+
+            {/* Description with char count */}
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: "0 0 6px 0" }}>Description</p>
+              <div style={{ position: "relative" }}>
+                <textarea
+                  className="input-field"
+                  placeholder="Describe your feedback in detail..."
+                  value={feedbackMessage}
+                  onChange={(e) => { if (e.target.value.length <= 200) setFeedbackMessage(e.target.value); }}
+                  rows={4}
+                  style={{ borderRadius: 14, padding: "12px 14px 28px 14px", resize: "none", fontFamily: "inherit", width: "100%", boxSizing: "border-box" }}
+                />
+                <span style={{
+                  position: "absolute", bottom: 8, right: 12, fontSize: 11, pointerEvents: "none",
+                  color: feedbackMessage.length >= 180 ? "#f43f5e" : "rgba(162,155,254,0.4)",
+                }}>{feedbackMessage.length}/200</span>
+              </div>
+            </div>
+
+            {/* Media Picker — max 3 items */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: 0 }}>Attachments (Optional)</p>
+                <span style={{ fontSize: 11, color: "rgba(162,155,254,0.4)" }}>{feedbackAttachments.length}/3</span>
+              </div>
+
+              {feedbackAttachments.length > 0 && (
+                <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                  {feedbackAttachments.map((file, i) => (
+                    <div key={i} style={{ position: "relative" }}>
+                      <div style={{
+                        width: 64, height: 64, borderRadius: 10,
+                        background: "rgba(108,92,231,0.15)", border: "1px solid rgba(162,155,254,0.15)",
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                        fontSize: 22, gap: 2,
+                      }}>
+                        <span>{file.type.startsWith("image/") ? "🖼️" : "🎬"}</span>
+                        <span style={{ fontSize: 9, color: "rgba(162,155,254,0.5)" }}>
+                          {(file.size / 1024 / 1024).toFixed(1)}MB
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setFeedbackAttachments(prev => prev.filter((_, j) => j !== i))}
+                        style={{
+                          position: "absolute", top: -6, right: -6, width: 18, height: 18,
+                          background: "#ff4757", border: "none", borderRadius: "50%", color: "#fff",
+                          cursor: "pointer", fontSize: 10, display: "flex", alignItems: "center",
+                          justifyContent: "center", padding: 0, lineHeight: 1,
+                        }}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {feedbackAttachments.length < 3 && (
+                <label style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "11px 14px",
+                  background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(162,155,254,0.25)",
+                  borderRadius: 12, cursor: "pointer",
+                }}>
+                  <span style={{ fontSize: 18 }}>📎</span>
+                  <span style={{ fontSize: 12, color: "rgba(162,155,254,0.5)", fontWeight: 600 }}>
+                    Add photo/video · Max 3 items · Videos under 20MB
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      const remaining = 3 - feedbackAttachments.length;
+                      if (files.length > remaining) showToast("Select up to 3 items", "warning");
+                      const toAdd: File[] = [];
+                      for (const f of files.slice(0, remaining)) {
+                        if (f.type.startsWith("video/") && f.size > 20 * 1024 * 1024) {
+                          showToast("Size of a single video cannot exceed 20 MB", "warning");
+                          continue;
+                        }
+                        toAdd.push(f);
+                      }
+                      setFeedbackAttachments(prev => [...prev, ...toAdd]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* Premium Submit Button */}
             <button
-              className="btn btn-primary btn-full"
               onClick={handleSubmitFeedback}
               disabled={feedbackSending}
+              style={{
+                width: "100%", padding: "16px 0", borderRadius: 22, border: "none",
+                background: "radial-gradient(ellipse at center, #7c3aed 0%, #4f46e5 100%)",
+                color: "#fff", fontWeight: 800, fontSize: 15,
+                cursor: feedbackSending ? "default" : "pointer",
+                opacity: feedbackSending ? 0.6 : 1,
+                boxShadow: "0 0 20px rgba(124,58,237,0.45)",
+                transition: "all 0.2s",
+                fontFamily: "inherit",
+              }}
             >
               {feedbackSending ? "Sending..." : "Submit Feedback"}
             </button>
@@ -4033,7 +4198,7 @@ export default function ProfilePage({
       {showTasksPanel && (
         <TasksPanel
           user={user}
-          onClose={() => setShowTasksPanel(false)}
+          onClose={() => { closeSubPage(); setShowTasksPanel(false); }}
           onUpdate={(updated) => onUpdate(updated as typeof user)}
         />
       )}
