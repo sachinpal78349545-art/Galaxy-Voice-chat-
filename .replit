@@ -30,7 +30,7 @@ timeoutMs = 20000
 [userenv.shared]
 
 [nix]
-packages = ["jre_minimal"]
+packages = ["jre_minimal", "zip"]
 channel = "stable-25_05"
 
 [objectStorage]

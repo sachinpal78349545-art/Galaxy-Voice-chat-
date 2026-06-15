@@ -14,7 +14,10 @@
     "typescript": "~5.9.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "protobufjs"],
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "protobufjs"
+    ],
     "overrides": {
       "picomatch@2": "2.3.2",
       "picomatch@4": "4.0.4",
@@ -32,6 +35,11 @@
     }
   },
   "dependencies": {
-    "phaser": "^4.0.0"
+    "@capacitor/android": "^5.7.8",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^5.7.8",
+    "@tanstack/react-query": "^5.101.0",
+    "phaser": "^4.0.0",
+    "zod": "^4.4.3"
   }
 }
