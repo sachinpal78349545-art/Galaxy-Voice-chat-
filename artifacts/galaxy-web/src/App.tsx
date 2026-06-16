@@ -21,6 +21,7 @@ import ExplorePage from "./pages/ExplorePage";
 import RechargePage from "./pages/RechargePage";
 import AdminRechargePage from "./pages/AdminRechargePage";
 import ProfileViewModal from "./components/ProfileViewModal";
+import UserSetupPage from "./pages/UserSetupPage";
 import "./index.css";
 
 // 👇 MomentPage import (agar aapke paas ye page hai, warna comment karein)
@@ -337,6 +338,18 @@ function AppInner() {
             <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>{maintenance.message}</p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (profile.profileCompleted === false) {
+    return (
+      <div className="app-wrapper">
+        <div className="stars" />
+        <UserSetupPage
+          user={fbUser}
+          onComplete={() => setProfile(prev => prev ? { ...prev, profileCompleted: true } : prev)}
+        />
       </div>
     );
   }

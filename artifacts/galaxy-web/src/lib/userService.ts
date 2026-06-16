@@ -122,6 +122,8 @@ export interface UserProfile {
   customBadges?: Record<string, { id: string; name: string; icon: string; imageUrl?: string }>;
   hasRoom?: boolean;
   myRoomId?: string;
+  profileCompleted?: boolean;
+  country?: string;
 }
 
 export const DEFAULT_PROFILE: Partial<UserProfile> = {
@@ -232,6 +234,7 @@ export async function initUser(uid: string, name: string, email: string, avatar:
     ...DEFAULT_PROFILE,
     createdAt: Date.now(),
     achievements,
+    profileCompleted: false,
   } as UserProfile;
   await set(ref(db, `users/${uid}`), profile);
   await set(ref(db, `userIds/${userId}`), uid);
