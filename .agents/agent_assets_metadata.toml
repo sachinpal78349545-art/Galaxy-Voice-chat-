@@ -126,3 +126,63 @@ id = "4Ikk3jAb4ktX_WnWMVa0V"
 uri = "file://artifacts/galaxy-web/public/boys/boy10.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "7XX5YG0590f6umw4Zi3qU"
+uri = "file://artifacts/galaxy-web/public/girls/girl1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Qa75cRWmgRxzD3G7T9QGP"
+uri = "file://artifacts/galaxy-web/public/girls/girl2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "XQqJ-sKckZDBlKO16IIpO"
+uri = "file://artifacts/galaxy-web/public/girls/girl3.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ljDWcEFZ-1bxuJvKfaMdd"
+uri = "file://artifacts/galaxy-web/public/girls/girl4.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5C_3H7B2VR6A7MOESlb15"
+uri = "file://artifacts/galaxy-web/public/girls/girl5.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "_W10wQ2PTP-Px2u2SQW5v"
+uri = "file://artifacts/galaxy-web/public/girls/girl6.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "gxi8HA6ZgZ3Sat50mQSou"
+uri = "file://artifacts/galaxy-web/public/girls/girl7.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "CAwNyOmBnGnpPAPgdsG7V"
+uri = "file://artifacts/galaxy-web/public/girls/girl8.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "8kmeQ9-OYp0HTYSNy4NQC"
+uri = "file://artifacts/galaxy-web/public/girls/girl9.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "nSEgmMHI2XuqQi6FVNcPB"
+uri = "file://artifacts/galaxy-web/public/girls/girl10.png"
+type = "image"
+title = "generated_image"
