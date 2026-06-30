@@ -1,9 +1,14 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.galaxy.voice',
+  appId: 'com.galaxy.voicechat',
   appName: 'Galaxy Voice Chat',
   webDir: 'dist/public',
+  android: {
+    allowMixedContent: true,
+    captureInput: true,
+    webContentsDebuggingEnabled: false,
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
@@ -15,9 +20,6 @@ const config: CapacitorConfig = {
       splashFullScreen: true,
       splashImmersive: true,
     },
-  },
-  android: {
-    allowMixedContent: true,
   },
 };
 

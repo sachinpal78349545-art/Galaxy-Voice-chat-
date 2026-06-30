@@ -1,0 +1,1 @@
+- [Capacitor tar ESM fix](capacitor-tar-fix.md) — @capacitor/cli v5 fails with tar v7 (ESM) in pnpm monorepos; requires patching template.js and adding tar to devDeps.

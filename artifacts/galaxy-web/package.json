@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
-    "build:android": "PORT=3000 BASE_PATH=/ vite build --config vite.config.ts && npx cap copy android && npx cap sync android",
+    "build:android": "tsc -p tsconfig.json --noEmit && vite build --config vite.config.ts && npx cap sync android",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "start": "node server.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -81,5 +81,8 @@
     "vite": "^5.4.15",
     "wouter": "^3.3.5",
     "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "tar": "7.5.11"
   }
 }

@@ -276,6 +276,10 @@ importers:
       zod:
         specifier: ^3.22.4
         version: 3.25.76
+    devDependencies:
+      tar:
+        specifier: 7.5.11
+        version: 7.5.11
 
   lib/api-client-react:
     dependencies:
