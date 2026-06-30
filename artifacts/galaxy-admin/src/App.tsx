@@ -14,6 +14,12 @@ import RoomsPage from "@/pages/RoomsPage";
 import AlertsPage from "@/pages/AlertsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ReportsPage from "@/pages/ReportsPage";
+import GiftsPage from "@/pages/GiftsPage";
+import BannersPage from "@/pages/BannersPage";
+import PackagesPage from "@/pages/PackagesPage";
+import NotificationsPage from "@/pages/NotificationsPage";
+import VipPage from "@/pages/VipPage";
+import LeaderboardPage from "@/pages/LeaderboardPage";
 import Layout from "@/components/Layout";
 
 const queryClient = new QueryClient();
@@ -39,9 +45,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    if (!loading && !adminUser) {
-      navigate("/login");
-    }
+    if (!loading && !adminUser) navigate("/login");
   }, [loading, adminUser, navigate]);
 
   if (loading) {
@@ -54,64 +58,35 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
   if (!adminUser) return null;
   return <>{children}</>;
+}
+
+function Guarded({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthGuard>
+      <Layout>{children}</Layout>
+    </AuthGuard>
+  );
 }
 
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route path="/">
-        <AuthGuard>
-          <Layout>
-            <Dashboard />
-          </Layout>
-        </AuthGuard>
-      </Route>
-      <Route path="/users">
-        <AuthGuard>
-          <Layout>
-            <UsersPage />
-          </Layout>
-        </AuthGuard>
-      </Route>
-      <Route path="/recharge">
-        <AuthGuard>
-          <Layout>
-            <RechargePage />
-          </Layout>
-        </AuthGuard>
-      </Route>
-      <Route path="/rooms">
-        <AuthGuard>
-          <Layout>
-            <RoomsPage />
-          </Layout>
-        </AuthGuard>
-      </Route>
-      <Route path="/alerts">
-        <AuthGuard>
-          <Layout>
-            <AlertsPage />
-          </Layout>
-        </AuthGuard>
-      </Route>
-      <Route path="/reports">
-        <AuthGuard>
-          <Layout>
-            <ReportsPage />
-          </Layout>
-        </AuthGuard>
-      </Route>
-      <Route path="/settings">
-        <AuthGuard>
-          <Layout>
-            <SettingsPage />
-          </Layout>
-        </AuthGuard>
-      </Route>
+      <Route path="/"><Guarded><Dashboard /></Guarded></Route>
+      <Route path="/users"><Guarded><UsersPage /></Guarded></Route>
+      <Route path="/recharge"><Guarded><RechargePage /></Guarded></Route>
+      <Route path="/rooms"><Guarded><RoomsPage /></Guarded></Route>
+      <Route path="/alerts"><Guarded><AlertsPage /></Guarded></Route>
+      <Route path="/reports"><Guarded><ReportsPage /></Guarded></Route>
+      <Route path="/gifts"><Guarded><GiftsPage /></Guarded></Route>
+      <Route path="/banners"><Guarded><BannersPage /></Guarded></Route>
+      <Route path="/packages"><Guarded><PackagesPage /></Guarded></Route>
+      <Route path="/notifications"><Guarded><NotificationsPage /></Guarded></Route>
+      <Route path="/vip"><Guarded><VipPage /></Guarded></Route>
+      <Route path="/leaderboard"><Guarded><LeaderboardPage /></Guarded></Route>
+      <Route path="/settings"><Guarded><SettingsPage /></Guarded></Route>
     </Switch>
   );
 }
@@ -122,28 +97,16 @@ function App() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setAdminUser(null);
-        setLoading(false);
-        return;
-      }
+      if (!firebaseUser) { setAdminUser(null); setLoading(false); return; }
       try {
         const profile = await getUser(firebaseUser.uid);
         if (profile && profile.userId === SUPER_ADMIN_USER_ID) {
-          setAdminUser({
-            firebaseUser,
-            uid: firebaseUser.uid,
-            userId: profile.userId,
-            name: profile.name || "SuperAdmin",
-            avatar: profile.avatar || "🌟",
-          });
+          setAdminUser({ firebaseUser, uid: firebaseUser.uid, userId: profile.userId, name: profile.name || "SuperAdmin", avatar: profile.avatar || "🌟" });
         } else {
           await auth.signOut();
           setAdminUser(null);
         }
-      } catch {
-        setAdminUser(null);
-      }
+      } catch { setAdminUser(null); }
       setLoading(false);
     });
     return unsub;
