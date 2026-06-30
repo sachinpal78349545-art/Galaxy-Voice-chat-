@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/galaxy-admin/"
+title = "Galaxy Admin Panel"
+version = "1.0.0"
+id = "artifacts/galaxy-admin"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/galaxy-admin/" ]
+localPort = 20257
+
+[services.development]
+run = "pnpm --filter @workspace/galaxy-admin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/galaxy-admin", "run", "build" ]
+publicDir = "artifacts/galaxy-admin/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20257"
+BASE_PATH = "/galaxy-admin/"
