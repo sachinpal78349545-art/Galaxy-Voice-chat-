@@ -126,13 +126,51 @@ function GiftRow({ gift, onSave, onDelete }: { gift: GiftItem; onSave: (g: GiftI
               placeholder="https://cdn.example.com/gift-sound.mp3" />
           </div>
 
-          {form.url && (
-            <div className="flex items-center gap-3 p-2 bg-primary/5 rounded-lg">
-              <img src={form.url} alt="preview" className="w-14 h-14 object-contain rounded-lg border border-border"
-                onError={e => { (e.target as HTMLImageElement).src = ""; }} />
-              <p className="text-xs text-muted-foreground">Image preview</p>
+          {/* 📱 App Preview Card — Exactly like Voice Room BottomBar */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground block">📱 App Preview (how it looks in gift grid)</Label>
+            <div className="flex items-center gap-4 p-3 rounded-xl" style={{ background: "rgba(18,10,36,0.95)", border: "1px solid rgba(236,72,153,0.2)" }}>
+              {/* Gift card exactly like BottomBar */}
+              <div style={{
+                background: "rgba(236,72,153,0.08)", border: "1px solid rgba(236,72,153,0.4)",
+                borderRadius: 16, padding: "10px 8px", display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", width: 72, position: "relative", flexShrink: 0,
+              }}>
+                {form.animationType === "fullscreen" && (
+                  <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: 3, background: "#FFD700" }} />
+                )}
+                <div style={{ width: 54, height: 54, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 12, background: "rgba(255,255,255,0.04)", position: "relative" }}>
+                  {form.url ? (
+                    <img
+                      src={form.url}
+                      alt={form.name}
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      onError={e => {
+                        const img = e.target as HTMLImageElement;
+                        img.style.display = "none";
+                        const fb = img.nextElementSibling as HTMLElement;
+                        if (fb) fb.style.display = "flex";
+                      }}
+                    />
+                  ) : null}
+                  <span style={{
+                    fontSize: 32, display: form.url ? "none" : "flex",
+                    alignItems: "center", justifyContent: "center", width: "100%", height: "100%",
+                  }}>{form.emoji || "🎁"}</span>
+                </div>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 500, textAlign: "center", width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{form.name || "Gift"}</span>
+                <span style={{ fontSize: 10, color: "#ffb703", fontWeight: 700 }}>💎 {form.cost}</span>
+              </div>
+              {/* Info */}
+              <div className="text-xs space-y-1 text-muted-foreground">
+                <p><span className="text-white font-semibold">Animation:</span> <span className={ANIM_META[form.animationType || "float"].color.split(" ")[1]}>{ANIM_META[form.animationType || "float"].label}</span></p>
+                <p><span className="text-white font-semibold">Cost:</span> 💎 {form.cost} coins</p>
+                {form.soundUrl && <p className="text-green-400">🔊 Sound attached</p>}
+                {!form.url && <p className="text-yellow-500/70">⚠ No image — showing emoji</p>}
+                {form.url && <p className="text-green-400/80">✓ Image URL set</p>}
+              </div>
             </div>
-          )}
+          </div>
 
           <div className="flex gap-2">
             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs" onClick={() => { onSave(form); setEditing(false); }}>
@@ -241,9 +279,46 @@ export default function GiftsPage() {
               ))}
             </select>
           </div>
-          <Input placeholder="🖼️ Image URL (Cloudinary CDN)" value={newGift.url || ""} onChange={e => setNewGift(f => ({ ...f, url: e.target.value }))} className="bg-background border-border text-xs" />
+          <Input placeholder="🖼️ Image URL (Cloudinary / any CDN link)" value={newGift.url || ""} onChange={e => setNewGift(f => ({ ...f, url: e.target.value }))} className="bg-background border-border text-xs" />
           <Input placeholder="🔊 Sound URL (.mp3 optional)" value={newGift.soundUrl || ""} onChange={e => setNewGift(f => ({ ...f, soundUrl: e.target.value }))} className="bg-background border-border text-xs" />
-          {newGift.url && <img src={newGift.url} alt="preview" className="w-16 h-16 object-contain rounded-lg border border-border" />}
+
+          {/* 📱 Live App Preview */}
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">📱 App Preview</p>
+            <div className="flex items-center gap-4 p-3 rounded-xl" style={{ background: "rgba(18,10,36,0.95)", border: "1px solid rgba(236,72,153,0.2)" }}>
+              <div style={{
+                background: "rgba(236,72,153,0.08)", border: "1px solid rgba(236,72,153,0.4)",
+                borderRadius: 16, padding: "10px 8px", display: "flex", flexDirection: "column",
+                alignItems: "center", width: 72, position: "relative", flexShrink: 0,
+              }}>
+                {newGift.animationType === "fullscreen" && (
+                  <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: 3, background: "#FFD700" }} />
+                )}
+                <div style={{ width: 54, height: 54, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 12, background: "rgba(255,255,255,0.04)", position: "relative" }}>
+                  {newGift.url ? (
+                    <img src={newGift.url} alt="preview"
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      onError={e => {
+                        const img = e.target as HTMLImageElement;
+                        img.style.display = "none";
+                        const fb = img.nextElementSibling as HTMLElement;
+                        if (fb) fb.style.display = "flex";
+                      }}
+                    />
+                  ) : null}
+                  <span style={{ fontSize: 32, display: newGift.url ? "none" : "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>{newGift.emoji || "🎁"}</span>
+                </div>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 500, textAlign: "center", width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{newGift.name || "Gift"}</span>
+                <span style={{ fontSize: 10, color: "#ffb703", fontWeight: 700 }}>💎 {newGift.cost}</span>
+              </div>
+              <div className="text-xs space-y-1 text-muted-foreground">
+                <p><span className="text-white font-semibold">Animation:</span> <span className={ANIM_META[(newGift.animationType as AnimationType) || "float"].color.split(" ")[1]}>{ANIM_META[(newGift.animationType as AnimationType) || "float"].label}</span></p>
+                {!newGift.url && <p className="text-yellow-500/70">⚠ No image — emoji shown</p>}
+                {newGift.url && <p className="text-green-400/80">✓ Image URL set</p>}
+                {newGift.soundUrl && <p className="text-green-400">🔊 Sound attached</p>}
+              </div>
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs" onClick={handleAdd} disabled={!newGift.name}>
               <Check className="w-3 h-3 mr-1" /> Add Gift

@@ -425,13 +425,30 @@ export default function BottomBar({
                           {g.animationType === "fullscreen" && (
                             <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: 3, background: "#FFD700" }} />
                           )}
-                          <div style={{ width: 54, height: 54, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 12 }}>
+                          <div style={{ width: 54, height: 54, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 12, position: "relative" }}>
                             {g.url ? (
-                              <img src={g.url} alt={g.name} style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                            ) : (
-                              <span style={{ fontSize: 34 }}>{g.emoji}</span>
-                            )}
+                              <img
+                                src={g.url}
+                                alt={g.name}
+                                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                                onError={e => {
+                                  const img = e.target as HTMLImageElement;
+                                  img.style.display = "none";
+                                  const fallback = img.nextElementSibling as HTMLElement;
+                                  if (fallback) fallback.style.display = "flex";
+                                }}
+                              />
+                            ) : null}
+                            <span
+                              style={{
+                                fontSize: 34,
+                                display: g.url ? "none" : "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "100%",
+                                height: "100%",
+                              }}
+                            >{g.emoji}</span>
                           </div>
                           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center", fontWeight: 500, marginBottom: 2 }}>{g.name}</span>
                           <span style={{ fontSize: 10, color: "#ffb703", fontWeight: 700 }}>💎 {g.cost}</span>
