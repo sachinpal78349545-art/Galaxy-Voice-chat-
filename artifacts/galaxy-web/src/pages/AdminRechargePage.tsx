@@ -89,13 +89,19 @@ export default function AdminRechargePage({ user, onBack }: Props) {
       fontFamily: "'Poppins','Inter',sans-serif",
       overflowY: "auto",
       paddingBottom: 32,
+      // ✅ Safe-area top padding for the whole page
+      paddingTop: "env(safe-area-inset-top, 0px)",
     }}>
-      {/* Header */}
+      {/* Header – now with safe-area aware top and padding */}
       <div style={{
         display: "flex", alignItems: "center", gap: 12,
         padding: "16px 16px 12px",
+        // ✅ Use calc to combine safe-area with padding
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)",
         borderBottom: "1px solid rgba(108,92,231,0.15)",
-        position: "sticky", top: 0, zIndex: 10,
+        position: "sticky",
+        top: "env(safe-area-inset-top, 0px)", // ✅ Safe-area aware sticky top
+        zIndex: 10,
         background: "rgba(13,0,26,0.92)", backdropFilter: "blur(12px)",
       }}>
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", color: "#a78bfa", padding: 4 }}>

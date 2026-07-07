@@ -24,9 +24,6 @@ import ProfileViewModal from "./components/ProfileViewModal";
 import UserSetupPage from "./pages/UserSetupPage";
 import "./index.css";
 
-// 👇 MomentPage import (agar aapke paas ye page hai, warna comment karein)
-// import MomentPage from "./pages/MomentPage";
-
 type NavPage = "home" | "rooms" | "chats" | "moment" | "mine" | "notifications" | "search" | "explore" | "recharge" | "admin-recharge";
 
 const NAV = [
@@ -76,7 +73,7 @@ function AppInner() {
   const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
   const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
   const [subPage, setSubPage] = useState<string | null>(null);
-  const [viewedProfile, setViewedProfile] = useState<UserProfile | null>(null); // 👈 नया
+  const [viewedProfile, setViewedProfile] = useState<UserProfile | null>(null);
 
   const presenceCleanup = useRef<(() => void) | null>(null);
   const userSubCleanup = useRef<(() => void) | null>(null);
@@ -420,7 +417,7 @@ function AppInner() {
   return (
     <div className="app-wrapper">
       <div className="stars" />
-      <div className="app-container">
+      <div className="app-container" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         {!isOnline && (
           <div style={{
             position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999,
@@ -655,4 +652,4 @@ export default function App() {
       <AppContent />
     </ToastProvider>
   );
-} 
+}

@@ -45,14 +45,50 @@ export default function ChatSection({ messages, userId: _userId, msgEndRef }: Ch
       <div className="chat-scroll-box">
         <div className="chat-content-list">
           {grouped.map((msg, i) => {
-            // System message types check
             const isSystem = ["system", "join", "leave", "welcome"].includes(msg.type || "");
+            
+            // 🎁 Check if message is a Gift message
+            const isGift = msg.text?.includes("sent 🎁") || msg.type === "gift";
 
             if (isSystem) {
               return (
                 <div key={i} className="chat-entry system-message">
                   <div className="chat-main-bubble system-bubble">
                     <p>{msg.text}</p>
+                  </div>
+                </div>
+              );
+            }
+
+            if (isGift) {
+              // Custom extraction if needed, or fallback rendering with premium background
+              // Extracting image URL from message properties if present
+              const giftImgUrl = (msg as any).giftUrl || (msg as any).url;
+
+              return (
+                <div key={i} className={`chat-entry ${!msg.showHeader ? 'no-header' : ''}`}>
+                  {msg.showHeader && (
+                    <div className="chat-user-row">
+                      <div className="chat-avatar-small">
+                        {msg.avatar?.startsWith?.("http") ? <img src={msg.avatar} alt="" /> : <span>👤</span>}
+                      </div>
+                      <span className="chat-name-label">{cleanName(msg.username)}</span>
+                      <span className="chat-lv-badge">Lv.6</span>
+                    </div>
+                  )}
+                  <div className="chat-bubble-wrapper">
+                    <div className="chat-main-bubble gift-premium-message-bubble">
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <p style={{ color: "#ffb703", fontWeight: "600" }}>{msg.text}</p>
+                        {giftImgUrl && (
+                          <img 
+                            src={giftImgUrl} 
+                            alt="gift" 
+                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }} 
+                          />
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -126,6 +162,14 @@ export default function ChatSection({ messages, userId: _userId, msgEndRef }: Ch
           padding: 6px 10px;
           border-radius: 4px 14px 14px 14px;
           display: inline-block;
+        }
+
+        /* 👑 PREMIUM GIFT ROW EFFECTS */
+        .gift-premium-message-bubble {
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(236, 72, 153, 0.2)) !important;
+          border: 1px solid rgba(236, 72, 153, 0.3);
+          box-shadow: 0 0 10px rgba(124, 58, 237, 0.2);
+          border-radius: 6px 16px 16px 16px !important;
         }
         
         /* SYSTEM MESSAGE STYLE (Yellow Text, No Avatar) */

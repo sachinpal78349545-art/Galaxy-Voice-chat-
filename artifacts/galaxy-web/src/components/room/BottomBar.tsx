@@ -4,16 +4,21 @@ import {
   Mic, MicOff, Smile, MessageCircle,
   Gift, MoreHorizontal, Send, ChevronDown
 } from "lucide-react";
+import { ref, onValue, off } from "firebase/database";
+import { db } from "../../lib/firebase";
 
 const EMOJIS = ["❤️","🔥","✨","😂","🎵","👏","🌟","💯","🚀","😍","🎉","💎"];
 
-// 🛡️ SECURITY LOCK: Secure Cloudinary URLs Integrated (No local asset extraction possible)
-const CLOUD_GIFTS = [
-  { id: "gift_ring",    name: "Galaxy Ring",    cost: 500,  url: "https://res.cloudinary.com/dz1bhfpkc/image/upload/v1782162038/Screenshot_20260622_211955_ChatGPT_b6268c.jpg" },
-  { id: "gift_teddy",   name: "Cosmic Teddy",   cost: 100,  url: "https://res.cloudinary.com/dz1bhfpkc/image/upload/v1782162037/Screenshot_20260622_210142_ChatGPT_b87vkg.jpg" },
-  { id: "gift_crown",   name: "Neon Crown",     cost: 1000, url: "https://res.cloudinary.com/dz1bhfpkc/image/upload/v1782162038/Screenshot_20260622_210121_ChatGPT_altiry.jpg" },
-  { id: "gift_perfume", name: "Galaxy Perfume",  cost: 300,  url: "https://res.cloudinary.com/dz1bhfpkc/image/upload/v1782162037/Screenshot_20260622_210111_ChatGPT_vreudo.jpg" },
-];
+interface LiveGift {
+  id: string;
+  emoji: string;
+  name: string;
+  cost: number;
+  url?: string;
+  animationType?: string;
+  soundUrl?: string;
+  enabled?: boolean;
+}
 
 const TABS = ["Backpack", "Gift", "Intimacy", "VIP", "PK"];
 const BANNER_BUBBLES = [59, 79, 99, 199, 299];
@@ -38,7 +43,7 @@ interface BottomBarProps {
   isOnSeat: boolean;
   onSendChat: () => void;
   onSendEmoji: (emoji: string) => void;
-  onHandleGift: (gift: { emoji: string; name: string; cost: number; url?: string }, combo: number) => void;
+  onHandleGift: (gift: { emoji: string; name: string; cost: number; url?: string; animationType?: string; soundUrl?: string }, combo: number) => void;
   onHandleReaction: (emoji: string) => void;
   onMicToggle: () => void;
   onSpeakerToggle: () => void;
@@ -73,6 +78,47 @@ export default function BottomBar({
   const [keyboardHeight, setKeyboardHeight] = useState(0); 
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [liveGifts,    setLiveGifts]    = useState<LiveGift[]>([]);
+  const [giftsLoading, setGiftsLoading] = useState(true);
+
+  useEffect(() => {
+    const r = ref(db, "appConfig/gifts");
+    const unsub = onValue(r, snap => {
+      if (snap.exists()) {
+        const val = snap.val() as Record<string, LiveGift>;
+        setLiveGifts(
+          Object.values(val)
+            .filter(g => g.enabled !== false)
+            .sort((a, b) => a.cost - b.cost)
+        );
+      } else {
+        setLiveGifts([]);
+      }
+      setGiftsLoading(false);
+    });
+    return () => off(r, "value", unsub);
+  }, []);
+
+  // Dynamic Keyframe Animation For All Selected Gifts (Smooth Glow Effect)
+  useEffect(() => {
+    const styleId = "gift-premium-animation-sheet";
+    if (!document.getElementById(styleId)) {
+      const styleSheet = document.createElement("style");
+      styleSheet.id = styleId;
+      styleSheet.innerText = `
+        @keyframes premiumGiftGlow {
+          0% { transform: scale(1); box-shadow: 0 0 4px rgba(139, 92, 246, 0.2); border-color: rgba(255,255,255,0.06); }
+          50% { transform: scale(1.03); box-shadow: 0 0 16px rgba(236, 72, 153, 0.5), inset 0 0 8px rgba(124, 58, 237, 0.3); border-color: #f472b6; }
+          100% { transform: scale(1); box-shadow: 0 0 4px rgba(139, 92, 246, 0.2); border-color: rgba(255,255,255,0.06); }
+        }
+        .premium-gift-selected {
+          animation: premiumGiftGlow 2s infinite ease-in-out !important;
+        }
+      `;
+      document.head.appendChild(styleSheet);
+    }
+  }, []);
+
   useEffect(() => {
     const handleViewportChange = () => {
       if (window.visualViewport) {
@@ -101,13 +147,19 @@ export default function BottomBar({
       showToast("Please select a gift first!", "error");
       return;
     }
-    const targetGift = CLOUD_GIFTS.find(g => g.id === selectedGift);
+    const targetGift = liveGifts.find(g => g.id === selectedGift);
     if (!targetGift) return;
 
     const totalCost = targetGift.cost * giftCombo;
     if (user.coins >= totalCost) {
-      // Mapping structure back to match existing backend signatures comfortably
-      onHandleGift({ emoji: "🎁", name: targetGift.name, cost: targetGift.cost, url: targetGift.url }, giftCombo);
+      onHandleGift({
+        emoji: targetGift.emoji || "🎁",
+        name: targetGift.name,
+        cost: targetGift.cost,
+        url: targetGift.url,
+        animationType: targetGift.animationType,
+        soundUrl: targetGift.soundUrl,
+      }, giftCombo);
       closeAllPopups();
     } else {
       showToast("Insufficient coins! Please recharge.", "error");
@@ -144,7 +196,6 @@ export default function BottomBar({
 
   return (
     <>
-      {/* BACKGROUND DISMISSER OVERLAY WHEN PANEL POPUPS ARE OPEN */}
       {(showGift || showEmoji || showReactions) && (
         <div 
           onClick={closeAllPopups} 
@@ -166,13 +217,12 @@ export default function BottomBar({
         touchAction: "none"
       }}>
         
-        {/* --- GHOST INPUTS --- */}
         <div style={{ opacity: 0, position: 'absolute', height: 0, width: 0, overflow: 'hidden' }}>
           <input type="text" name="prevent_autofill_user" tabIndex={-1} />
           <input type="password" name="prevent_autofill_pass" tabIndex={-1} />
         </div>
 
-        {/* CHAT INPUT AREA */}
+        {/* INPUT LAYOUT BAR */}
         {(inputOpen || keyboardHeight > 0) && (
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
@@ -215,7 +265,7 @@ export default function BottomBar({
           </div>
         )}
 
-        {/* BOTTOM ROW MENU BAR */}
+        {/* CONTROLS ROW */}
         {keyboardHeight === 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
@@ -275,7 +325,6 @@ export default function BottomBar({
         )}
       </div>
 
-      {/* POPUPS VIEWPORTS */}
       {keyboardHeight === 0 && (
         <>
           {/* EMOJI BOX WINDOW */}
@@ -295,7 +344,7 @@ export default function BottomBar({
             </div>
           )}
 
-          {/* 👑 PREMIUM CHALOTALK STYLE SLIDE-UP GIFT OVERLAY PANEL (Matching 99235.jpg) */}
+          {/* 👑 PREMIUM SLIDE-UP GIFT OVERLAY PANEL */}
           {showGift && (
             <div style={{
               position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 1100,
@@ -307,14 +356,12 @@ export default function BottomBar({
               boxShadow: "0 -10px 30px rgba(0,0,0,0.5)"
             }}>
               
-              {/* TOP BALANCES & NAVIGATION TABS MATRIX */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: 12, justifyContent: "space-between" }}>
                 <div style={{ fontSize: 13, color: "#38bdf8", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
                   <span>💎 {user.coins}</span>
                   <ChevronDown size={14} />
                 </div>
                 
-                {/* HORIZONTAL APP SCROLL TABS */}
                 <div style={{ display: "flex", gap: 14, overflowX: "auto", whiteSpace: "nowrap", paddingBottom: 4 }}>
                   {TABS.map(t => (
                     <button 
@@ -335,13 +382,12 @@ export default function BottomBar({
                 </div>
               </div>
 
-              {/* THIN HORIZONTAL PREMIUM PROMO CAROUSEL ROW */}
               <div style={{
                 background: "linear-gradient(90deg, rgba(236,72,153,0.15), rgba(124,58,237,0.15))",
                 borderRadius: 12, padding: "6px 10px", display: "flex", alignItems: "center",
                 justifyContent: "space-between", marginBottom: 14, border: "1px solid rgba(255,255,255,0.05)"
               }}>
-                <span style={{ fontSize: 11, color: "#f472b6", fontWeight: 700 }}>🎁 Random gifts</span>
+                <span style={{ fontSize: 11, color: "#f472b6", fontWeight: 700 }}>🎁 VIP Store Gifts Enabled</span>
                 <div style={{ display: "flex", gap: 6 }}>
                   {BANNER_BUBBLES.map(num => (
                     <div key={num} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 10, padding: "2px 6px", color: "#c4b5fd" }}>{num}</div>
@@ -349,51 +395,65 @@ export default function BottomBar({
                 </div>
               </div>
 
-              {/* MAIN DYNAMIC 4x2 SEAT MATRIX GIFT GRID STREAM LAYER */}
+              {/* 4 COLUMN GIFT GRID — LIVE FROM FIREBASE */}
               {activeTab === "Gift" ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
-                  {CLOUD_GIFTS.map(g => {
-                    const isSelected = selectedGift === g.id;
-                    return (
-                      <div 
-                        key={g.id}
-                        onClick={() => setSelectedGift(g.id)}
-                        style={{
-                          background: isSelected ? "rgba(124,58,237,0.15)" : "rgba(255,255,255,0.03)",
-                          border: isSelected ? "1.5px solid #a78bfa" : "1px solid rgba(255,255,255,0.06)",
-                          borderRadius: 16, padding: "8px 4px", display: "flex", flexDirection: "column",
-                          alignItems: "center", justifyContent: "center", cursor: "pointer",
-                          boxShadow: isSelected ? "0 0 12px rgba(124,58,237,0.25)" : "none",
-                          transition: "all 0.1s ease"
-                        }}
-                      >
-                        {/* 🛡️ Secure hosted web container inside view frame */}
-                        <div style={{ width: 50, height: 50, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 10 }}>
-                          <img src={g.url} alt={g.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                giftsLoading ? (
+                  <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: 12 }}>
+                    Loading gifts…
+                  </div>
+                ) : liveGifts.length === 0 ? (
+                  <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: 12 }}>
+                    No gifts available
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16, maxHeight: "250px", overflowY: "auto", padding: "4px 2px" }}>
+                    {liveGifts.map(g => {
+                      const isSelected = selectedGift === g.id;
+                      return (
+                        <div 
+                          key={g.id}
+                          onClick={() => setSelectedGift(g.id)}
+                          className={isSelected ? "premium-gift-selected" : ""}
+                          style={{
+                            background: isSelected ? "rgba(236,72,153,0.08)" : "rgba(255,255,255,0.03)",
+                            border: `1px solid ${isSelected ? "rgba(236,72,153,0.4)" : "rgba(255,255,255,0.06)"}`,
+                            borderRadius: 16, padding: "10px 4px", display: "flex", flexDirection: "column",
+                            alignItems: "center", justifyContent: "center", cursor: "pointer",
+                            transition: "all 0.2s ease-in-out", position: "relative",
+                          }}
+                        >
+                          {g.animationType === "fullscreen" && (
+                            <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: 3, background: "#FFD700" }} />
+                          )}
+                          <div style={{ width: 54, height: 54, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 12 }}>
+                            {g.url ? (
+                              <img src={g.url} alt={g.name} style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                            ) : (
+                              <span style={{ fontSize: 34 }}>{g.emoji}</span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center", fontWeight: 500, marginBottom: 2 }}>{g.name}</span>
+                          <span style={{ fontSize: 10, color: "#ffb703", fontWeight: 700 }}>💎 {g.cost}</span>
                         </div>
-                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center", marginBottom: 2 }}>{g.name}</span>
-                        <span style={{ fontSize: 10, color: "#ffb703", fontWeight: 700 }}>💎 {g.cost}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
                 <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: 12 }}>
                   Empty Content Stream
                 </div>
               )}
 
-              {/* BOTTOM PANEL CONTROLS SYSTEM FOOTER ROW */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 12 }}>
                 
-                {/* TARGET USER SWITCH DROPDOWN CONTAINER */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 20, cursor: "pointer" }}>
                   <div style={{ width: 18, height: 18, borderRadius: 9, background: "#ec4899", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>H</div>
                   <span style={{ fontSize: 11, color: "#fff" }}>Host</span>
                   <ChevronDown size={12} color="rgba(255,255,255,0.4)" />
                 </div>
 
-                {/* QUANTITY AND GRADIENT ACTION TRIGGER BUTTON BLOCK */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
                   <button 
                     onClick={() => setComboOpen(!comboOpen)}
@@ -406,7 +466,6 @@ export default function BottomBar({
                     <ChevronDown size={12} />
                   </button>
 
-                  {/* COMBO BOX FLOATER */}
                   {comboOpen && (
                     <div style={{ position: "absolute", bottom: 38, left: 0, background: "#1e1b4b", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 1200 }}>
                       {GIFT_COMBOS.map(combo => (
@@ -433,7 +492,7 @@ export default function BottomBar({
             </div>
           )}
 
-          {/* REACTIONS DOCK BAR WINDOW */}
+          {/* REACTIONS DOCK BAR */}
           {showReactions && (
             <div style={{
               position: "fixed", bottom: 90, right: 10, zIndex: 1100,

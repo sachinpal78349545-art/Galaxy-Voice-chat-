@@ -37,7 +37,17 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
   const [lbPeriod, setLbPeriod] = useState<LeaderboardPeriod>("daily");
   const [lbEntries, setLbEntries] = useState<LeaderboardEntry[]>([]);
   const [speakingUids, setSpeakingUids] = useState<Set<number>>(new Set());
-  const [giftAnim, setGiftAnim] = useState<{ emoji: string; sender: string; receiver: string } | null>(null);
+  // ✅ MODIFIED: Added url and isVip
+  const [giftAnim, setGiftAnim] = useState<{
+    emoji: string;
+    giftName: string;
+    sender: string;
+    receiver: string;
+    url?: string;
+    isVip?: boolean;
+    animationType?: "float" | "fullscreen" | "particle";
+    combo?: number;
+  } | null>(null);
   const [giftParticles, setGiftParticles] = useState<{ id: number; emoji: string; x: number; y: number; px: string; py: string }[]>([]);
   const [showCloseMenu, setShowCloseMenu] = useState(false);
   const [showUsersPanel, setShowUsersPanel] = useState(false);
@@ -334,16 +344,47 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
     await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: e, type: "emoji" }).catch(console.error);
   };
 
-  const handleGift = async (gift: { emoji: string; name: string; cost: number }, combo: number = 1) => {
+  // ✅ MODIFIED: handleGift now accepts url, animationType, soundUrl
+  const handleGift = async (gift: { emoji: string; name: string; cost: number; url?: string; animationType?: string; soundUrl?: string }, combo: number = 1) => {
     if (!room) return;
     const totalCost = gift.cost * combo;
     const hostSeat = room.seats.find(s => s.userId && s.userId !== user.uid);
     const recipientId = hostSeat?.userId || room.hostId;
     const recipientName = hostSeat?.username || room.host;
     const success = await sendGift(user.uid, user, recipientId, gift.emoji, totalCost);
-    if (!success) { showToast(`Not enough coins! Need ${totalCost}`, "warning", ); return; }
-    setGiftAnim({ emoji: gift.emoji, sender: user.name, receiver: recipientName });
-    setTimeout(() => setGiftAnim(null), 3000);
+    if (!success) { showToast(`Not enough coins! Need ${totalCost}`, "warning"); return; }
+
+    // VIP detection logic – modify as needed
+    const isVip = totalCost >= 500 ||
+                  gift.name.toLowerCase().includes("vip") ||
+                  gift.name.toLowerCase().includes("premium") ||
+                  gift.name.toLowerCase().includes("crown") ||
+                  gift.name.toLowerCase().includes("diamond");
+
+    const animationType = (
+      gift.animationType === "fullscreen" || gift.animationType === "particle"
+        ? gift.animationType
+        : isVip ? "fullscreen" : "float"
+    ) as "float" | "fullscreen" | "particle";
+
+    if (gift.soundUrl) {
+      try { new Audio(gift.soundUrl).play().catch(() => {}); } catch {}
+    }
+
+    setGiftAnim({
+      emoji: gift.emoji,
+      giftName: gift.name,
+      sender: user.name,
+      receiver: recipientName,
+      url: gift.url,
+      isVip,
+      animationType,
+      combo,
+    });
+
+    const duration = animationType === "fullscreen" ? 4500 : animationType === "particle" ? 3500 : 3000;
+    setTimeout(() => setGiftAnim(null), duration);
+
     const floatCount = Math.min(combo * 3, 15);
     for (let i = 0; i < floatCount; i++) setTimeout(() => spawnFloat(gift.emoji, true), i * 200);
     const particleEmojis = ["\u2764\uFE0F", "\u2B50", "\u2728", "\uD83D\uDC96", "\uD83C\uDF1F"];
@@ -599,15 +640,118 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
         }}>{f.item}</div>
       ))}
 
-      {giftAnim && (
+      {/* ===== GIFT ANIMATIONS (3 types) ===== */}
+
+      {/* FLOAT — small compact animation at top */}
+      {giftAnim && giftAnim.animationType === "float" && (
         <div style={{
           position: "fixed", top: "22%", left: "50%", transform: "translateX(-50%)",
-          zIndex: 600, textAlign: "center", pointerEvents: "none", animation: "giftReveal 3s ease forwards",
+          zIndex: 1500, textAlign: "center", pointerEvents: "none",
+          animation: "giftReveal 3s ease forwards",
         }}>
-          <div style={{ fontSize: 80, animation: "giftBounce 0.6s ease infinite" }}>{giftAnim.emoji}</div>
-          <div style={{ fontSize: 14, color: "#FFD700", fontWeight: 800, textShadow: "0 2px 8px rgba(0,0,0,0.8), 0 0 20px rgba(138,43,226,0.5)", marginTop: 8 }}>
-            {giftAnim.sender} {"\u27A4"} {giftAnim.receiver}
+          <div style={{ display: "inline-block", animation: "giftBounce 0.8s ease infinite alternate" }}>
+            {giftAnim.url ? (
+              <img src={giftAnim.url} alt={giftAnim.emoji} style={{ width: 80, height: 80, objectFit: "contain", borderRadius: 8 }} />
+            ) : (
+              <span style={{ fontSize: 80 }}>{giftAnim.emoji}</span>
+            )}
           </div>
+          <div style={{ fontSize: 13, color: "#FFD700", fontWeight: 800, marginTop: 8, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>
+            {giftAnim.sender} ➤ {giftAnim.receiver}
+          </div>
+        </div>
+      )}
+
+      {/* PARTICLE — burst + sparkles around central gift */}
+      {giftAnim && giftAnim.animationType === "particle" && (
+        <div style={{
+          position: "fixed", top: "28%", left: "50%", transform: "translateX(-50%)",
+          zIndex: 1500, textAlign: "center", pointerEvents: "none",
+        }}>
+          <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            {["✨","🌟","💫","⭐","✨","🌟","💫","⭐"].map((s, i) => (
+              <div key={i} style={{
+                position: "absolute",
+                fontSize: 20,
+                animation: `particleOut 1.4s ease-out ${i * 0.08}s forwards`,
+                "--pdeg": `${i * 45}deg`,
+              } as React.CSSProperties}>{s}</div>
+            ))}
+            <div style={{ animation: "popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275) forwards" }}>
+              {giftAnim.url ? (
+                <img src={giftAnim.url} alt={giftAnim.emoji} style={{
+                  width: 110, height: 110, objectFit: "contain", borderRadius: 16,
+                  filter: "drop-shadow(0 0 24px rgba(191,0,255,0.7))",
+                }} />
+              ) : (
+                <span style={{ fontSize: 90, filter: "drop-shadow(0 0 24px rgba(191,0,255,0.7))" }}>{giftAnim.emoji}</span>
+              )}
+            </div>
+          </div>
+          <div style={{ fontSize: 13, color: "#FFD700", fontWeight: 800, marginTop: 12, textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}>
+            {giftAnim.sender} ➤ {giftAnim.receiver}
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN — like Yalla / Chalotalk full-screen gift reveal */}
+      {giftAnim && giftAnim.animationType === "fullscreen" && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 2000,
+          background: "rgba(4,2,16,0.93)", backdropFilter: "blur(12px)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          pointerEvents: "none", animation: "fsGiftEntry 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards",
+        }}>
+          {/* Ambient sparkle particles */}
+          {[
+            {t:"12%",l:"8%"}, {t:"20%",l:"82%"}, {t:"38%",l:"4%"}, {t:"35%",l:"91%"},
+            {t:"58%",l:"10%"},{t:"62%",l:"80%"},{t:"72%",l:"28%"},{t:"70%",l:"68%"},
+            {t:"18%",l:"48%"},{t:"80%",l:"48%"},{t:"44%",l:"48%"},{t:"8%",l:"55%"},
+          ].map((pos, i) => (
+            <div key={i} style={{
+              position: "absolute", top: pos.t, left: pos.l, fontSize: 18 + (i % 3) * 4,
+              animation: `fsSparkle ${1.2 + (i % 4) * 0.25}s ease-in-out ${i * 0.12}s infinite alternate`,
+              opacity: 0.75, pointerEvents: "none",
+            }}>{"✨🌟💫⭐🎆"[i % 5]}</div>
+          ))}
+
+          {/* Big gift image with bounce */}
+          <div style={{ animation: "vipGiftBounce 0.65s ease-in-out infinite alternate", marginBottom: 22 }}>
+            {giftAnim.url ? (
+              <img src={giftAnim.url} alt={giftAnim.emoji} style={{
+                width: 168, height: 168, objectFit: "contain", borderRadius: 24,
+                filter: "drop-shadow(0 0 40px rgba(191,0,255,0.8)) drop-shadow(0 0 80px rgba(255,215,0,0.35))",
+              }} />
+            ) : (
+              <span style={{ fontSize: 144, filter: "drop-shadow(0 0 40px rgba(191,0,255,0.8))" }}>{giftAnim.emoji}</span>
+            )}
+          </div>
+
+          {/* Gift name */}
+          <div style={{
+            fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: 0.5, marginBottom: 12,
+            textShadow: "0 0 30px rgba(255,215,0,0.9), 0 2px 12px rgba(0,0,0,0.9)",
+          }}>
+            🎁 {giftAnim.giftName}
+          </div>
+
+          {/* Sender card */}
+          <div style={{
+            background: "rgba(255,255,255,0.07)", backdropFilter: "blur(8px)",
+            border: "1px solid rgba(255,255,255,0.18)", borderRadius: 32,
+            padding: "9px 24px", fontSize: 14, fontWeight: 700, color: "#FFD700",
+            textShadow: "0 0 16px rgba(255,215,0,0.7)",
+          }}>
+            {giftAnim.sender} ➤ {giftAnim.receiver}
+          </div>
+
+          {giftAnim.combo && giftAnim.combo > 1 && (
+            <div style={{
+              marginTop: 14, background: "linear-gradient(135deg, #bf00ff, #ff6b00)",
+              borderRadius: 22, padding: "5px 20px", fontSize: 20, fontWeight: 900, color: "#fff",
+              boxShadow: "0 6px 24px rgba(191,0,255,0.55)", letterSpacing: 1,
+            }}>×{giftAnim.combo}</div>
+          )}
         </div>
       )}
 

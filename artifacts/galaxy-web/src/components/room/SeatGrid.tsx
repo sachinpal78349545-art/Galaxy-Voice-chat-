@@ -1,7 +1,7 @@
 import React from "react";
 import { Room, RoomSeat, cleanName } from "./types";
 import { getUserRole } from "../../lib/roomService";
-import { isPngFrame, getPngFramePath, DEFAULT_FRAME_ID, isAnimatedFrame, getFrameColors } from "../../lib/storeService";
+import { isAnimatedFrame, getFrameColors } from "../../lib/storeService";
 
 interface SeatGridProps {
   room: Room;
@@ -21,7 +21,6 @@ interface SeatGridProps {
 export default function SeatGrid({ room, userUid, hasControl: _hasControl, speakingUids, voiceJoined, hashCode, onSeatTap, isOwnerSeat, officialUids, superAdminUids, equippedFrames, ghostUids }: SeatGridProps) {
   return (
     <div className="room-seat-area" style={{ width: "100%", padding: "0 8px" }}>
-      {/* ChaloTalk Style: repeat(5, 1fr) layout for 5 upar, 5 neeche */}
       <div 
         className="room-seat-grid-10" 
         style={{ 
@@ -33,9 +32,7 @@ export default function SeatGrid({ room, userUid, hasControl: _hasControl, speak
           width: "100%"
         }}
       >
-        {/* Total length 8 se badhakar 10 kar di hai */}
         {Array.from({ length: 10 }, (_, i) => {
-          // ChaloTalk standard ke hisab se last seat (Seat 10) ya standard seats lock kar sakte hain
           const lockedByDefault = [9].includes(i);
           const seat = room.seats[i] || { index: i, userId: null, username: null, avatar: null, isMuted: false, isLocked: lockedByDefault, isSpeaking: false };
           const isSpeaking = seat.userId
@@ -79,7 +76,6 @@ interface SeatCellProps {
   onTap: () => void;
 }
 
-// ChaloTalk compact size rings (80px box scaling to 56px inside)
 function AudioWaveRing({ color = "cyan" }: { color?: "cyan" | "gold" | "blue" }) {
   const colors = {
     cyan:  { ring: "rgba(0,255,255,0.5)", bar: "rgba(0,255,255,0.6)" },
@@ -125,21 +121,21 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
   const isActive = !!seat.userId;
   const isLocked = seat.isLocked;
   const isSpecial = isOfficial || isSuperAdmin;
-  const activeFrameId = isSuperAdmin ? undefined : (frameId || (isActive ? DEFAULT_FRAME_ID : undefined));
-  const hasPngFrame = activeFrameId && isPngFrame(activeFrameId);
-  const hasAnimFrame = activeFrameId && isAnimatedFrame(activeFrameId);
-  const animColors = hasAnimFrame ? getFrameColors(activeFrameId!) : null;
+  
+  // ✅ PNG frame completely disabled to avoid broken images
+  const hasPngFrame = false;
+  const hasAnimFrame = frameId && isAnimatedFrame(frameId);
+  const animColors = hasAnimFrame ? getFrameColors(frameId!) : null;
 
   const seatClass = [
     "seat-bubble",
-    isSuperAdmin && isActive ? "" : (hasAnimFrame ? "" : (hasPngFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty"))),
+    isSuperAdmin && isActive ? "" : (hasAnimFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty")),
     isOwner && isActive && !hasPngFrame && !hasAnimFrame && !isSuperAdmin && !isMe ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
     !hasPngFrame && !hasAnimFrame && !isSuperAdmin && isOfficial && isActive && !isMe ? "seat-official" : "",
   ].filter(Boolean).join(" ");
 
   const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
-  const pngPath = hasPngFrame ? getPngFramePath(activeFrameId!) : null;
 
   return (
     <div 
@@ -155,7 +151,6 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
       }} 
       onClick={onTap}
     >
-      {/* 5 columns ke liye avatar box size ko 54px kiya hai taaki ChaloTalk jaisa sharp aur precise dikhe */}
       <div className="seat-wrapper" style={{ width: 54, height: 54, position: "relative" }}>
         {isSuperAdmin && isActive && (
           <>
@@ -163,21 +158,12 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
             <div className="sa-seat-crown" style={{ fontSize: "11px", top: "-10px" }}>{"\u{1F451}"}</div>
           </>
         )}
-        {!isSuperAdmin && !hasPngFrame && !hasAnimFrame && isOfficial && isActive && !isMe && (
-          <img src={`${import.meta.env.BASE_URL}assets/official/official_frame_new.png`} alt="" className="official-phoenix-frame" style={{ width: 78, height: 78 }} />
-        )}
-        {pngPath && isActive && (
-          <img
-            src={pngPath}
-            alt=""
-            className="png-frame-seat"
-            style={{ width: 76, height: 76 }}
-          />
-        )}
+        {/* ✅ REMOVED: official_frame_new.png – no more broken box */}
+        {/* ✅ REMOVED: PNG frame */}
         {hasAnimFrame && animColors && isActive && (
           <div className="af-seat-wrapper">
             <div
-              className={`af-wrapper af-${activeFrameId!.replace("frame_", "")}`}
+              className={`af-wrapper af-${frameId!.replace("frame_", "")}`}
               style={{ width: 58, height: 58 }}
             >
               <div
@@ -200,26 +186,37 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
           </div>
         )}
         
-        {/* Core Avatar Bubble Style Overrides for ChaloTalk Scaling */}
+        {/* ✅ FIXED: Local paths (/boys/boy1.jpg) are now recognized */}
         <div className={seatClass} style={{ width: "100%", height: "100%", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {isLocked ? (
             <span className="seat-locked-icon" style={{ fontSize: "12px" }}>{"\u{1F512}"}</span>
           ) : isActive ? (
-            seat.avatar?.startsWith("http")
-              ? <img src={seat.avatar} alt="" className="seat-avatar-img" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.innerHTML = '<span style="font-size:12px;">\u{1F464}</span>'; }} />
-              : <span style={{ fontSize: "12px" }}>{seat.avatar && seat.avatar.length <= 4 ? seat.avatar : "\u{1F464}"}</span>
+            seat.avatar && (seat.avatar.startsWith("http") || seat.avatar.startsWith("/")) ? (
+              <img 
+                src={seat.avatar} 
+                alt="" 
+                className="seat-avatar-img" 
+                style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} 
+                onError={(e) => {
+                  // Hide broken image and show placeholder
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.textContent = "👤";
+                    parent.style.fontSize = "16px";
+                  }
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: "16px" }}>👤</span>
+            )
           ) : (
             <span className="seat-empty-plus" style={{ fontSize: "16px" }}>+</span>
           )}
         </div>
 
-        {/* Badges adjustments to keep them perfectly attached to the smaller 54px bubble */}
-        {isSuperAdmin && isActive && (
-          <img src={`${import.meta.env.BASE_URL}assets/official/super_admin_badge.svg`} alt="Super Admin" className="super-admin-seat-badge" style={{ width: "32px", bottom: "-4px" }} />
-        )}
-        {isOfficial && !isSuperAdmin && isActive && !isMe && (
-          <img src={`${import.meta.env.BASE_URL}assets/official/official_badge_new.png`} alt="Official" className="official-badge-label" style={{ width: "34px", bottom: "-4px" }} />
-        )}
+        {/* ✅ REMOVED: super_admin_badge.svg and official_badge_new.png – no more broken boxes */}
         {role === "owner" && isActive && !isSpecial && (
           <div className="seat-badge seat-badge-owner" style={{ fontSize: "10px", padding: "1px" }}>{"\u{1F451}"}</div>
         )}

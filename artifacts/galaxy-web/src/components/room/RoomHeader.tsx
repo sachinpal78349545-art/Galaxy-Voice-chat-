@@ -16,7 +16,7 @@ interface RoomHeaderProps {
   onShowMoreMenu?: () => void;
 }
 
-// Shared glassmorphism panel — slightly rectangular, soft gold ambient
+// Shared glassmorphism panel
 const glass: React.CSSProperties = {
   background: "rgba(14, 8, 32, 0.55)",
   border: "1px solid rgba(255, 215, 0, 0.13)",
@@ -26,7 +26,6 @@ const glass: React.CSSProperties = {
   boxShadow: "0 4px 24px rgba(0,0,0,0.45), 0 0 20px rgba(255,200,80,0.08)",
 };
 
-// Thin vertical separator inside panels
 const Sep = () => (
   <span style={{
     display: "inline-block", width: 1, height: 16,
@@ -34,15 +33,7 @@ const Sep = () => (
   }} />
 );
 
-// Icon action button inside panel
-const IBtn = ({
-  onClick, children, danger = false, title,
-}: {
-  onClick?: () => void;
-  children: React.ReactNode;
-  danger?: boolean;
-  title?: string;
-}) => (
+const IBtn = ({ onClick, children, danger = false, title }: any) => (
   <button onClick={onClick} title={title} style={{
     width: 30, height: 30, borderRadius: 8,
     background: "transparent", border: "none",
@@ -64,6 +55,11 @@ export default function RoomHeader({
   const lbValue = (liveCount * 0.95 + 7.23).toFixed(2);
   const previewUsers = Object.values(room.roomUsers || {}).slice(0, 2);
 
+  // ✅ Helper to check if avatar URL is valid
+  const isValidAvatarUrl = (url: string) => {
+    return url.startsWith("http") || url.startsWith("/") || url.startsWith("data:");
+  };
+
   return (
     <>
       <div style={{
@@ -73,7 +69,7 @@ export default function RoomHeader({
         justifyContent: "space-between", gap: 8,
       }}>
 
-        {/* ── LEFT PANEL: avatar flush-left → name → ID → trophy ── */}
+        {/* LEFT PANEL */}
         <div
           onClick={onOpenControlPanel}
           style={{
@@ -83,7 +79,7 @@ export default function RoomHeader({
             gap: 0, maxWidth: "60%", cursor: "pointer", overflow: "hidden",
           }}
         >
-          {/* Avatar — flush against left edge, no gap */}
+          {/* Avatar — flush left */}
           <div style={{
             width: 44, height: 44, flexShrink: 0,
             borderRadius: "12px 0 0 12px",
@@ -93,9 +89,28 @@ export default function RoomHeader({
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 22, overflow: "hidden",
           }}>
-            {avatarSrc
-              ? <img src={avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : avatarEmoji}
+            {isValidAvatarUrl(avatarSrc) ? (
+              <img
+                src={avatarSrc}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={(e) => {
+                  // ✅ Agar image fail ho, toh emoji dikhao aur image hide karo
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.textContent = avatarEmoji;
+                    parent.style.fontSize = "22px";
+                    parent.style.display = "flex";
+                    parent.style.alignItems = "center";
+                    parent.style.justifyContent = "center";
+                  }
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: 22 }}>{avatarEmoji}</span>
+            )}
           </div>
 
           {/* Text block */}
@@ -111,7 +126,6 @@ export default function RoomHeader({
               <span style={{ fontSize: 9, color: "rgba(255,255,255,0.38)", fontWeight: 500, letterSpacing: 0.3 }}>
                 ID {room.id.slice(5, 14).toUpperCase()}
               </span>
-              {/* Trophy badge — compact */}
               <button
                 onClick={(e) => { e.stopPropagation(); onLoadLeaderboard(); }}
                 style={{
@@ -129,14 +143,14 @@ export default function RoomHeader({
           </div>
         </div>
 
-        {/* ── RIGHT PANEL: ONE structured group ── viewers | share · more | close ── */}
+        {/* RIGHT PANEL */}
         <div style={{
           ...glass,
           display: "flex", alignItems: "center",
           padding: "4px 5px 4px 4px", gap: 0,
           flexShrink: 0,
         }}>
-          {/* Viewers cluster */}
+          {/* Viewers */}
           <button
             onClick={onShowUsersPanel}
             style={{
@@ -145,7 +159,6 @@ export default function RoomHeader({
               padding: "2px 6px", fontFamily: "inherit",
             }}
           >
-            {/* stacked mini-avatars */}
             <div style={{ display: "flex", alignItems: "center", marginRight: 2 }}>
               {previewUsers.length > 0
                 ? previewUsers.map((u, i) => (
@@ -156,9 +169,19 @@ export default function RoomHeader({
                       display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
                       marginLeft: i === 0 ? 0 : -6, position: "relative", zIndex: 2 - i,
                     }}>
-                      {(u.avatar || "").startsWith("http")
-                        ? <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        : (u.avatar || "👤")}
+                      {u.avatar && (u.avatar.startsWith("http") || u.avatar.startsWith("/")) ? (
+                        <img
+                          src={u.avatar}
+                          alt=""
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                            (e.target as HTMLImageElement).parentElement!.textContent = "👤";
+                          }}
+                        />
+                      ) : (
+                        <span>{u.avatar || "👤"}</span>
+                      )}
                     </div>
                   ))
                 : <div style={{
@@ -177,19 +200,16 @@ export default function RoomHeader({
 
           <Sep />
 
-          {/* Share */}
           <IBtn onClick={onShare} title="Share">
             <Share2 size={13} strokeWidth={2.5} />
           </IBtn>
 
-          {/* More — opens 3-dot menu (Clean Chat / Lock / Theme / Report) */}
           <IBtn onClick={onShowMoreMenu || onOpenControlPanel} title="More options">
             <MoreHorizontal size={14} strokeWidth={2.5} />
           </IBtn>
 
           <Sep />
 
-          {/* Close */}
           <IBtn onClick={onShowCloseMenu} danger title="Leave room">
             <X size={13} strokeWidth={2.8} />
           </IBtn>

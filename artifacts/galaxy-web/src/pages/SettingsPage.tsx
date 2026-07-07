@@ -94,6 +94,36 @@ export default function SettingsPage({
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
 
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
+    typeof Notification !== "undefined" ? Notification.permission : "default"
+  );
+  const [notifMessages, setNotifMessages]   = useState(() => localStorage.getItem("notif_messages")   !== "false");
+  const [notifFollows,  setNotifFollows]    = useState(() => localStorage.getItem("notif_follows")    !== "false");
+  const [notifOnline,   setNotifOnline]     = useState(() => localStorage.getItem("notif_online")     !== "false");
+
+  const requestNotifPermission = async () => {
+    if (typeof Notification === "undefined") {
+      showToast("Notifications not supported on this browser", "error");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      showToast("Notifications blocked — please enable from browser settings", "warning", "🔔");
+      return;
+    }
+    const result = await Notification.requestPermission();
+    setNotifPermission(result);
+    if (result === "granted") showToast("Notifications enabled! 🔔", "success");
+    else showToast("Notification permission not granted", "warning");
+  };
+
+  const toggleNotif = (key: "messages" | "follows" | "online", val: boolean) => {
+    localStorage.setItem(`notif_${key}`, String(val));
+    if (key === "messages") setNotifMessages(val);
+    if (key === "follows")  setNotifFollows(val);
+    if (key === "online")   setNotifOnline(val);
+    if (val && notifPermission !== "granted") requestNotifPermission();
+  };
+
   // Navigation bar hider
   useEffect(() => {
     if (setNavBarVisible) setNavBarVisible(false);
@@ -297,6 +327,64 @@ export default function SettingsPage({
             </div>
             <span style={{ color: "rgba(139,122,170,0.2)", fontSize: 16 }}>›</span>
           </button>
+        </div>
+
+        {/* 🔔 NOTIFICATION SETTINGS SECTION */}
+        <div style={{ marginTop: 16, padding: "14px 12px", background: "rgba(108,92,231,0.06)", borderRadius: 14, border: "1px solid rgba(108,92,231,0.14)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🔔</span>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Notification Settings</p>
+                <p style={{ fontSize: 10, color: "rgba(139,122,170,0.6)" }}>
+                  {notifPermission === "granted" ? "✅ Enabled" : notifPermission === "denied" ? "🚫 Blocked in browser" : "⚠️ Permission needed"}
+                </p>
+              </div>
+            </div>
+            {notifPermission !== "granted" && (
+              <button
+                onClick={requestNotifPermission}
+                style={{
+                  background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+                  border: "none", borderRadius: 20, padding: "6px 14px",
+                  color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                }}
+              >
+                Enable
+              </button>
+            )}
+          </div>
+
+          {[
+            { key: "messages" as const, icon: "💬", label: "Messages",     desc: "When someone sends you a message",          val: notifMessages },
+            { key: "follows"  as const, icon: "👥", label: "New Followers", desc: "When someone follows you or you follow back", val: notifFollows  },
+            { key: "online"   as const, icon: "🟢", label: "Friend Online", desc: "When someone you follow comes online",       val: notifOnline   },
+          ].map(item => (
+            <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.04)", marginTop: 2 }}>
+              <span style={{ fontSize: 16, width: 24, textAlign: "center" }}>{item.icon}</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{item.label}</p>
+                <p style={{ fontSize: 10, color: "rgba(139,122,170,0.5)" }}>{item.desc}</p>
+              </div>
+              <button
+                onClick={() => toggleNotif(item.key, !item.val)}
+                style={{
+                  width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+                  background: item.val && notifPermission === "granted"
+                    ? "linear-gradient(135deg, #6C5CE7, #A29BFE)"
+                    : "rgba(255,255,255,0.1)",
+                  position: "relative", transition: "background 0.25s", flexShrink: 0,
+                }}
+              >
+                <div style={{
+                  position: "absolute", top: 3, width: 18, height: 18, borderRadius: 9, background: "#fff",
+                  transition: "left 0.25s",
+                  left: item.val && notifPermission === "granted" ? 23 : 3,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                }} />
+              </button>
+            </div>
+          ))}
         </div>
 
         {/* App Version Section */}
