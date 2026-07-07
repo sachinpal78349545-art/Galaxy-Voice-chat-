@@ -1,22 +1,23 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { Zap, Lock, Mail, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Zap, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAdmin } from "@/App";
 import { useEffect } from "react";
 
+const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME;
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
+
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [, navigate] = useLocation();
-  const { adminUser } = useAdmin();
+  const { adminUser, setAdminLoggedIn } = useAdmin();
 
   useEffect(() => {
     if (adminUser) navigate("/");
@@ -26,17 +27,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err: any) {
-      const code = err?.code || "";
-      if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") {
-        setError("Invalid email or password.");
-      } else if (code === "auth/too-many-requests") {
-        setError("Too many attempts. Please try again later.");
-      } else {
-        setError("Access denied. SuperAdmin only.");
-      }
+
+    await new Promise(r => setTimeout(r, 400));
+
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      await setAdminLoggedIn(true);
+      navigate("/");
+    } else {
+      setError("Invalid username or password.");
     }
     setLoading(false);
   }
@@ -60,16 +58,17 @@ export default function LoginPage() {
         <div className="bg-card border border-border rounded-2xl p-6 shadow-xl">
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-sm text-foreground/80">Email</Label>
+              <Label htmlFor="username" className="text-sm text-foreground/80">Username</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@galaxy.app"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="Enter username"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
                   required
+                  autoComplete="off"
                   className="pl-9 bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
               </div>
@@ -86,6 +85,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
+                  autoComplete="off"
                   className="pl-9 pr-9 bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
                 <button

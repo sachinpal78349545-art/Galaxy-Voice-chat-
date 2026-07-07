@@ -28,6 +28,8 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
+VITE_ADMIN_USERNAME = "galaxy@4334"
+VITE_ADMIN_PASSWORD = "sachin@1244"
 
 [nix]
 packages = ["jre_minimal", "zip"]

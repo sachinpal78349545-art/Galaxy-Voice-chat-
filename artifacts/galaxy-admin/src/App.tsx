@@ -3,9 +3,6 @@ import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { getUser, SUPER_ADMIN_USER_ID } from "@/lib/adminService";
 import LoginPage from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
 import UsersPage from "@/pages/UsersPage";
@@ -24,20 +21,19 @@ import Layout from "@/components/Layout";
 
 const queryClient = new QueryClient();
 
-interface AdminUser {
-  firebaseUser: User;
-  userId: string;
-  name: string;
-  avatar: string;
-  uid: string;
-}
+const SESSION_KEY = "galaxy_admin_auth";
 
 interface AuthContextType {
-  adminUser: AdminUser | null;
+  adminUser: { name: string } | null;
   loading: boolean;
+  setAdminLoggedIn: (v: boolean) => void;
 }
 
-export const AuthContext = createContext<AuthContextType>({ adminUser: null, loading: true });
+export const AuthContext = createContext<AuthContextType>({
+  adminUser: null,
+  loading: false,
+  setAdminLoggedIn: () => {},
+});
 export const useAdmin = () => useContext(AuthContext);
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -92,28 +88,29 @@ function Router() {
 }
 
 function App() {
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [adminUser, setAdminUser] = useState<{ name: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) { setAdminUser(null); setLoading(false); return; }
-      try {
-        const profile = await getUser(firebaseUser.uid);
-        if (profile && profile.userId === SUPER_ADMIN_USER_ID) {
-          setAdminUser({ firebaseUser, uid: firebaseUser.uid, userId: profile.userId, name: profile.name || "SuperAdmin", avatar: profile.avatar || "🌟" });
-        } else {
-          await auth.signOut();
-          setAdminUser(null);
-        }
-      } catch { setAdminUser(null); }
-      setLoading(false);
-    });
-    return unsub;
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored === "true") {
+      setAdminUser({ name: "SuperAdmin" });
+    }
+    setLoading(false);
   }, []);
 
+  const setAdminLoggedIn = (v: boolean) => {
+    if (v) {
+      sessionStorage.setItem(SESSION_KEY, "true");
+      setAdminUser({ name: "SuperAdmin" });
+    } else {
+      sessionStorage.removeItem(SESSION_KEY);
+      setAdminUser(null);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ adminUser, loading }}>
+    <AuthContext.Provider value={{ adminUser, loading, setAdminLoggedIn }}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
