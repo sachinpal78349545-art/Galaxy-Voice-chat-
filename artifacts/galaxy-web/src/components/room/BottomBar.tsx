@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Room, UserProfile } from "./types";
 import {
-  Mic, MicOff, Smile, MessageCircle,
+  Mic, MicOff,
   Gift, MoreHorizontal, Send, ChevronDown
 } from "lucide-react";
 import { ref, onValue, off } from "firebase/database";
@@ -279,16 +279,8 @@ export default function BottomBar({
                   padding: "0 14px", gap: 8,
                 }}
               >
-                <MessageCircle size={16} color="rgba(255,255,255,0.4)" />
                 <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Say something…</span>
               </button>
-
-              <RoundBtn
-                icon={<Smile size={20} />}
-                onClick={() => { const n = !showEmoji; closeAllPopups(); if (n) setShowEmoji(true); }}
-                active={showEmoji}
-                color={showEmoji ? "purple" : "muted"}
-              />
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

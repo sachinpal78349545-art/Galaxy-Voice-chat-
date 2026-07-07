@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
-import { Gift, Plus, Trash2, RefreshCw, Edit2, Check, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Gift, Plus, Trash2, RefreshCw, Edit2, Check, X, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ref, set, remove, onValue, off } from "firebase/database";
-import { db } from "@/lib/firebase";
+import { ref as dbRef, set, remove, onValue, off } from "firebase/database";
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 
 type AnimationType = "float" | "fullscreen" | "particle";
 
@@ -21,7 +22,7 @@ interface GiftItem {
 }
 
 const ANIM_META: Record<AnimationType, { label: string; color: string; desc: string }> = {
-  float:      { label: "Float",      color: "bg-blue-500/20 text-blue-400",   desc: "Small animation top of room" },
+  float:      { label: "Float",      color: "bg-blue-500/20 text-blue-400",    desc: "Small animation top of room" },
   fullscreen: { label: "Fullscreen", color: "bg-yellow-500/20 text-yellow-400", desc: "Full-screen reveal (Yalla style)" },
   particle:   { label: "Particle",   color: "bg-purple-500/20 text-purple-400", desc: "Burst + sparkles effect" },
 };
@@ -40,6 +41,86 @@ const DEFAULT_GIFTS: GiftItem[] = [
 
 const EMPTY_NEW: Partial<GiftItem> = { emoji: "🎁", name: "", cost: 50, enabled: true, animationType: "float", url: "", soundUrl: "" };
 
+function AppPreviewCard({ url, emoji, name, cost, animationType }: { url?: string; emoji?: string; name?: string; cost?: number; animationType?: AnimationType }) {
+  return (
+    <div style={{
+      background: "rgba(236,72,153,0.08)", border: "1px solid rgba(236,72,153,0.4)",
+      borderRadius: 16, padding: "10px 8px", display: "flex", flexDirection: "column",
+      alignItems: "center", width: 80, position: "relative", flexShrink: 0,
+    }}>
+      {animationType === "fullscreen" && (
+        <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: 3, background: "#FFD700" }} />
+      )}
+      <div style={{ width: 54, height: 54, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 12, background: "rgba(255,255,255,0.04)", position: "relative" }}>
+        {url ? (
+          <img src={url} alt={name}
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            onError={e => {
+              const img = e.target as HTMLImageElement;
+              img.style.display = "none";
+              const fb = img.nextElementSibling as HTMLElement;
+              if (fb) fb.style.display = "flex";
+            }}
+          />
+        ) : null}
+        <span style={{ fontSize: 32, display: url ? "none" : "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>{emoji || "🎁"}</span>
+      </div>
+      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 500, textAlign: "center", width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name || "Gift"}</span>
+      <span style={{ fontSize: 10, color: "#ffb703", fontWeight: 700 }}>💎 {cost ?? 0}</span>
+    </div>
+  );
+}
+
+function UploadImageButton({ onUploaded, giftId }: { onUploaded: (url: string) => void; giftId: string }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState("");
+
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith("image/")) { setError("Only image files allowed"); return; }
+    if (file.size > 5 * 1024 * 1024) { setError("Max 5MB"); return; }
+    setError("");
+    setProgress(0);
+    const path = `gifts/${giftId}_${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+    const sRef = storageRef(storage, path);
+    const task = uploadBytesResumable(sRef, file);
+    task.on(
+      "state_changed",
+      snap => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
+      err => { setError(err.message); setProgress(null); },
+      async () => {
+        const url = await getDownloadURL(task.snapshot.ref);
+        onUploaded(url);
+        setProgress(null);
+      }
+    );
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="w-full h-10 border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs gap-2"
+        onClick={() => fileRef.current?.click()}
+        disabled={progress !== null}
+      >
+        <ImagePlus className="w-4 h-4" />
+        {progress !== null ? `Uploading… ${progress}%` : "📱 Upload from Gallery"}
+      </Button>
+      {progress !== null && (
+        <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+          <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+        </div>
+      )}
+      {error && <p className="text-destructive text-xs">{error}</p>}
+    </div>
+  );
+}
+
 function GiftRow({ gift, onSave, onDelete }: { gift: GiftItem; onSave: (g: GiftItem) => void; onDelete: (id: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm]       = useState(gift);
@@ -47,14 +128,19 @@ function GiftRow({ gift, onSave, onDelete }: { gift: GiftItem; onSave: (g: GiftI
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
+      {/* Row header */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
           {form.url ? (
             <img src={form.url} alt={form.name} className="w-full h-full object-contain"
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-          ) : (
-            <span className="text-2xl">{form.emoji}</span>
-          )}
+              onError={e => {
+                const img = e.target as HTMLImageElement;
+                img.style.display = "none";
+                const fb = img.nextElementSibling as HTMLElement;
+                if (fb) fb.style.display = "inline";
+              }} />
+          ) : null}
+          <span className="text-2xl" style={{ display: form.url ? "none" : "inline" }}>{form.emoji}</span>
         </div>
 
         <div className="flex-1 min-w-0">
@@ -64,7 +150,7 @@ function GiftRow({ gift, onSave, onDelete }: { gift: GiftItem; onSave: (g: GiftI
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${meta.color}`}>{meta.label}</span>
             {!form.enabled && <span className="text-[10px] px-2 py-0.5 rounded bg-muted text-muted-foreground">OFF</span>}
           </div>
-          {form.url && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{form.url.slice(0, 52)}…</p>}
+          {form.url && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{form.url.slice(0, 50)}…</p>}
           {form.soundUrl && <p className="text-[10px] text-green-500/70 mt-0.5">🔊 Sound attached</p>}
         </div>
 
@@ -82,11 +168,12 @@ function GiftRow({ gift, onSave, onDelete }: { gift: GiftItem; onSave: (g: GiftI
         </div>
       </div>
 
+      {/* Edit form */}
       {editing && (
         <div className="px-4 pb-4 border-t border-border space-y-3 pt-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Emoji (fallback if no image)</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">Emoji (fallback)</Label>
               <Input value={form.emoji} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
                 className="bg-background border-border text-xs h-8" placeholder="🎁" />
             </div>
@@ -101,7 +188,7 @@ function GiftRow({ gift, onSave, onDelete }: { gift: GiftItem; onSave: (g: GiftI
                 className="bg-background border-border text-xs h-8" />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Animation Type</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">Animation</Label>
               <select value={form.animationType || "float"}
                 onChange={e => setForm(f => ({ ...f, animationType: e.target.value as AnimationType }))}
                 className="w-full h-8 rounded-md border border-border bg-background text-xs text-white px-2">
@@ -112,62 +199,35 @@ function GiftRow({ gift, onSave, onDelete }: { gift: GiftItem; onSave: (g: GiftI
             </div>
           </div>
 
+          {/* 📱 Gallery Upload */}
+          <UploadImageButton giftId={gift.id} onUploaded={url => setForm(f => ({ ...f, url }))} />
+
+          {/* OR manual URL */}
           <div>
-            <Label className="text-xs text-muted-foreground mb-1 block">🖼️ Image URL (Cloudinary / any CDN)</Label>
+            <Label className="text-xs text-muted-foreground mb-1 block">Or paste Image URL</Label>
             <Input value={form.url || ""} onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
               className="bg-background border-border text-xs h-8"
               placeholder="https://res.cloudinary.com/…/gift.png" />
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground mb-1 block">🔊 Sound URL (.mp3 / .ogg — optional)</Label>
+            <Label className="text-xs text-muted-foreground mb-1 block">🔊 Sound URL (.mp3 — optional)</Label>
             <Input value={form.soundUrl || ""} onChange={e => setForm(f => ({ ...f, soundUrl: e.target.value }))}
               className="bg-background border-border text-xs h-8"
               placeholder="https://cdn.example.com/gift-sound.mp3" />
           </div>
 
-          {/* 📱 App Preview Card — Exactly like Voice Room BottomBar */}
+          {/* 📱 App Preview */}
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground block">📱 App Preview (how it looks in gift grid)</Label>
+            <Label className="text-xs text-muted-foreground block">📱 App Preview</Label>
             <div className="flex items-center gap-4 p-3 rounded-xl" style={{ background: "rgba(18,10,36,0.95)", border: "1px solid rgba(236,72,153,0.2)" }}>
-              {/* Gift card exactly like BottomBar */}
-              <div style={{
-                background: "rgba(236,72,153,0.08)", border: "1px solid rgba(236,72,153,0.4)",
-                borderRadius: 16, padding: "10px 8px", display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center", width: 72, position: "relative", flexShrink: 0,
-              }}>
-                {form.animationType === "fullscreen" && (
-                  <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: 3, background: "#FFD700" }} />
-                )}
-                <div style={{ width: 54, height: 54, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 12, background: "rgba(255,255,255,0.04)", position: "relative" }}>
-                  {form.url ? (
-                    <img
-                      src={form.url}
-                      alt={form.name}
-                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                      onError={e => {
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = "none";
-                        const fb = img.nextElementSibling as HTMLElement;
-                        if (fb) fb.style.display = "flex";
-                      }}
-                    />
-                  ) : null}
-                  <span style={{
-                    fontSize: 32, display: form.url ? "none" : "flex",
-                    alignItems: "center", justifyContent: "center", width: "100%", height: "100%",
-                  }}>{form.emoji || "🎁"}</span>
-                </div>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 500, textAlign: "center", width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{form.name || "Gift"}</span>
-                <span style={{ fontSize: 10, color: "#ffb703", fontWeight: 700 }}>💎 {form.cost}</span>
-              </div>
-              {/* Info */}
+              <AppPreviewCard url={form.url} emoji={form.emoji} name={form.name} cost={form.cost} animationType={form.animationType} />
               <div className="text-xs space-y-1 text-muted-foreground">
-                <p><span className="text-white font-semibold">Animation:</span> <span className={ANIM_META[form.animationType || "float"].color.split(" ")[1]}>{ANIM_META[form.animationType || "float"].label}</span></p>
-                <p><span className="text-white font-semibold">Cost:</span> 💎 {form.cost} coins</p>
-                {form.soundUrl && <p className="text-green-400">🔊 Sound attached</p>}
-                {!form.url && <p className="text-yellow-500/70">⚠ No image — showing emoji</p>}
-                {form.url && <p className="text-green-400/80">✓ Image URL set</p>}
+                <p><span className="text-white font-semibold">Animation:</span> <span className={meta.color.split(" ")[1]}>{meta.label}</span></p>
+                <p><span className="text-white font-semibold">Cost:</span> 💎 {form.cost}</p>
+                {form.soundUrl && <p className="text-green-400">🔊 Sound</p>}
+                {!form.url && <p className="text-yellow-500/70">⚠ No image</p>}
+                {form.url && <p className="text-green-400/80">✓ Image set</p>}
               </div>
             </div>
           </div>
@@ -192,9 +252,10 @@ export default function GiftsPage() {
   const [loading, setLoading] = useState(true);
   const [adding,  setAdding]  = useState(false);
   const [newGift, setNewGift] = useState<Partial<GiftItem>>(EMPTY_NEW);
+  const newGiftId = useRef(`gift_${Date.now()}`);
 
   useEffect(() => {
-    const r = ref(db, "appConfig/gifts");
+    const r = dbRef(db, "appConfig/gifts");
     const unsub = onValue(r, snap => {
       if (snap.exists()) {
         const val = snap.val() as Record<string, GiftItem>;
@@ -211,24 +272,30 @@ export default function GiftsPage() {
   }, []);
 
   async function handleSave(gift: GiftItem) {
-    await set(ref(db, `appConfig/gifts/${gift.id}`), gift);
+    await set(dbRef(db, `appConfig/gifts/${gift.id}`), gift);
     toast({ title: "Gift updated ✓" });
   }
 
   async function handleDelete(id: string) {
-    await remove(ref(db, `appConfig/gifts/${id}`));
+    await remove(dbRef(db, `appConfig/gifts/${id}`));
     toast({ title: "Gift deleted" });
   }
 
   async function handleAdd() {
-    if (!newGift.name || !newGift.emoji) { toast({ title: "Name & emoji required", variant: "destructive" }); return; }
-    const id = `gift_${Date.now()}`;
+    if (!newGift.name) { toast({ title: "Gift name required", variant: "destructive" }); return; }
+    const id = newGiftId.current;
     const gift: GiftItem = {
-      id, emoji: newGift.emoji!, name: newGift.name!, cost: newGift.cost || 50,
-      enabled: true, animationType: newGift.animationType || "float",
-      url: newGift.url || "", soundUrl: newGift.soundUrl || "",
+      id,
+      emoji: newGift.emoji || "🎁",
+      name: newGift.name!,
+      cost: newGift.cost || 50,
+      enabled: true,
+      animationType: newGift.animationType || "float",
+      url: newGift.url || "",
+      soundUrl: newGift.soundUrl || "",
     };
-    await set(ref(db, `appConfig/gifts/${id}`), gift);
+    await set(dbRef(db, `appConfig/gifts/${id}`), gift);
+    newGiftId.current = `gift_${Date.now()}`;
     setNewGift(EMPTY_NEW);
     setAdding(false);
     toast({ title: "Gift added ✓" });
@@ -248,13 +315,14 @@ export default function GiftsPage() {
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
             {loading ? "Loading…" : "Live ✓"}
           </Button>
-          <Button size="sm" onClick={() => setAdding(v => !v)}>
+          <Button size="sm" onClick={() => { setAdding(v => !v); newGiftId.current = `gift_${Date.now()}`; }}>
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             Add Gift
           </Button>
         </div>
       </div>
 
+      {/* Animation legend */}
       <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-3 gap-4">
         {(Object.entries(ANIM_META) as [AnimationType, typeof ANIM_META[AnimationType]][]).map(([k, v]) => (
           <div key={k} className={`rounded-lg p-3 text-center ${v.color.split(" ")[0]}`}>
@@ -264,12 +332,13 @@ export default function GiftsPage() {
         ))}
       </div>
 
+      {/* Add new gift form */}
       {adding && (
         <div className="bg-card border border-primary/30 rounded-xl p-4 space-y-3">
           <p className="text-sm font-semibold text-white">➕ New Gift</p>
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="Emoji" value={newGift.emoji} onChange={e => setNewGift(f => ({ ...f, emoji: e.target.value }))} className="bg-background border-border text-xs" />
-            <Input placeholder="Gift Name" value={newGift.name} onChange={e => setNewGift(f => ({ ...f, name: e.target.value }))} className="bg-background border-border text-xs" />
+            <Input placeholder="Emoji (fallback)" value={newGift.emoji} onChange={e => setNewGift(f => ({ ...f, emoji: e.target.value }))} className="bg-background border-border text-xs" />
+            <Input placeholder="Gift Name *" value={newGift.name} onChange={e => setNewGift(f => ({ ...f, name: e.target.value }))} className="bg-background border-border text-xs" />
             <Input type="number" placeholder="Cost (coins)" value={newGift.cost} onChange={e => setNewGift(f => ({ ...f, cost: Number(e.target.value) }))} className="bg-background border-border text-xs" />
             <select value={newGift.animationType || "float"}
               onChange={e => setNewGift(f => ({ ...f, animationType: e.target.value as AnimationType }))}
@@ -279,46 +348,27 @@ export default function GiftsPage() {
               ))}
             </select>
           </div>
-          <Input placeholder="🖼️ Image URL (Cloudinary / any CDN link)" value={newGift.url || ""} onChange={e => setNewGift(f => ({ ...f, url: e.target.value }))} className="bg-background border-border text-xs" />
+
+          {/* Gallery Upload */}
+          <UploadImageButton giftId={newGiftId.current} onUploaded={url => setNewGift(f => ({ ...f, url }))} />
+
+          <Input placeholder="Or paste Image URL" value={newGift.url || ""} onChange={e => setNewGift(f => ({ ...f, url: e.target.value }))} className="bg-background border-border text-xs" />
           <Input placeholder="🔊 Sound URL (.mp3 optional)" value={newGift.soundUrl || ""} onChange={e => setNewGift(f => ({ ...f, soundUrl: e.target.value }))} className="bg-background border-border text-xs" />
 
-          {/* 📱 Live App Preview */}
+          {/* App Preview */}
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">📱 App Preview</p>
             <div className="flex items-center gap-4 p-3 rounded-xl" style={{ background: "rgba(18,10,36,0.95)", border: "1px solid rgba(236,72,153,0.2)" }}>
-              <div style={{
-                background: "rgba(236,72,153,0.08)", border: "1px solid rgba(236,72,153,0.4)",
-                borderRadius: 16, padding: "10px 8px", display: "flex", flexDirection: "column",
-                alignItems: "center", width: 72, position: "relative", flexShrink: 0,
-              }}>
-                {newGift.animationType === "fullscreen" && (
-                  <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: 3, background: "#FFD700" }} />
-                )}
-                <div style={{ width: 54, height: 54, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 12, background: "rgba(255,255,255,0.04)", position: "relative" }}>
-                  {newGift.url ? (
-                    <img src={newGift.url} alt="preview"
-                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                      onError={e => {
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = "none";
-                        const fb = img.nextElementSibling as HTMLElement;
-                        if (fb) fb.style.display = "flex";
-                      }}
-                    />
-                  ) : null}
-                  <span style={{ fontSize: 32, display: newGift.url ? "none" : "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>{newGift.emoji || "🎁"}</span>
-                </div>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 500, textAlign: "center", width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{newGift.name || "Gift"}</span>
-                <span style={{ fontSize: 10, color: "#ffb703", fontWeight: 700 }}>💎 {newGift.cost}</span>
-              </div>
+              <AppPreviewCard url={newGift.url} emoji={newGift.emoji} name={newGift.name} cost={newGift.cost} animationType={newGift.animationType as AnimationType} />
               <div className="text-xs space-y-1 text-muted-foreground">
                 <p><span className="text-white font-semibold">Animation:</span> <span className={ANIM_META[(newGift.animationType as AnimationType) || "float"].color.split(" ")[1]}>{ANIM_META[(newGift.animationType as AnimationType) || "float"].label}</span></p>
                 {!newGift.url && <p className="text-yellow-500/70">⚠ No image — emoji shown</p>}
-                {newGift.url && <p className="text-green-400/80">✓ Image URL set</p>}
+                {newGift.url && <p className="text-green-400/80">✓ Image set</p>}
                 {newGift.soundUrl && <p className="text-green-400">🔊 Sound attached</p>}
               </div>
             </div>
           </div>
+
           <div className="flex gap-2">
             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs" onClick={handleAdd} disabled={!newGift.name}>
               <Check className="w-3 h-3 mr-1" /> Add Gift
