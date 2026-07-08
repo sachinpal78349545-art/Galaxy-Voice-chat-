@@ -24,6 +24,7 @@ import SnakeLadders from "../components/room/SnakeLadders";
 import { subscribeNotifications, Notification } from "../lib/notificationService";
 import GiftAnimation from "../components/gifts/GiftAnimation";
 import { GiftAnimState } from "../components/gifts/giftTypes";
+import EntryEffect from "../components/room/EntryEffect";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; onMinimize?: () => void; enteredPassword?: string; onMessage?: (uid: string) => void; }
 
@@ -635,23 +636,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
       {/* ===== GIFT ANIMATIONS (extracted to GiftAnimation component) ===== */}
       <GiftAnimation giftAnim={giftAnim} giftParticles={giftParticles} />
 
-      {welcomeAnim && (
-        <div style={{
-          position: "fixed", top: "15%", left: "50%", transform: "translateX(-50%)",
-          zIndex: 700, textAlign: "center", pointerEvents: "none",
-          animation: "welcomeEntry 3.5s ease forwards",
-        }}>
-          <div style={{ fontSize: 40, marginBottom: 8, filter: "drop-shadow(0 0 12px rgba(138,43,226,0.8))" }}>{"\u{1F52E}"}</div>
-          <div style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.15)", borderRadius: 28, padding: "14px 28px",
-            boxShadow: "0 8px 32px rgba(138,43,226,0.35), 0 0 60px rgba(138,43,226,0.15), inset 0 1px 0 rgba(255,255,255,0.15)",
-          }}>
-            <p style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: 0.5 }}>Welcome {welcomeAnim}!</p>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 3, letterSpacing: 0.3 }}>The sanctuary awaits {"\u2728"}</p>
-          </div>
-        </div>
-      )}
+      <EntryEffect
+        name={welcomeAnim || ""}
+        avatar={user.avatar}
+        entryId={user.equippedEntry}
+        visible={!!welcomeAnim}
+      />
 
       <RoomHeader
         room={room}

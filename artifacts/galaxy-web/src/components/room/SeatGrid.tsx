@@ -1,7 +1,7 @@
 import React from "react";
 import { Room, RoomSeat, cleanName } from "./types";
 import { getUserRole } from "../../lib/roomService";
-import { isAnimatedFrame, getFrameColors } from "../../lib/storeService";
+import AvatarFrame from "../frames/AvatarFrame";
 
 interface SeatGridProps {
   room: Room;
@@ -118,21 +118,17 @@ function AudioWaveRing({ color = "cyan" }: { color?: "cyan" | "gold" | "blue" })
 }
 
 function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial, isSuperAdmin, frameId, onTap }: SeatCellProps) {
-  const isActive = !!seat.userId;
-  const isLocked = seat.isLocked;
-  const isSpecial = isOfficial || isSuperAdmin;
-  
-  // ✅ PNG frame completely disabled to avoid broken images
-  const hasPngFrame = false;
-  const hasAnimFrame = frameId && isAnimatedFrame(frameId);
-  const animColors = hasAnimFrame ? getFrameColors(frameId!) : null;
+  const isActive    = !!seat.userId;
+  const isLocked    = seat.isLocked;
+  const isSpecial   = isOfficial || isSuperAdmin;
+  const hasFrame    = !!frameId && isActive;
 
   const seatClass = [
     "seat-bubble",
-    isSuperAdmin && isActive ? "" : (hasAnimFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty")),
-    isOwner && isActive && !hasPngFrame && !hasAnimFrame && !isSuperAdmin && !isMe ? "seat-owner" : "",
+    isSuperAdmin && isActive ? "" : (hasFrame ? "" : (isSpeaking ? "seat-speaking" : isActive ? "seat-active" : "seat-empty")),
+    isOwner && isActive && !hasFrame && !isSuperAdmin && !isMe ? "seat-owner" : "",
     isLocked ? "seat-locked" : "",
-    !hasPngFrame && !hasAnimFrame && !isSuperAdmin && isOfficial && isActive && !isMe ? "seat-official" : "",
+    !hasFrame && !isSuperAdmin && isOfficial && isActive && !isMe ? "seat-official" : "",
   ].filter(Boolean).join(" ");
 
   const clickable = (!isMe && seat.userId) || (!seat.userId && !isLocked);
@@ -158,26 +154,6 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
             <div className="sa-seat-crown" style={{ fontSize: "11px", top: "-10px" }}>{"\u{1F451}"}</div>
           </>
         )}
-        {/* ✅ REMOVED: official_frame_new.png – no more broken box */}
-        {/* ✅ REMOVED: PNG frame */}
-        {hasAnimFrame && animColors && isActive && (
-          <div className="af-seat-wrapper">
-            <div
-              className={`af-wrapper af-${frameId!.replace("frame_", "")}`}
-              style={{ width: 58, height: 58 }}
-            >
-              <div
-                className="af-ring"
-                style={{
-                  background: `conic-gradient(${animColors.primary}, ${animColors.secondary}, ${animColors.tertiary}, ${animColors.primary})`,
-                }}
-              />
-              <div className="af-glow" style={{
-                boxShadow: `0 0 6px ${animColors.primary}99, 0 0 12px ${animColors.secondary}66`,
-              }} />
-            </div>
-          </div>
-        )}
         {isSpeaking && <AudioWaveRing color={isSuperAdmin ? "gold" : isOfficial ? "blue" : "cyan"} />}
         {isSpeaking && (
           <div className={isSuperAdmin ? "speaking-ring-gold" : isOfficial ? "speaking-ring-blue" : ""}>
@@ -185,36 +161,38 @@ function SeatCell({ seat, seatIndex, role, isMe, isSpeaking, isOwner, isOfficial
             <div className="speaking-ring speaking-ring-outer" />
           </div>
         )}
-        
-        {/* ✅ FIXED: Local paths (/boys/boy1.jpg) are now recognized */}
-        <div className={seatClass} style={{ width: "100%", height: "100%", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {isLocked ? (
-            <span className="seat-locked-icon" style={{ fontSize: "12px" }}>{"\u{1F512}"}</span>
-          ) : isActive ? (
-            seat.avatar && (seat.avatar.startsWith("http") || seat.avatar.startsWith("/")) ? (
-              <img 
-                src={seat.avatar} 
-                alt="" 
-                className="seat-avatar-img" 
-                style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} 
-                onError={(e) => {
-                  // Hide broken image and show placeholder
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = "none";
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.textContent = "👤";
-                    parent.style.fontSize = "16px";
-                  }
-                }}
-              />
+
+        {/* Avatar + Frame — uses AvatarFrame when frame equipped, else plain seat bubble */}
+        {hasFrame ? (
+          <div className="af-seat-wrapper">
+            <AvatarFrame
+              avatar={seat.avatar || "👤"}
+              frameId={frameId}
+              size={44}
+            />
+          </div>
+        ) : (
+          <div className={seatClass} style={{ width: "100%", height: "100%", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {isLocked ? (
+              <span className="seat-locked-icon" style={{ fontSize: "12px" }}>{"\u{1F512}"}</span>
+            ) : isActive ? (
+              seat.avatar && (seat.avatar.startsWith("http") || seat.avatar.startsWith("/")) ? (
+                <img src={seat.avatar} alt="" className="seat-avatar-img"
+                  style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                  onError={e => {
+                    const t = e.target as HTMLImageElement;
+                    t.style.display = "none";
+                    if (t.parentElement) { t.parentElement.textContent = "👤"; t.parentElement.style.fontSize = "16px"; }
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: "16px" }}>👤</span>
+              )
             ) : (
-              <span style={{ fontSize: "16px" }}>👤</span>
-            )
-          ) : (
-            <span className="seat-empty-plus" style={{ fontSize: "16px" }}>+</span>
-          )}
-        </div>
+              <span className="seat-empty-plus" style={{ fontSize: "16px" }}>+</span>
+            )}
+          </div>
+        )}
 
         {/* ✅ REMOVED: super_admin_badge.svg and official_badge_new.png – no more broken boxes */}
         {role === "owner" && isActive && !isSpecial && (
