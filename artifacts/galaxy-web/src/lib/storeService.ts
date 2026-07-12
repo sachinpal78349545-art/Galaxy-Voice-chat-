@@ -15,6 +15,7 @@ export interface StoreItem {
   price: number;
   preview: string;
   rarity: "common" | "rare" | "epic" | "legendary";
+  imageUrl?: string; // ✅ New field for theme images
 }
 
 export interface OwnedItem {
@@ -45,7 +46,7 @@ export const ANIMATED_FRAME_IDS = [
   "frame_electric",
   "frame_galaxy",
   "frame_diamond_royal",
-  "fantasy_gold_frame", // ✅ नया फ्रेम
+  "fantasy_gold_frame",
 ] as const;
 
 export function isAnimatedFrame(frameId: string): boolean {
@@ -67,19 +68,44 @@ export const STORE_ITEMS: StoreItem[] = [
   { id: "frame_galaxy", name: "Galaxy Vortex", icon: "\u{1F30C}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #6a0dad, #1e90ff, #ff00ff, #6a0dad)", rarity: "legendary" },
   { id: "frame_diamond_royal", name: "Diamond Royal", icon: "\u{1F48E}", category: "frame", price: 1000, preview: "conic-gradient(from 0deg, #b9f2ff, #e0e0e0, #80deea, #b9f2ff)", rarity: "legendary" },
 
-  // ✅ नया फैंटेसी गोल्ड फ्रेम
+  // Fantasy Gold frame
   { id: "fantasy_gold_frame", name: "Fantasy Gold", icon: "👑", category: "frame", price: 800, preview: "linear-gradient(145deg, #FFD700, #FFA500)", rarity: "legendary" },
 
+  // Entry FX
   { id: "entry_lightning", name: "Lightning Strike", icon: "\u26A1", category: "entry", price: 300, preview: "linear-gradient(135deg, #FFD700, #FF6B35)", rarity: "common" },
   { id: "entry_stars", name: "Starfall", icon: "\u2B50", category: "entry", price: 600, preview: "linear-gradient(135deg, #6C5CE7, #A29BFE)", rarity: "rare" },
   { id: "entry_phoenix", name: "Phoenix Rise", icon: "\u{1F985}", category: "entry", price: 1000, preview: "linear-gradient(135deg, #FF6B35, #FF1744)", rarity: "epic" },
   { id: "entry_galaxy", name: "Galaxy Portal", icon: "\u{1F300}", category: "entry", price: 1800, preview: "linear-gradient(135deg, #0D47A1, #6C5CE7, #E040FB)", rarity: "legendary" },
 
+  // Themes
   { id: "theme_midnight", name: "Midnight Blue", icon: "\u{1F319}", category: "theme", price: 400, preview: "linear-gradient(180deg, #0D1B2A, #1B2838)", rarity: "common" },
   { id: "theme_sakura", name: "Sakura Garden", icon: "\u{1F338}", category: "theme", price: 700, preview: "linear-gradient(180deg, #2D1B38, #1A0F2E)", rarity: "rare" },
   { id: "theme_ocean", name: "Deep Ocean", icon: "\u{1F30A}", category: "theme", price: 700, preview: "linear-gradient(180deg, #0A1628, #0D2137)", rarity: "rare" },
   { id: "theme_volcano", name: "Volcano", icon: "\u{1F30B}", category: "theme", price: 1200, preview: "linear-gradient(180deg, #2D0A0A, #1A0505)", rarity: "epic" },
   { id: "theme_aurora", name: "Aurora Borealis", icon: "\u{1F30C}", category: "theme", price: 2500, preview: "linear-gradient(180deg, #0A2E1A, #1A0F2E, #0D1B4A)", rarity: "legendary" },
+
+  // ✅ NEW: Cosmic Galaxy theme
+  {
+    id: "theme_galaxy_cosmic",
+    name: "Cosmic Galaxy",
+    icon: "🌌",
+    category: "theme",
+    price: 190,
+    preview: "linear-gradient(135deg, #1a0f2e, #0a0614)",
+    rarity: "rare",
+    imageUrl: "https://res.cloudinary.com/dz1bhfpkc/image/upload/v1782285782/Screenshot_20260623_125325_ChatGPT_nusel5.jpg"
+  },
+  // ✅ NEW: Celestial Wave theme
+  {
+    id: "theme_celestial_wave",
+    name: "Celestial Wave",
+    icon: "🌊",
+    category: "theme",
+    price: 1440,
+    preview: "linear-gradient(135deg, #0d47a1, #6c5ce7)",
+    rarity: "epic",
+    imageUrl: "https://res.cloudinary.com/dz1bhfpkc/image/upload/v1782285782/Screenshot_20260623_125351_ChatGPT_lg7hbl.jpg"
+  },
 ];
 
 export function getStoreItem(itemId: string): StoreItem | undefined {

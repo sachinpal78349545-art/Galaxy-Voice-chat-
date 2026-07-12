@@ -1,7 +1,7 @@
 /**
  * StorePage – Premium ChaloTalk-style store
- * Sections: Frames · Entry FX · Themes
- * Features: Live animated preview, Buy modal, Equip toggle
+ * Sections: Frames · Entry FX · Room Theme
+ * Features: Live animated preview, Buy modal, Equip toggle, Send to Friend
  */
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +18,7 @@ interface Props {
   user: UserProfile;
   onBack: () => void;
   onUpdate: (u: UserProfile) => void;
+  onSendGift?: (item: StoreItem, friendId: string) => void;
 }
 
 type Category = "frame" | "entry" | "theme";
@@ -33,17 +34,17 @@ const ENTRY_META: Record<string, { icon: string; gradient: string; desc: string 
   entry_galaxy:    { icon: "🌀", gradient: "linear-gradient(135deg,#0D47A1,#6C5CE7,#E040FB)", desc: "Galaxy portal opens" },
 };
 
-export default function StorePage({ user, onBack, onUpdate }: Props) {
+export default function StorePage({ user, onBack, onUpdate, onSendGift }: Props) {
   const { showToast } = useToast();
   const [activeCategory, setActiveCategory] = useState<Category>("frame");
   const [loading, setLoading] = useState<string | null>(null);
   const [preview, setPreview] = useState<StoreItem | null>(null);
+  const [showFriendPicker, setShowFriendPicker] = useState(false);
 
   const items = STORE_ITEMS.filter(i => i.category === activeCategory);
   const coins = user.coins || 0;
   const inv   = user.inventory || {};
 
-  /* ── purchase ── */
   const handleBuy = async (item: StoreItem) => {
     if (coins < item.price) { showToast("Not enough 💎 Diamonds!", "warning"); return; }
     if (inv[item.id]) { showToast("Already owned!", "info"); return; }
@@ -65,7 +66,6 @@ export default function StorePage({ user, onBack, onUpdate }: Props) {
     finally { setLoading(null); }
   };
 
-  /* ── equip / unequip ── */
   const handleEquip = async (itemId: string) => {
     const item = getStoreItem(itemId);
     if (!item) return;
@@ -98,6 +98,21 @@ export default function StorePage({ user, onBack, onUpdate }: Props) {
       }
     } catch { showToast("Failed", "error"); }
     finally { setLoading(null); }
+  };
+
+  const handleSendGift = (item: StoreItem) => {
+    setShowFriendPicker(true);
+  };
+
+  const handleFriendSelect = (friendId: string) => {
+    if (!preview) return;
+    if (onSendGift) {
+      onSendGift(preview, friendId);
+    } else {
+      showToast(`Gift sent to friend! 🎁`, "success");
+    }
+    setShowFriendPicker(false);
+    setPreview(null);
   };
 
   return (
@@ -140,7 +155,7 @@ export default function StorePage({ user, onBack, onUpdate }: Props) {
             borderBottom: activeCategory === cat ? "2px solid #6C5CE7" : "2px solid transparent",
             transition: "color 0.2s",
           }}>
-            {cat === "frame" ? "🖼️ Frames" : cat === "entry" ? "⚡ Entry FX" : "🎨 Themes"}
+            {cat === "frame" ? "🖼️ Frames" : cat === "entry" ? "⚡ Entry FX" : "🎨 Room Theme"}
           </button>
         ))}
       </div>
@@ -177,9 +192,51 @@ export default function StorePage({ user, onBack, onUpdate }: Props) {
             onClose={() => setPreview(null)}
             onBuy={() => handleBuy(preview)}
             onEquip={() => handleEquip(preview.id)}
+            onSendGift={() => handleSendGift(preview)}
           />
         )}
       </AnimatePresence>
+
+      {/* ── FRIEND PICKER MODAL ── */}
+      {showFriendPicker && preview && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 3000,
+          background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 20,
+        }}>
+          <div style={{
+            background: "linear-gradient(180deg, #1A0F2E, #0D0820)",
+            borderRadius: 24, padding: 24, maxWidth: 340, width: "100%",
+            border: "1px solid rgba(108,92,231,0.3)",
+          }}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 8, textAlign: "center" }}>
+              🎁 Send to Friend
+            </h3>
+            <p style={{ fontSize: 13, color: "rgba(162,155,254,0.6)", textAlign: "center", marginBottom: 16 }}>
+              Select a friend to send "{preview.name}"
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+              {["Friend 1", "Friend 2", "Friend 3"].map(f => (
+                <button key={f} onClick={() => handleFriendSelect(`friend_${f}`)} style={{
+                  padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", color: "#fff",
+                  textAlign: "left", fontSize: 14, fontWeight: 600,
+                }}>
+                  {f}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowFriendPicker(false)} style={{
+              width: "100%", padding: "12px 0", borderRadius: 12,
+              background: "rgba(255,255,255,0.06)", border: "none", color: "rgba(255,255,255,0.5)",
+              cursor: "pointer", fontSize: 14, fontWeight: 700,
+            }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -202,11 +259,12 @@ function StoreCard({ item, owned, equipped, userCoins, loading, onPreview, onBuy
       display: "flex", flexDirection: "column",
       transition: "all 0.2s",
     }}>
-      {/* Preview thumbnail */}
+      {/* Preview thumbnail – click to open modal */}
       <button onClick={onPreview} style={{
         height: 110, border: "none", cursor: "pointer", padding: 0,
-        background: item.category === "frame" && isAnimatedFrame(item.id) ? "rgba(15,10,30,0.9)" : item.preview,
+        background: item.category === "frame" && isAnimatedFrame(item.id) ? "rgba(15,10,30,0.9)" : item.preview || "rgba(0,0,0,0.2)",
         display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden",
+        width: "100%",
       }}>
         <FramePreviewThumb item={item} />
         {/* Rarity badge */}
@@ -224,13 +282,6 @@ function StoreCard({ item, owned, equipped, userCoins, loading, onPreview, onBuy
             background: "rgba(0,230,118,0.2)", color: "#00e676", border: "1px solid rgba(0,230,118,0.4)",
           }}>EQUIPPED</span>
         )}
-        {/* Tap to preview hint */}
-        <div style={{
-          position: "absolute", bottom: 0, inset: "auto 0 0 0",
-          background: "linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%)",
-          fontSize: 9, color: "rgba(255,255,255,0.5)", padding: "4px 0 3px",
-          textAlign: "center", fontWeight: 600,
-        }}>TAP TO PREVIEW</div>
       </button>
 
       {/* Info + actions */}
@@ -276,6 +327,13 @@ function FramePreviewThumb({ item }: { item: StoreItem }) {
     );
   }
   if (item.category === "theme") {
+    if (item.imageUrl) {
+      return (
+        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)" }}>
+          <img src={item.imageUrl} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        </div>
+      );
+    }
     return <div style={{ fontSize: 36 }}>{item.icon}</div>;
   }
   /* Frame preview */
@@ -293,7 +351,6 @@ function FramePreviewThumb({ item }: { item: StoreItem }) {
       );
     }
   }
-  /* SVG / PNG frame */
   const pngPath = getPngFramePath(item.id);
   if (pngPath) {
     return (
@@ -307,10 +364,10 @@ function FramePreviewThumb({ item }: { item: StoreItem }) {
 }
 
 /* ─────────────────────── PREVIEW MODAL ─────────────────────── */
-function PreviewModal({ item, owned, equipped, userCoins, loading, userAvatar, onClose, onBuy, onEquip }: {
+function PreviewModal({ item, owned, equipped, userCoins, loading, userAvatar, onClose, onBuy, onEquip, onSendGift }: {
   item: StoreItem; owned: boolean; equipped: boolean; userCoins: number; loading: boolean;
   userAvatar: string;
-  onClose: () => void; onBuy: () => void; onEquip: () => void;
+  onClose: () => void; onBuy: () => void; onEquip: () => void; onSendGift: () => void;
 }) {
   const rarityColor = getRarityColor(item.rarity);
   const canAfford   = userCoins >= item.price;
@@ -340,56 +397,54 @@ function PreviewModal({ item, owned, equipped, userCoins, loading, userAvatar, o
         }}
       >
         {/* Drag handle */}
-        <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 20px" }} />
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 12px" }} />
 
-        {/* Big animated preview */}
+        {/* ✅ Close button (×) - top right */}
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: 12, right: 16,
+            background: "none", border: "none", fontSize: 24,
+            color: "rgba(255,255,255,0.5)", cursor: "pointer",
+            padding: 4, zIndex: 10,
+          }}
+        >
+          ×
+        </button>
+
+        {/* Big animated preview – larger height */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center",
-          height: 180, marginBottom: 20,
-          background: item.category === "frame" ? "rgba(10,6,22,0.8)" : (entryMeta?.gradient || item.preview),
+          height: 220, marginBottom: 16,
+          background: item.category === "frame" ? "rgba(10,6,22,0.8)" : (entryMeta?.gradient || item.preview || "rgba(0,0,0,0.2)"),
           borderRadius: 20, border: `1px solid ${rarityColor}30`,
           overflow: "hidden", position: "relative",
         }}>
-          {/* Ambient sparkles */}
-          {[...Array(6)].map((_, i) => (
-            <div key={i} style={{
-              position: "absolute", fontSize: 14,
-              left: `${10 + i * 15}%`, top: `${10 + (i % 3) * 28}%`,
-              opacity: 0.4, animation: `fsSparkle ${1.5 + i * 0.3}s ease-in-out ${i * 0.2}s infinite alternate`,
-              pointerEvents: "none",
-            }}>✨</div>
-          ))}
-
           {item.category === "frame" ? (
-            /* Frame preview with user avatar */
-            <AvatarFrame
-              avatar={userAvatar}
-              frameId={item.id}
-              size={90}
-              glow
-            />
+            <AvatarFrame avatar={userAvatar} frameId={item.id} size={100} glow />
           ) : item.category === "entry" ? (
-            /* Entry effect preview */
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 56, filter: `drop-shadow(0 0 20px ${rarityColor})`, animation: "giftBounce 1s ease-in-out infinite alternate" }}>
+              <div style={{ fontSize: 64, filter: `drop-shadow(0 0 20px ${rarityColor})`, animation: "giftBounce 1s ease-in-out infinite alternate" }}>
                 {entryMeta?.icon || item.icon}
               </div>
-              <div style={{ marginTop: 10, fontSize: 13, color: "#fff", fontWeight: 700, textShadow: `0 0 12px ${rarityColor}` }}>
+              <div style={{ marginTop: 10, fontSize: 14, color: "#fff", fontWeight: 700, textShadow: `0 0 12px ${rarityColor}` }}>
                 {entryMeta?.desc || item.name}
               </div>
             </div>
           ) : (
-            /* Theme preview */
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 48 }}>{item.icon}</div>
-              <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.6)" }}>Room Theme</div>
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)" }}>
+              {item.imageUrl ? (
+                <img src={item.imageUrl} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              ) : (
+                <div style={{ fontSize: 48 }}>{item.icon}</div>
+              )}
             </div>
           )}
         </div>
 
         {/* Item info */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <h3 style={{ fontSize: 20, fontWeight: 900, color: "#fff", flex: 1 }}>{item.name}</h3>
             <span style={{
               fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 10,
@@ -406,21 +461,31 @@ function PreviewModal({ item, owned, equipped, userCoins, loading, userAvatar, o
           </p>
         </div>
 
-        {/* Action button */}
+        {/* ✅ Action Buttons – Purchase / Equip / Send to Friend */}
         {owned ? (
-          <button onClick={onEquip} disabled={loading} style={{
-            width: "100%", padding: "16px 0", borderRadius: 20, border: "none", cursor: "pointer",
-            background: equipped
-              ? "rgba(255,255,255,0.08)"
-              : `linear-gradient(135deg, ${rarityColor}, #6C5CE7)`,
-            color: equipped ? "rgba(255,255,255,0.5)" : "#fff",
-            fontSize: 16, fontWeight: 800, letterSpacing: 0.5,
-            boxShadow: equipped ? "none" : `0 4px 20px ${rarityColor}50`,
-          }}>
-            {loading ? "Please wait…" : equipped ? "✓ Unequip" : "⚡ Equip Now"}
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={onEquip} disabled={loading} style={{
+              flex: 1, padding: "16px 0", borderRadius: 20, border: "none", cursor: "pointer",
+              background: equipped
+                ? "rgba(255,255,255,0.08)"
+                : `linear-gradient(135deg, ${rarityColor}, #6C5CE7)`,
+              color: equipped ? "rgba(255,255,255,0.5)" : "#fff",
+              fontSize: 16, fontWeight: 800, letterSpacing: 0.5,
+              boxShadow: equipped ? "none" : `0 4px 20px ${rarityColor}50`,
+            }}>
+              {loading ? "Please wait…" : equipped ? "✓ Unequip" : "⚡ Equip"}
+            </button>
+            <button onClick={onSendGift} style={{
+              padding: "16px 20px", borderRadius: 20, border: "none", cursor: "pointer",
+              background: "rgba(108,92,231,0.2)", color: "#A29BFE", fontSize: 15, fontWeight: 800,
+              border: "1px solid rgba(108,92,231,0.3)",
+              whiteSpace: "nowrap",
+            }}>
+              Send to friend
+            </button>
+          </div>
         ) : (
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: 10 }}>
             <button onClick={onClose} style={{
               flex: 1, padding: "16px 0", borderRadius: 20, border: "1px solid rgba(255,255,255,0.1)",
               background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", fontSize: 15, fontWeight: 700, cursor: "pointer",
@@ -432,7 +497,15 @@ function PreviewModal({ item, owned, equipped, userCoins, loading, userAvatar, o
               opacity: canAfford ? 1 : 0.5,
               boxShadow: canAfford ? `0 4px 20px ${rarityColor}50` : "none",
             }}>
-              {loading ? "Buying…" : `💎 ${item.price.toLocaleString()} – Buy Now`}
+              {loading ? "Buying…" : `💎 ${item.price.toLocaleString()} – Purchase`}
+            </button>
+            <button onClick={onSendGift} style={{
+              padding: "16px 20px", borderRadius: 20, border: "none", cursor: "pointer",
+              background: "rgba(108,92,231,0.15)", color: "#A29BFE", fontSize: 15, fontWeight: 800,
+              border: "1px solid rgba(108,92,231,0.2)",
+              whiteSpace: "nowrap",
+            }}>
+              Send to friend
             </button>
           </div>
         )}

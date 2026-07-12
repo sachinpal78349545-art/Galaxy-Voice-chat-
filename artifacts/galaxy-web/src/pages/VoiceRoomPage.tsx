@@ -1,7 +1,7 @@
-// VoiceRoomPage.tsx – cleaned, removed 🎵 🎁 🎭 buttons and their popups (nothing else changed)
+// VoiceRoomPage.tsx – Dynamic Room Theme Picker with Optimized Background
 import React, { useState, useEffect, useRef } from "react";
 import { uploadWithAppCheck } from "../lib/firebase";
-import { getStoreItem } from "../lib/storeService";
+import { getStoreItem, STORE_ITEMS } from "../lib/storeService";
 import {
   Room, RoomMessage, ROOM_THEMES, ROOM_AVATARS,
   subscribeRoom, subscribeRoomMessages, sendRoomMessage,
@@ -25,6 +25,8 @@ import { subscribeNotifications, Notification } from "../lib/notificationService
 import GiftAnimation from "../components/gifts/GiftAnimation";
 import { GiftAnimState } from "../components/gifts/giftTypes";
 import EntryEffect from "../components/room/EntryEffect";
+import { ref as dbRef, get } from "firebase/database";
+import { db } from "../lib/firebase";
 
 interface Props { roomId: string; user: UserProfile; onLeave: () => void; onMinimize?: () => void; enteredPassword?: string; onMessage?: (uid: string) => void; }
 
@@ -74,10 +76,12 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
   const [showRoomMode, setShowRoomMode] = useState(false);
   const [showInbox, setShowInbox] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [roomThemes, setRoomThemes] = useState<any[]>([]);
   const [seatFloats, setSeatFloats] = useState<{ id: number; emoji: string; left: number; top: number }[]>([]);
   const [inboxNotifs, setInboxNotifs] = useState<Notification[]>([]);
   const floatId = useRef(0);
   const msgEnd = useRef<HTMLDivElement>(null);
+  const roomContainerRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
   const joinedRef = useRef(false);
   const voiceInitRef = useRef(false);
@@ -85,6 +89,71 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
   const joinTimestampRef = useRef(Date.now());
   const chatClearedAtRef = useRef(0);
 
+  // ─── Helper to optimize Cloudinary images ───
+  const optimizeImageUrl = (url: string): string => {
+    if (!url || !url.includes("cloudinary.com")) return url;
+    // Add width 400, auto quality, auto format for mobile
+    return url.replace("/upload/", "/upload/w_400,q_auto,f_auto/");
+  };
+
+  // ─── Fetch room themes from Firebase ───
+  const fetchRoomThemes = async () => {
+    try {
+      const snap = await get(dbRef(db, "appConfig/themes"));
+      if (snap.exists()) {
+        const data = snap.val();
+        const themes = Object.values(data).filter((t: any) => t.enabled !== false);
+        setRoomThemes(themes);
+        return themes;
+      } else {
+        const fallback = STORE_ITEMS.filter(i => i.category === "theme");
+        setRoomThemes(fallback);
+        return fallback;
+      }
+    } catch {
+      const fallback = STORE_ITEMS.filter(i => i.category === "theme");
+      setRoomThemes(fallback);
+      return fallback;
+    }
+  };
+
+  useEffect(() => {
+    if (!showThemePicker) return;
+    fetchRoomThemes();
+  }, [showThemePicker]);
+
+  // ─── Apply theme background with optimized image ───
+  useEffect(() => {
+    const container = roomContainerRef.current;
+    if (!container) return;
+
+    const themeId = room?.theme || "galaxy";
+    let theme = roomThemes.find(t => t.id === themeId);
+    if (!theme) theme = ROOM_THEMES.find(t => t.id === themeId);
+
+    if (theme && themeId !== "galaxy") {
+      let imgUrl = theme.imageUrl || "";
+      // Optimize Cloudinary image for mobile
+      if (imgUrl.includes("cloudinary.com")) {
+        imgUrl = optimizeImageUrl(imgUrl);
+      }
+      const bg = imgUrl ? `url(${imgUrl})` : theme.preview || "none";
+      container.style.backgroundImage = bg !== "none" ? bg : "";
+      container.style.backgroundSize = "cover";
+      container.style.backgroundPosition = "center";
+      container.style.backgroundRepeat = "no-repeat";
+      container.style.backgroundColor = "#0a0614"; // fallback dark color
+    } else {
+      // Reset to default (mystical background will show via conditional rendering)
+      container.style.backgroundImage = "";
+      container.style.backgroundSize = "";
+      container.style.backgroundPosition = "";
+      container.style.backgroundRepeat = "";
+      container.style.backgroundColor = "";
+    }
+  }, [room?.theme, roomThemes]);
+
+  // ─── Original useEffects (unchanged) ───
   useEffect(() => {
     const unsub1 = subscribeRoom(roomId, r => {
       if (!r && joinedRef.current) {
@@ -308,7 +377,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
     return unsub;
   }, [user.uid]);
 
-  // Auto-launch initialGame once when room loads (for the room creator)
   const initialGameLaunched = useRef(false);
   useEffect(() => {
     if (!room?.initialGame || initialGameLaunched.current) return;
@@ -337,7 +405,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
     await sendRoomMessage(roomId, { userId: user.uid, username: user.name, avatar: user.avatar, text: e, type: "emoji" }).catch(console.error);
   };
 
-  // ✅ MODIFIED: handleGift now accepts url, animationType, soundUrl
   const handleGift = async (gift: { emoji: string; name: string; cost: number; url?: string; animationType?: string; soundUrl?: string }, combo: number = 1) => {
     if (!room) return;
     const totalCost = gift.cost * combo;
@@ -347,7 +414,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
     const success = await sendGift(user.uid, user, recipientId, gift.emoji, totalCost);
     if (!success) { showToast(`Not enough coins! Need ${totalCost}`, "warning"); return; }
 
-    // VIP detection logic – modify as needed
     const isVip = totalCost >= 500 ||
                   gift.name.toLowerCase().includes("vip") ||
                   gift.name.toLowerCase().includes("premium") ||
@@ -607,9 +673,14 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
   }
 
   return (
-    <div className="no-screenshot room-container">
-      <div className="room-bg" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)` }} />
-      <div className="room-bg-overlay" />
+    <div className="no-screenshot room-container" ref={roomContainerRef}>
+      {/* Default mystical background – only shown when no custom theme is active */}
+      {(!room?.theme || room.theme === "galaxy") && (
+        <>
+          <div className="room-bg" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}bg-mystical.png)` }} />
+          <div className="room-bg-overlay" />
+        </>
+      )}
 
       <div className="galaxy-stars" />
       <div className="galaxy-twinkle" />
@@ -633,7 +704,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
         }}>{f.item}</div>
       ))}
 
-      {/* ===== GIFT ANIMATIONS (extracted to GiftAnimation component) ===== */}
       <GiftAnimation giftAnim={giftAnim} giftParticles={giftParticles} />
 
       <EntryEffect
@@ -729,7 +799,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
         inboxBadge={inboxNotifs.filter(n => !n.read).length}
       />
 
-      {/* Seat-anchored floating emojis */}
       {seatFloats.map(f => (
         <div key={f.id} style={{
           position: "fixed", left: f.left, top: f.top, zIndex: 1500,
@@ -774,7 +843,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
           hasControl={hasControl} onClose={() => setActiveGame(null)} />
       )}
 
-      {/* ── 3-DOT MORE MENU (Clean Chat / Lock Room / Theme / Report) ── */}
+      {/* ── 3-DOT MORE MENU ── */}
       {showMoreMenu && (
         <div onClick={() => setShowMoreMenu(false)} style={{
           position: "fixed", inset: 0, zIndex: 1100,
@@ -795,7 +864,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
                 try { await updateRoomSettings(roomId, { isPrivate: !room.isPrivate } as any); showToast(room.isPrivate ? "Room unlocked" : "Room locked", "success"); }
                 catch { showToast("Failed", "error"); }
               }, show: true },
-              { icon: "🎨", label: "Room Theme", color: "#a78bfa", onClick: () => { if (!hasControl) { showToast("Admin only", "error"); return; } setShowThemePicker(true); }, show: true },
+              { icon: "🎨", label: "Room Theme", color: "#a78bfa", onClick: () => { if (!hasControl) { showToast("Admin only", "error"); return; } setShowThemePicker(true); }, show: hasControl },
               { icon: "🚩", label: "Report Room", color: "#ef4444", onClick: () => setShowReportModal(room.hostId), show: true },
             ].filter(x => x.show).map((opt, i) => (
               <button key={i} onClick={() => { opt.onClick(); setShowMoreMenu(false); }} style={{
@@ -826,27 +895,55 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
           <div onClick={e => e.stopPropagation()} style={{
             width: "100%", maxWidth: 340, background: "rgba(20,12,40,0.98)",
             border: "1px solid rgba(167,139,250,0.5)", borderRadius: 18, padding: 20,
-            boxShadow: "0 16px 48px rgba(0,0,0,0.7)", animation: "popIn 0.2s ease",
+            boxShadow: "0 16px 48px rgba(0,0,0,0.7)",
           }}>
             <h3 style={{ fontSize: 16, fontWeight: 900, color: "#fff", marginBottom: 14, textAlign: "center" }}>
               🎨 Choose Room Theme
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
-              {ROOM_THEMES.map(t => {
-                const active = (room.theme || "galaxy") === t.id;
-                return (
-                  <button key={t.id} onClick={async () => {
-                    try { await updateRoomSettings(roomId, { theme: t.id } as any); showToast(`Theme: ${t.name}`, "success"); setShowThemePicker(false); }
-                    catch { showToast("Failed", "error"); }
-                  }} style={{
-                    padding: 14, borderRadius: 12, border: active ? "2px solid #a78bfa" : "1px solid rgba(255,255,255,0.1)",
-                    background: t.bg, color: "#fff", cursor: "pointer", fontFamily: "inherit",
-                    fontSize: 13, fontWeight: 700, height: 80,
-                    boxShadow: active ? "0 0 20px rgba(167,139,250,0.6)" : "none",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>{t.name}</button>
-                );
-              })}
+              {roomThemes.length === 0 ? (
+                <p style={{ gridColumn: "span 2", textAlign: "center", color: "rgba(255,255,255,0.4)", padding: 20 }}>
+                  No themes available. Admin can add from Admin Panel.
+                </p>
+              ) : (
+                roomThemes.map(t => {
+                  const active = (room.theme || "galaxy") === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={async () => {
+                        if (!hasControl) { showToast("Admin only", "error"); return; }
+                        try {
+                          await updateRoomSettings(roomId, { theme: t.id } as any);
+                          showToast(`Theme: ${t.name} applied!`, "success");
+                          setShowThemePicker(false);
+                        } catch {
+                          showToast("Failed to update theme", "error");
+                        }
+                      }}
+                      style={{
+                        padding: 14, borderRadius: 12,
+                        border: active ? "2px solid #a78bfa" : "1px solid rgba(255,255,255,0.1)",
+                        background: t.preview || "rgba(255,255,255,0.03)",
+                        color: "#fff", cursor: hasControl ? "pointer" : "not-allowed",
+                        fontFamily: "inherit", fontSize: 13, fontWeight: 700,
+                        height: 80,
+                        boxShadow: active ? "0 0 20px rgba(167,139,250,0.6)" : "none",
+                        display: "flex", flexDirection: "column",
+                        alignItems: "center", justifyContent: "center", gap: 4,
+                        opacity: hasControl ? 1 : 0.5,
+                      }}
+                    >
+                      {t.imageUrl ? (
+                        <img src={t.imageUrl} alt={t.name} style={{ width: 40, height: 40, objectFit: "contain", borderRadius: 4 }} />
+                      ) : (
+                        <span style={{ fontSize: 24 }}>{t.icon}</span>
+                      )}
+                      <span style={{ fontSize: 11 }}>{t.name}</span>
+                    </button>
+                  );
+                })
+              )}
             </div>
             <button onClick={() => setShowThemePicker(false)} style={{
               marginTop: 14, width: "100%", padding: "10px 0", borderRadius: 10, border: "none",
@@ -857,7 +954,7 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
         </div>
       )}
 
-      {/* ── ROOM MODE GRID (More button → game grid) ── */}
+      {/* ── Rest of modals (RoomMode, Inbox, SeatSheet, etc.) ── */}
       {showRoomMode && (
         <div onClick={() => setShowRoomMode(false)} style={{
           position: "fixed", inset: 0, zIndex: 1100,
@@ -910,7 +1007,6 @@ export default function VoiceRoomPage({ roomId, user, onLeave, onMinimize, enter
         </div>
       )}
 
-      {/* ── INBOX MODAL ── */}
       {showInbox && (
         <div onClick={() => setShowInbox(false)} style={{
           position: "fixed", inset: 0, zIndex: 1100,
