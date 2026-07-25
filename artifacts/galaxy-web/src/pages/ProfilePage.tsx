@@ -21,6 +21,7 @@ import { Report, getReportQueue, reviewReport } from "../lib/reportService";
 import SettingsPage from "./SettingsPage";
 import UserLevelPage from "./UserLevelPage";
 import StorePage from "./StorePage";
+import HostAgencyApply from "../components/HostAgencyApply";
 
 interface Props {
   user: UserProfile;
@@ -130,6 +131,7 @@ export default function ProfilePage({
   const [ormLoading, setOrmLoading] = useState(false);
   const [ormLoaded, setOrmLoaded] = useState(false);
   const [showFamily, setShowFamily] = useState(false);
+  const [showApply, setShowApply] = useState(false);
   const [myFamily, setMyFamily] = useState<Family | null>(null);
   const [allFamilies, setAllFamilies] = useState<Family[]>([]);
   const [_familyLoading, setFamilyLoading] = useState(false);
@@ -153,7 +155,7 @@ export default function ProfilePage({
     showLevelPage, showStorePage, showSettings, showAchievements,
     showPrivacyPolicy, showBlocked, showFriendRequests, showFriendsList,
     showReport, showSearch, showFeedback, showHelp, showBackpack,
-    showAdminPanel, showOfficialRules, showFamily, showLanguage, showReportQueue,
+    showAdminPanel, showOfficialRules, showFamily, showLanguage, showReportQueue, showApply,
     viewingProfile, showFollowersList, showFollowingList
   ];
 
@@ -603,6 +605,10 @@ export default function ProfilePage({
       openSubPage("officialRules");
       setShowOfficialRules(true);
     }
+    if (action === "apply") {
+      openSubPage("apply");
+      setShowApply(true);
+    }
     if (action === "reportQueue") {
       openSubPage("reportQueue");
       setShowReportQueue(true);
@@ -630,6 +636,7 @@ export default function ProfilePage({
     { icon: "💰", label: "Wallet", color: "#f59e0b", glow: "rgba(245,158,11,0.35)", action: "wallet" },
     { icon: "🛍️", label: "Store", color: "#a855f7", glow: "rgba(168,85,247,0.35)", action: "store" },
     { icon: "🎒", label: "Backpack", color: "#ec4899", glow: "rgba(236,72,153,0.35)", action: "backpack" },
+    { icon: "🎤", label: "Be a Host", color: "#FFD700", glow: "rgba(255,215,0,0.35)", action: "apply" },
     { icon: "💡", label: "Help", color: "#22c55e", glow: "rgba(34,197,94,0.35)", action: "help" },
     { icon: "💬", label: "Feedback", color: "#06b6d4", glow: "rgba(6,182,212,0.35)", action: "feedback" },
   ];
@@ -4336,6 +4343,16 @@ export default function ProfilePage({
           user={user}
           onClose={() => { closeSubPage(); setShowTasksPanel(false); }}
           onUpdate={(updated) => onUpdate(updated as typeof user)}
+        />
+      )}
+
+      {showApply && (
+        <HostAgencyApply
+          uid={user.uid}
+          userId={user.userId}
+          name={user.name}
+          avatar={user.avatar}
+          onClose={() => { closeSubPage(); setShowApply(false); }}
         />
       )}
     </div>

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Zap, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Zap, Lock, User, Eye, EyeOff, AlertCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdmin } from "@/App";
+import { useAdmin, DEMO_USERNAME, DEMO_PASSWORD } from "@/App";
 import { useEffect } from "react";
 
 const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME;
@@ -27,16 +27,23 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     await new Promise(r => setTimeout(r, 400));
 
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      await setAdminLoggedIn(true);
+      await setAdminLoggedIn(true, false);
+      navigate("/");
+    } else if (username === DEMO_USERNAME && password === DEMO_PASSWORD) {
+      await setAdminLoggedIn(true, true);
       navigate("/");
     } else {
       setError("Invalid username or password.");
     }
     setLoading(false);
+  }
+
+  function handleDemoLogin() {
+    setUsername(DEMO_USERNAME);
+    setPassword(DEMO_PASSWORD);
   }
 
   return (
@@ -115,11 +122,33 @@ export default function LoginPage() {
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Signing in...
                 </span>
-              ) : (
-                "Sign In to Admin Panel"
-              )}
+              ) : "Sign In to Admin Panel"}
             </Button>
           </form>
+
+          {/* Demo login section */}
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5 mb-3">
+              <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-amber-300">Demo Account (View Only)</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Username: <span className="text-white font-mono">demo</span> &nbsp;|&nbsp;
+                  Password: <span className="text-white font-mono">demo123</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Demo users can browse but cannot make any changes.</p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDemoLogin}
+              className="w-full text-xs border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+            >
+              Fill Demo Credentials
+            </Button>
+          </div>
 
           <p className="text-center text-xs text-muted-foreground mt-4">
             Restricted to SuperAdmin accounts only

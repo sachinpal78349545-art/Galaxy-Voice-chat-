@@ -17,24 +17,39 @@ import PackagesPage from "@/pages/PackagesPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import VipPage from "@/pages/VipPage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
+import ApplicationsPage from "@/pages/ApplicationsPage";
+import GamesPage from "@/pages/GamesPage";
 import Layout from "@/components/Layout";
 
 const queryClient = new QueryClient();
 
 const SESSION_KEY = "galaxy_admin_auth";
+const DEMO_SESSION_KEY = "galaxy_admin_demo";
+
+// ─── Hardcoded demo credentials (view-only, cannot be changed) ───
+export const DEMO_USERNAME = "demo";
+export const DEMO_PASSWORD = "demo123";
 
 interface AuthContextType {
-  adminUser: { name: string } | null;
+  adminUser: { name: string; avatar?: string } | null;
   loading: boolean;
-  setAdminLoggedIn: (v: boolean) => void;
+  isDemo: boolean;
+  setAdminLoggedIn: (v: boolean, demo?: boolean) => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   adminUser: null,
   loading: false,
+  isDemo: false,
   setAdminLoggedIn: () => {},
 });
 export const useAdmin = () => useContext(AuthContext);
+
+/** Call this when a demo user tries to perform a write action */
+export function useDemoGuard() {
+  const { isDemo } = useAdmin();
+  return isDemo;
+}
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { adminUser, loading } = useAdmin();
@@ -82,35 +97,54 @@ function Router() {
       <Route path="/notifications"><Guarded><NotificationsPage /></Guarded></Route>
       <Route path="/vip"><Guarded><VipPage /></Guarded></Route>
       <Route path="/leaderboard"><Guarded><LeaderboardPage /></Guarded></Route>
+      <Route path="/applications"><Guarded><ApplicationsPage /></Guarded></Route>
+      <Route path="/games"><Guarded><GamesPage /></Guarded></Route>
       <Route path="/settings"><Guarded><SettingsPage /></Guarded></Route>
     </Switch>
   );
 }
 
 function App() {
-  const [adminUser, setAdminUser] = useState<{ name: string } | null>(null);
+  const [adminUser, setAdminUser] = useState<{ name: string; avatar?: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
+    const demo = sessionStorage.getItem(DEMO_SESSION_KEY);
     if (stored === "true") {
       setAdminUser({ name: "SuperAdmin" });
+      setIsDemo(false);
+    } else if (demo === "true") {
+      setAdminUser({ name: "Demo Viewer" });
+      setIsDemo(true);
     }
     setLoading(false);
   }, []);
 
-  const setAdminLoggedIn = (v: boolean) => {
+  const setAdminLoggedIn = (v: boolean, demo = false) => {
     if (v) {
-      sessionStorage.setItem(SESSION_KEY, "true");
-      setAdminUser({ name: "SuperAdmin" });
+      if (demo) {
+        sessionStorage.setItem(DEMO_SESSION_KEY, "true");
+        sessionStorage.removeItem(SESSION_KEY);
+        setAdminUser({ name: "Demo Viewer" });
+        setIsDemo(true);
+      } else {
+        sessionStorage.setItem(SESSION_KEY, "true");
+        sessionStorage.removeItem(DEMO_SESSION_KEY);
+        setAdminUser({ name: "SuperAdmin" });
+        setIsDemo(false);
+      }
     } else {
       sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(DEMO_SESSION_KEY);
       setAdminUser(null);
+      setIsDemo(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ adminUser, loading, setAdminLoggedIn }}>
+    <AuthContext.Provider value={{ adminUser, loading, isDemo, setAdminLoggedIn }}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>

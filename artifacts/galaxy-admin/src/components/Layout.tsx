@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { useAdmin } from "@/App";
 import {
   LayoutDashboard, Users, CreditCard, Radio, Bell, Settings,
   LogOut, Menu, X, Flag, ChevronRight, Zap, Gift, Image,
-  Package, Send, Crown, Trophy,
+  Package, Send, Crown, Trophy, Gamepad2, ClipboardList, Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,6 +24,7 @@ const NAV_GROUPS = [
       { path: "/users", label: "All Users", icon: Users },
       { path: "/vip", label: "VIP & Officials", icon: Crown },
       { path: "/reports", label: "Reports", icon: Flag },
+      { path: "/applications", label: "Applications", icon: ClipboardList },
     ],
   },
   {
@@ -41,6 +40,7 @@ const NAV_GROUPS = [
       { path: "/rooms", label: "Rooms", icon: Radio },
       { path: "/gifts", label: "Gifts", icon: Gift },
       { path: "/banners", label: "Banners", icon: Image },
+      { path: "/games", label: "Games", icon: Gamepad2 },
     ],
   },
   {
@@ -61,12 +61,12 @@ const NAV_GROUPS = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location, navigate] = useLocation();
-  const { adminUser } = useAdmin();
+  const { adminUser, isDemo, setAdminLoggedIn } = useAdmin();
   const { toast } = useToast();
 
-  async function handleLogout() {
-    try { await signOut(auth); navigate("/login"); }
-    catch { toast({ title: "Logout failed", variant: "destructive" }); }
+  function handleLogout() {
+    setAdminLoggedIn(false);
+    navigate("/login");
   }
 
   function isActive(path: string) {
@@ -85,6 +85,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <p className="text-[10px] text-sidebar-foreground/50 mt-0.5">Control Panel v1.0</p>
           </div>
         </div>
+        {isDemo && (
+          <div className="mt-2 flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 rounded-md px-2 py-1">
+            <Eye className="w-3 h-3 text-amber-400 shrink-0" />
+            <span className="text-[10px] text-amber-300 font-semibold">VIEW ONLY — Demo Mode</span>
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-4">
@@ -119,11 +125,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="px-2 py-3 border-t border-sidebar-border shrink-0">
         <div className="flex items-center gap-2 px-2.5 py-2 mb-1.5 rounded-lg bg-sidebar-accent/20">
           <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-sm shrink-0">
-            {adminUser?.avatar || "🌟"}
+            {isDemo ? "👁️" : "🌟"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white truncate leading-none">{adminUser?.name || "SuperAdmin"}</p>
-            <p className="text-[10px] text-primary/70 mt-0.5">Super Admin</p>
+            <p className="text-xs font-semibold text-white truncate leading-none">{adminUser?.name || "Admin"}</p>
+            <p className={cn("text-[10px] mt-0.5", isDemo ? "text-amber-400" : "text-primary/70")}>
+              {isDemo ? "Demo Viewer" : "Super Admin"}
+            </p>
           </div>
         </div>
         <Button variant="ghost" size="sm" onClick={handleLogout}
@@ -136,14 +144,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <aside className="hidden lg:flex flex-col w-52 shrink-0 bg-sidebar border-r border-sidebar-border">
+      {/* Demo banner */}
+      {isDemo && (
+        <div className="fixed top-0 left-0 right-0 z-[999] bg-amber-500/90 text-amber-950 text-center text-xs font-bold py-1 px-4">
+          👁️ DEMO MODE — View Only. Actions are disabled.
+        </div>
+      )}
+
+      <aside className={cn("hidden lg:flex flex-col w-52 shrink-0 bg-sidebar border-r border-sidebar-border", isDemo && "mt-7")}>
         <SidebarContent />
       </aside>
 
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative z-10 flex flex-col w-52 bg-sidebar border-r border-sidebar-border">
+          <aside className={cn("relative z-10 flex flex-col w-52 bg-sidebar border-r border-sidebar-border", isDemo && "mt-7")}>
             <button className="absolute top-3 right-3 text-sidebar-foreground/60 hover:text-white" onClick={() => setSidebarOpen(false)}>
               <X className="w-5 h-5" />
             </button>
@@ -152,7 +167,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className={cn("flex-1 flex flex-col min-w-0 overflow-hidden", isDemo && "mt-7")}>
         <header className="lg:hidden flex items-center h-13 px-4 border-b border-border bg-card shrink-0">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="mr-3 h-8 w-8">
             <Menu className="w-4 h-4" />
