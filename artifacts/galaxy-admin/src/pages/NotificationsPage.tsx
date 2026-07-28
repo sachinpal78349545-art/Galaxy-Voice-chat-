@@ -6,26 +6,29 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ref, push, set, get } from "firebase/database";
 import { db } from "@/lib/firebase";
+import { useAdmin } from "@/App";
 import { cn } from "@/lib/utils";
 
 const NOTIF_TYPES = [
-  { value: "system", label: "📢 System", icon: "📢" },
-  { value: "gift", label: "🎁 Gift", icon: "🎁" },
-  { value: "achievement", label: "🏆 Achievement", icon: "🏆" },
-  { value: "room_invite", label: "🎤 Room Invite", icon: "🎤" },
+  { value: "system",      label: "📢 System"      },
+  { value: "gift",        label: "🎁 Gift"         },
+  { value: "achievement", label: "🏆 Achievement"  },
+  { value: "room_invite", label: "🎤 Room Invite"  },
 ];
 
 export default function NotificationsPage() {
   const { toast } = useToast();
-  const [mode, setMode] = useState<"all" | "user">("all");
+  const { isDemo, showDemoBlock } = useAdmin();
+  const [mode, setMode]         = useState<"all" | "user">("all");
   const [targetUid, setTargetUid] = useState("");
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [type, setType] = useState("system");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState<{ count: number; ts: number } | null>(null);
+  const [title, setTitle]       = useState("");
+  const [body, setBody]         = useState("");
+  const [type, setType]         = useState("system");
+  const [sending, setSending]   = useState(false);
+  const [sent, setSent]         = useState<{ count: number; ts: number } | null>(null);
 
   async function handleSend() {
+    if (isDemo) { showDemoBlock(); return; }
     if (!title.trim() || !body.trim()) return;
     setSending(true);
     try {
@@ -33,7 +36,7 @@ export default function NotificationsPage() {
         type,
         title: title.trim(),
         body: body.trim(),
-        icon: NOTIF_TYPES.find(t => t.value === type)?.icon || "📢",
+        icon: NOTIF_TYPES.find(t => t.value === type)?.label?.split(" ")[0] || "📢",
         read: false,
         timestamp: Date.now(),
       };
@@ -69,10 +72,8 @@ export default function NotificationsPage() {
         setSent({ count, ts: Date.now() });
         toast({ title: `Notification sent to ${count} users!` });
       }
-
-      setTitle("");
-      setBody("");
-    } catch (e) {
+      setTitle(""); setBody("");
+    } catch {
       toast({ title: "Failed to send", variant: "destructive" });
     }
     setSending(false);
@@ -93,31 +94,18 @@ export default function NotificationsPage() {
 
       <div className="bg-card border border-border rounded-xl p-5 space-y-4">
         <div className="flex gap-2">
-          <button
-            onClick={() => setMode("all")}
-            className={cn("flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all", mode === "all" ? "bg-primary border-primary text-white" : "border-border text-muted-foreground hover:text-white")}
-          >
-            <Users className="w-4 h-4" />
-            All Users
+          <button onClick={() => setMode("all")} className={cn("flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all", mode === "all" ? "bg-primary border-primary text-white" : "border-border text-muted-foreground hover:text-white")}>
+            <Users className="w-4 h-4" />All Users
           </button>
-          <button
-            onClick={() => setMode("user")}
-            className={cn("flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all", mode === "user" ? "bg-primary border-primary text-white" : "border-border text-muted-foreground hover:text-white")}
-          >
-            <User className="w-4 h-4" />
-            Specific User
+          <button onClick={() => setMode("user")} className={cn("flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all", mode === "user" ? "bg-primary border-primary text-white" : "border-border text-muted-foreground hover:text-white")}>
+            <User className="w-4 h-4" />Specific User
           </button>
         </div>
 
         {mode === "user" && (
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">User Firebase UID</Label>
-            <Input
-              placeholder="Enter user UID..."
-              value={targetUid}
-              onChange={e => setTargetUid(e.target.value)}
-              className="bg-background border-border"
-            />
+            <Input placeholder="Enter user UID..." value={targetUid} onChange={e => setTargetUid(e.target.value)} className="bg-background border-border" />
           </div>
         )}
 
@@ -125,11 +113,8 @@ export default function NotificationsPage() {
           <Label className="text-xs text-muted-foreground">Notification Type</Label>
           <div className="flex gap-2 flex-wrap">
             {NOTIF_TYPES.map(t => (
-              <button
-                key={t.value}
-                onClick={() => setType(t.value)}
-                className={cn("px-3 py-1.5 rounded-lg border text-xs font-medium transition-all", type === t.value ? "bg-primary border-primary text-white" : "border-border text-muted-foreground hover:text-white")}
-              >
+              <button key={t.value} onClick={() => setType(t.value)}
+                className={cn("px-3 py-1.5 rounded-lg border text-xs font-medium transition-all", type === t.value ? "bg-primary border-primary text-white" : "border-border text-muted-foreground hover:text-white")}>
                 {t.label}
               </button>
             ))}
@@ -138,41 +123,16 @@ export default function NotificationsPage() {
 
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Title</Label>
-          <Input
-            placeholder="Notification title"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            className="bg-background border-border"
-          />
+          <Input placeholder="Notification title" value={title} onChange={e => setTitle(e.target.value)} className="bg-background border-border" />
         </div>
-
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Message</Label>
-          <Input
-            placeholder="Notification body message"
-            value={body}
-            onChange={e => setBody(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleSend()}
-            className="bg-background border-border"
-          />
+          <Input placeholder="Notification body message" value={body} onChange={e => setBody(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSend()} className="bg-background border-border" />
         </div>
 
-        <Button
-          onClick={handleSend}
-          disabled={sending || !title.trim() || !body.trim()}
-          className="w-full bg-primary hover:bg-primary/90"
-        >
-          {sending ? (
-            <span className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Sending...
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <Send className="w-4 h-4" />
-              Send to {mode === "all" ? "All Users" : "User"}
-            </span>
-          )}
+        <Button onClick={handleSend} disabled={sending || !title.trim() || !body.trim()} className="w-full bg-primary hover:bg-primary/90">
+          {sending ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Sending...</span>
+                   : <span className="flex items-center gap-2"><Send className="w-4 h-4" />Send to {mode === "all" ? "All Users" : "User"}</span>}
         </Button>
       </div>
 

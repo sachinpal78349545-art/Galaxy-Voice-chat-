@@ -77,29 +77,51 @@ export interface GlobalAlert {
   active: boolean;
 }
 
+// ─── Updated getAllUsers with error handling ──────────────────
 export async function getAllUsers(): Promise<UserProfile[]> {
-  const snap = await get(ref(db, "users"));
-  if (!snap.exists()) return [];
-  const val = snap.val() as Record<string, UserProfile>;
-  return Object.entries(val)
-    .map(([uid, u]) => ({ ...u, uid }))
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  try {
+    const snap = await get(ref(db, "users"));
+    if (!snap.exists()) return [];
+    const val = snap.val() as Record<string, UserProfile>;
+    return Object.entries(val)
+      .map(([uid, u]) => ({ ...u, uid }))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch (error: any) {
+    console.error("Error fetching users:", error);
+    if (error.message?.includes("permission_denied")) {
+      throw new Error("Permission denied: You are not authorized to view users. Please check Firebase security rules.");
+    }
+    throw error;
+  }
 }
 
+// ─── Updated searchUsers with error propagation ──────────────────
 export async function searchUsers(query: string): Promise<UserProfile[]> {
-  const all = await getAllUsers();
-  const q = query.toLowerCase();
-  return all.filter(u =>
-    u.name?.toLowerCase().includes(q) ||
-    u.email?.toLowerCase().includes(q) ||
-    u.userId?.includes(q) ||
-    u.uid?.includes(q)
-  );
+  try {
+    const all = await getAllUsers();
+    const q = query.toLowerCase();
+    return all.filter(u =>
+      u.name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.userId?.includes(q) ||
+      u.uid?.includes(q)
+    );
+  } catch (error) {
+    // re-throw so caller can handle it
+    throw error;
+  }
 }
+
+// ─── Rest of the functions (unchanged) ──────────────────────────
 
 export async function getUser(uid: string): Promise<UserProfile | null> {
-  const snap = await get(ref(db, `users/${uid}`));
-  return snap.exists() ? { ...snap.val(), uid } : null;
+  try {
+    const snap = await get(ref(db, `users/${uid}`));
+    return snap.exists() ? { ...snap.val(), uid } : null;
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return null;
+  }
 }
 
 export async function setUserCoins(uid: string, coins: number): Promise<void> {

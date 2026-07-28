@@ -53,7 +53,7 @@ export default function GamesPage() {
   const [form, setForm] = useState<Partial<GameConfig>>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const { isDemo } = useAdmin();
+  const { isDemo, showDemoBlock } = useAdmin();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function GamesPage() {
   }, []);
 
   async function seedDefaults() {
-    if (isDemo) return toast({ title: "Demo Mode", description: "Actions disabled.", variant: "destructive" });
+    if (isDemo) { showDemoBlock(); return; }
     for (const g of DEFAULT_GAMES) {
       await set(ref(db, `appConfig/games/${g.id}`), { ...g, createdAt: Date.now() });
     }
@@ -91,7 +91,7 @@ export default function GamesPage() {
   }
 
   async function handleSave() {
-    if (isDemo) return toast({ title: "Demo Mode", description: "Actions disabled.", variant: "destructive" });
+    if (isDemo) { showDemoBlock(); return; }
     if (!form.name || !form.url) return toast({ title: "Name and URL are required.", variant: "destructive" });
     setSaving(true);
     const id = editing?.id || form.name!.toLowerCase().replace(/\s+/g, "_");
@@ -111,13 +111,13 @@ export default function GamesPage() {
   }
 
   async function toggleEnabled(g: GameConfig) {
-    if (isDemo) return toast({ title: "Demo Mode", description: "Actions disabled.", variant: "destructive" });
+    if (isDemo) { showDemoBlock(); return; }
     await update(ref(db, `appConfig/games/${g.id}`), { enabled: !g.enabled });
     toast({ title: `${g.name} ${!g.enabled ? "enabled" : "disabled"}` });
   }
 
   async function handleDelete(id: string) {
-    if (isDemo) return toast({ title: "Demo Mode", description: "Actions disabled.", variant: "destructive" });
+    if (isDemo) { showDemoBlock(); return; }
     setDeleting(id);
     try {
       await remove(ref(db, `appConfig/games/${id}`));

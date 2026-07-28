@@ -19,22 +19,26 @@ import VipPage from "@/pages/VipPage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import ApplicationsPage from "@/pages/ApplicationsPage";
 import GamesPage from "@/pages/GamesPage";
+import OfficialFramesPage from "@/pages/OfficialFramesPage";
 import Layout from "@/components/Layout";
 
 const queryClient = new QueryClient();
 
-const SESSION_KEY = "galaxy_admin_auth";
+const SESSION_KEY      = "galaxy_admin_auth";
 const DEMO_SESSION_KEY = "galaxy_admin_demo";
 
-// ─── Hardcoded demo credentials (view-only, cannot be changed) ───
+// ─── Hardcoded demo credentials — view-only, cannot be changed via config ───
 export const DEMO_USERNAME = "demo";
 export const DEMO_PASSWORD = "demo123";
 
+// ─── Auth Context ────────────────────────────────────────────────────────────
 interface AuthContextType {
   adminUser: { name: string; avatar?: string } | null;
   loading: boolean;
   isDemo: boolean;
   setAdminLoggedIn: (v: boolean, demo?: boolean) => void;
+  /** Call this inside any write action to show the demo-blocked popup */
+  showDemoBlock: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -42,23 +46,83 @@ export const AuthContext = createContext<AuthContextType>({
   loading: false,
   isDemo: false,
   setAdminLoggedIn: () => {},
+  showDemoBlock: () => {},
 });
 export const useAdmin = () => useContext(AuthContext);
 
-/** Call this when a demo user tries to perform a write action */
-export function useDemoGuard() {
-  const { isDemo } = useAdmin();
-  return isDemo;
+// ─── Demo Blocked Modal ───────────────────────────────────────────────────────
+function DemoBlockedModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [, navigate] = useLocation();
+  if (!open) return null;
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 99999,
+        background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: "linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%)",
+          border: "1px solid rgba(251,191,36,0.3)",
+          borderRadius: 20, padding: "32px 28px", maxWidth: 380, width: "100%",
+          textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.8)",
+        }}
+      >
+        {/* Lock icon */}
+        <div style={{
+          width: 72, height: 72, borderRadius: "50%", margin: "0 auto 20px",
+          background: "rgba(251,191,36,0.12)", border: "2px solid rgba(251,191,36,0.3)",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32,
+        }}>🔒</div>
+
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fbbf24", margin: "0 0 10px" }}>
+          Permission Denied
+        </h2>
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.6, margin: "0 0 8px" }}>
+          You are logged in as a <strong style={{ color: "#fbbf24" }}>Demo User</strong>.
+        </p>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.6, margin: "0 0 28px" }}>
+          Demo accounts can only view data. All actions (create, edit, delete, approve, ban, etc.) are disabled. Login with your admin credentials to make changes.
+        </p>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)",
+              background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)", fontSize: 13,
+              fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            Got It
+          </button>
+          <button
+            onClick={() => { onClose(); navigate("/login"); }}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 10, border: "none",
+              background: "linear-gradient(90deg, #f59e0b, #d97706)", color: "#1a0a00", fontSize: 13,
+              fontWeight: 700, cursor: "pointer",
+            }}
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
+// ─── Auth Guard ───────────────────────────────────────────────────────────────
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { adminUser, loading } = useAdmin();
   const [, navigate] = useLocation();
-
   useEffect(() => {
     if (!loading && !adminUser) navigate("/login");
   }, [loading, adminUser, navigate]);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -74,44 +138,44 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 function Guarded({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthGuard>
-      <Layout>{children}</Layout>
-    </AuthGuard>
-  );
+  return <AuthGuard><Layout>{children}</Layout></AuthGuard>;
 }
 
+// ─── Router ───────────────────────────────────────────────────────────────────
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route path="/"><Guarded><Dashboard /></Guarded></Route>
-      <Route path="/users"><Guarded><UsersPage /></Guarded></Route>
-      <Route path="/recharge"><Guarded><RechargePage /></Guarded></Route>
-      <Route path="/rooms"><Guarded><RoomsPage /></Guarded></Route>
-      <Route path="/alerts"><Guarded><AlertsPage /></Guarded></Route>
-      <Route path="/reports"><Guarded><ReportsPage /></Guarded></Route>
-      <Route path="/gifts"><Guarded><GiftsPage /></Guarded></Route>
-      <Route path="/banners"><Guarded><BannersPage /></Guarded></Route>
-      <Route path="/packages"><Guarded><PackagesPage /></Guarded></Route>
+      <Route path="/">            <Guarded><Dashboard /></Guarded></Route>
+      <Route path="/users">       <Guarded><UsersPage /></Guarded></Route>
+      <Route path="/recharge">    <Guarded><RechargePage /></Guarded></Route>
+      <Route path="/rooms">       <Guarded><RoomsPage /></Guarded></Route>
+      <Route path="/alerts">      <Guarded><AlertsPage /></Guarded></Route>
+      <Route path="/reports">     <Guarded><ReportsPage /></Guarded></Route>
+      <Route path="/gifts">       <Guarded><GiftsPage /></Guarded></Route>
+      <Route path="/banners">     <Guarded><BannersPage /></Guarded></Route>
+      <Route path="/packages">    <Guarded><PackagesPage /></Guarded></Route>
       <Route path="/notifications"><Guarded><NotificationsPage /></Guarded></Route>
-      <Route path="/vip"><Guarded><VipPage /></Guarded></Route>
-      <Route path="/leaderboard"><Guarded><LeaderboardPage /></Guarded></Route>
+      <Route path="/vip">         <Guarded><VipPage /></Guarded></Route>
+      <Route path="/leaderboard"> <Guarded><LeaderboardPage /></Guarded></Route>
       <Route path="/applications"><Guarded><ApplicationsPage /></Guarded></Route>
-      <Route path="/games"><Guarded><GamesPage /></Guarded></Route>
-      <Route path="/settings"><Guarded><SettingsPage /></Guarded></Route>
+      <Route path="/games">       <Guarded><GamesPage /></Guarded></Route>
+      <Route path="/official-frames"><Guarded><OfficialFramesPage /></Guarded></Route>
+      <Route path="/settings">    <Guarded><SettingsPage /></Guarded></Route>
     </Switch>
   );
 }
 
+// ─── Root App ─────────────────────────────────────────────────────────────────
 function App() {
   const [adminUser, setAdminUser] = useState<{ name: string; avatar?: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isDemo, setIsDemo] = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [isDemo, setIsDemo]       = useState(false);
+  const [demoBlockOpen, setDemoBlockOpen] = useState(false);
 
   useEffect(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
-    const demo = sessionStorage.getItem(DEMO_SESSION_KEY);
+    const demo   = sessionStorage.getItem(DEMO_SESSION_KEY);
     if (stored === "true") {
       setAdminUser({ name: "SuperAdmin" });
       setIsDemo(false);
@@ -143,12 +207,15 @@ function App() {
     }
   };
 
+  const showDemoBlock = () => setDemoBlockOpen(true);
+
   return (
-    <AuthContext.Provider value={{ adminUser, loading, isDemo, setAdminLoggedIn }}>
+    <AuthContext.Provider value={{ adminUser, loading, isDemo, setAdminLoggedIn, showDemoBlock }}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />
+            <DemoBlockedModal open={demoBlockOpen} onClose={() => setDemoBlockOpen(false)} />
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

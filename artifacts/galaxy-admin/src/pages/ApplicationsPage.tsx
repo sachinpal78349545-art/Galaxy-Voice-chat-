@@ -38,7 +38,7 @@ export default function ApplicationsPage() {
   const [reviewTarget, setReviewTarget] = useState<{ id: string; type: "host" | "agency"; action: "approved" | "rejected" } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [reviewing, setReviewing] = useState(false);
-  const { isDemo } = useAdmin();
+  const { isDemo, showDemoBlock } = useAdmin();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,10 +57,7 @@ export default function ApplicationsPage() {
 
   async function handleReview() {
     if (!reviewTarget) return;
-    if (isDemo) {
-      toast({ title: "Demo Mode", description: "Actions are disabled in demo mode.", variant: "destructive" });
-      return;
-    }
+    if (isDemo) { showDemoBlock(); return; }
     setReviewing(true);
     try {
       const path = reviewTarget.type === "host" ? `hostApplications/${reviewTarget.id}` : `agencyApplications/${reviewTarget.id}`;

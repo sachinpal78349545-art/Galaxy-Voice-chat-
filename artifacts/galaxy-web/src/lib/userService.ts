@@ -75,7 +75,7 @@ export interface UserProfile {
   lastSeen: number;
   createdAt: number;
   isSuperAdmin?: boolean;
-  globalRole?: "official" | "user";
+  globalRole?: "official" | "officialHost" | "user";
   frame?: string;
   friendsCount?: number;
   fansCount?: number;
