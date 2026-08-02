@@ -75,7 +75,7 @@ if (!rawPort && !isBuild) {
 }
 
 const port = rawPort ? Number(rawPort) : 3000;
-const basePath = "./"; // Maine ise fixed "./" kar diya hai white screen fix karne ke liye
+const basePath = "./";
 
 export default defineConfig({
   base: basePath,
@@ -109,6 +109,8 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // ✅ Security: Source Maps बंद करें (production में)
+    sourcemap: false,
   },
   server: {
     port,
@@ -124,6 +126,14 @@ export default defineConfig({
     fs: {
       strict: true,
       deny: ["**/.*"],
+    },
+    // ✅ Proxy – API requests ko backend (server.mjs) पर forward करें
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080', // backend server port
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
     },
   },
   preview: {

@@ -1,18 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Room, UserProfile } from "./types";
-import { Mic, MicOff, Gift, MoreHorizontal, Send, ChevronDown } from "lucide-react";
+import { Mic, MicOff, Gift, MoreHorizontal, Send, ChevronDown, X } from "lucide-react";
 import GiftPanel from "../gifts/GiftPanel";
 import { LiveGift } from "../gifts/giftTypes";
+import GameHub from "./GameHub"; // 👈 Import GameHub
 
 const EMOJIS    = ["❤️","🔥","✨","😂","🎵","👏","🌟","💯","🚀","😍","🎉","💎"];
-const REACTIONS = [
-  { emoji: "👏", label: "Clap"  },
-  { emoji: "🔥", label: "Fire"  },
-  { emoji: "❤️", label: "Love"  },
-  { emoji: "😂", label: "LOL"   },
-  { emoji: "💯", label: "100"   },
-  { emoji: "🎉", label: "Party" },
-];
 
 interface BottomBarProps {
   room: Room;
@@ -36,6 +29,10 @@ interface BottomBarProps {
   inboxBadge?: number;
   onFloatEmoji?: (emoji: string) => void;
   className?: string;
+  // 👇 नए props – games menu के लिए
+  hasControl?: boolean;
+  onSelectGame?: (game: string) => void;
+  onCloseMenu?: () => void;
 }
 
 export default function BottomBar({
@@ -46,10 +43,13 @@ export default function BottomBar({
   onMicToggle,
   className = "",
   showToast,
+  hasControl = false,
+  onSelectGame,
+  onCloseMenu,
 }: BottomBarProps) {
   const [showEmoji,      setShowEmoji]      = useState(false);
   const [showGift,       setShowGift]       = useState(false);
-  const [showReactions,  setShowReactions]  = useState(false);
+  const [showMenu,       setShowMenu]       = useState(false); // 👈 showMenu instead of showReactions
   const [inputOpen,      setInputOpen]      = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,7 +72,7 @@ export default function BottomBar({
   const closeAllPopups = () => {
     setShowEmoji(false);
     setShowGift(false);
-    setShowReactions(false);
+    setShowMenu(false);
   };
 
   const micActive = isOnSeat && !isMuted;
@@ -102,10 +102,28 @@ export default function BottomBar({
     );
   };
 
+  // ── Menu open/close handlers ──
+  const handleMenuToggle = () => {
+    if (showMenu) {
+      setShowMenu(false);
+      if (onCloseMenu) onCloseMenu();
+    } else {
+      setShowMenu(true);
+      // close other popups
+      setShowEmoji(false);
+      setShowGift(false);
+    }
+  };
+
+  const handleGameSelect = (game: string) => {
+    setShowMenu(false);
+    if (onSelectGame) onSelectGame(game);
+  };
+
   return (
     <>
       {/* Backdrop for popups */}
-      {(showGift || showEmoji || showReactions) && (
+      {(showGift || showEmoji || showMenu) && (
         <div onClick={closeAllPopups}
           style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.2)" }} />
       )}
@@ -205,10 +223,11 @@ export default function BottomBar({
                 {micActive ? <Mic size={22} strokeWidth={2.5} /> : <MicOff size={22} strokeWidth={2.5} />}
               </button>
 
+              {/* ── 3‑Dot Button ── opens Games Menu ── */}
               <RoundBtn
                 icon={<MoreHorizontal size={20} />}
-                onClick={() => { const n = !showReactions; closeAllPopups(); if (n) setShowReactions(true); }}
-                active={showReactions}
+                onClick={handleMenuToggle}
+                active={showMenu}
                 color="muted"
               />
             </div>
@@ -218,7 +237,7 @@ export default function BottomBar({
 
       {keyboardHeight === 0 && (
         <>
-          {/* Emoji popup */}
+          {/* Emoji popup (unchanged) */}
           {showEmoji && (
             <div style={{
               position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
@@ -235,7 +254,7 @@ export default function BottomBar({
             </div>
           )}
 
-          {/* ── GIFT PANEL (separate component) ── */}
+          {/* ── GIFT PANEL ── */}
           {showGift && (
             <GiftPanel
               userCoins={user.coins}
@@ -253,18 +272,44 @@ export default function BottomBar({
             />
           )}
 
-          {/* Reactions dock */}
-          {showReactions && (
+          {/* ── GAMES MENU (Bottom Sheet) ── */}
+          {showMenu && (
             <div style={{
-              position: "fixed", bottom: 90, right: 10, zIndex: 1100,
-              background: "rgba(15,8,35,0.92)", borderRadius: 30, padding: "10px 6px",
-              display: "flex", flexDirection: "column", gap: 8,
-              border: "1px solid rgba(255,255,255,0.1)",
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 1100,
+              maxHeight: "70vh",
+              background: "linear-gradient(180deg, #0b051f 0%, #030107 100%)",
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              border: "1px solid rgba(108,92,231,0.2)",
+              padding: "20px 16px 30px",
+              boxShadow: "0 -10px 40px rgba(0,0,0,0.8)",
+              animation: "slideUp 0.25s ease-out",
             }}>
-              {REACTIONS.map(r => (
-                <button key={r.emoji} onClick={() => { onHandleReaction(r.emoji); closeAllPopups(); }}
-                  style={{ background: "none", border: "none", fontSize: 22, padding: 5, cursor: "pointer" }}>{r.emoji}</button>
-              ))}
+              {/* Drag handle */}
+              <div style={{
+                width: 40, height: 4, borderRadius: 2,
+                background: "rgba(255,255,255,0.15)",
+                margin: "0 auto 16px",
+              }} />
+              <button
+                onClick={() => { setShowMenu(false); if (onCloseMenu) onCloseMenu(); }}
+                style={{
+                  position: "absolute", top: 12, right: 16,
+                  background: "none", border: "none", color: "rgba(255,255,255,0.3)",
+                  fontSize: 20, cursor: "pointer",
+                }}
+              >
+                <X size={20} />
+              </button>
+              <GameHub
+                hasControl={hasControl}
+                onSelectGame={handleGameSelect}
+                onClose={() => { setShowMenu(false); if (onCloseMenu) onCloseMenu(); }}
+              />
             </div>
           )}
         </>

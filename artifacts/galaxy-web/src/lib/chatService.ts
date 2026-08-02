@@ -305,6 +305,11 @@ export async function markRead(convId: string, userId: string): Promise<void> {
   return markConversationRead(convId, userId);
 }
 
+// ─── ✅ Added: updateLastSeen ──────────────────────────────
+export async function updateLastSeen(convId: string, userId: string): Promise<void> {
+  await update(ref(db, `conversations/${convId}/lastSeen`), { [userId]: Date.now() });
+}
+
 export async function deleteConversation(convId: string, userId: string): Promise<void> {
   await remove(ref(db, `userConvs/${userId}/${convId}`));
 }

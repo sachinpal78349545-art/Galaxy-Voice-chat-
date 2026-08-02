@@ -1,7 +1,12 @@
+// @ts-nocheck
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import { z } from "zod";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -15,17 +20,15 @@ function fmtError(err) {
 
 process.on("uncaughtException", (err) => {
   console.error(`[FATAL] uncaughtException at ${new Date().toISOString()}:\n${fmtError(err)}`);
-  // Give logger time to flush, then die so process manager can restart
   setTimeout(() => process.exit(1), 500);
 });
 
 process.on("unhandledRejection", (reason) => {
   console.error(`[WARN] unhandledRejection at ${new Date().toISOString()}:\n${fmtError(reason)}`);
-  // Non-fatal — log and continue
 });
 
 /* ───────────────────────── Memory Guard ───────────────────────── */
-// Log memory usage every 5 minutes; warn if heap > 400 MB
+
 setInterval(() => {
   const mem = process.memoryUsage();
   const heapMB = Math.round(mem.heapUsed / 1024 / 1024);
@@ -39,7 +42,64 @@ setInterval(() => {
 
 /* ───────────────────────── Express Setup ───────────────────────── */
 
+// ✅ Security Headers (helmet)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", "wss:", "https:"],
+      fontSrc: ["'self'", "data:"],
+    },
+  },
+  crossOriginOpenerPolicy: { policy: "same-origin" },
+  crossOriginResourcePolicy: { policy: "same-origin" },
+}));
+
+// ✅ CORS – सिर्फ अपने डोमेन को allow करें
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["https://galaxy-voice-chat-galaxy-web.vercel.app", "http://localhost:3000"];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
+
+// ✅ Rate Limiting – हर API पर 10 requests per 10 seconds
+const apiLimiter = rateLimit({
+  windowMs: 10 * 1000,
+  max: 10,
+  message: { error: "Too many requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/", apiLimiter);
+
+// ✅ Input Validation Schemas (Zod)
+const AgoraTokenSchema = z.object({
+  channelName: z.string().min(1),
+  uid: z.union([z.string(), z.number()]),
+  role: z.number().int().min(1).max(2).optional(),
+});
+
+const RechargeSchema = z.object({
+  packageId: z.string().min(1),
+  userId: z.string().min(1),
+  paymentMethod: z.string().optional(),
+});
+
+/* ───────────────────────── Static & Health ───────────────────────── */
 
 const publicDir = path.join(__dirname, "dist", "public");
 app.use(express.static(publicDir));
@@ -105,18 +165,19 @@ function buildAgoraToken(appId, appCertificate, channelName, uid, role, expireTs
 
 app.post("/api/agora-token", (req, res) => {
   try {
-    const { channelName, uid, role } = req.body;
-
-    if (!channelName || uid === undefined) {
-      return res.status(400).json({ error: "channelName and uid required" });
+    const parsed = AgoraTokenSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request: " + parsed.error.issues.map(i => i.message).join(", ") });
     }
+
+    const { channelName, uid, role = 2 } = parsed.data;
 
     if (!AGORA_APP_CERTIFICATE) {
       return res.json({ token: null, appId: AGORA_APP_ID, message: "No certificate configured, using app ID only" });
     }
 
     const expireTs = Math.floor(Date.now() / 1000) + 3600;
-    const token = buildAgoraToken(AGORA_APP_ID, AGORA_APP_CERTIFICATE, channelName, uid, role || 2, expireTs);
+    const token = buildAgoraToken(AGORA_APP_ID, AGORA_APP_CERTIFICATE, channelName, uid, role, expireTs);
 
     res.json({ token, appId: AGORA_APP_ID });
   } catch (err) {
@@ -142,10 +203,14 @@ app.get("/api/recharge-packages", (_req, res) => {
 
 app.post("/api/recharge", (req, res) => {
   try {
-    const { packageId, userId, paymentMethod } = req.body;
+    const parsed = RechargeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request: " + parsed.error.issues.map(i => i.message).join(", ") });
+    }
+
+    const { packageId } = parsed.data;
     const pkg = RECHARGE_PACKAGES.find(p => p.id === packageId);
     if (!pkg) return res.status(400).json({ error: "Invalid package" });
-    if (!userId) return res.status(400).json({ error: "userId required" });
 
     const orderId = `order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -171,6 +236,14 @@ app.use((_req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
+/* ───────────────────────── Error Handler ───────────────────────── */
+
+// ✅ Generic error handler – किसी भी unhandled error को पकड़ें और सामान्य मैसेज दें
+app.use((err, _req, res, _next) => {
+  console.error("[ERROR] Unhandled:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
 /* ───────────────────────── Start ───────────────────────── */
 
 app.listen(PORT, "0.0.0.0", () => {
@@ -178,7 +251,7 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`[SERVER] Keep-alive: /ping | Health: /healthz | Agora: POST /api/agora-token`);
 
   // ── Integrated Keep-Alive: self-ping every 4 min to prevent sleep ──
-  const SELF_PING_MS = 4 * 60 * 1000; // 4 minutes
+  const SELF_PING_MS = 4 * 60 * 1000;
   let selfPingFailures = 0;
 
   async function selfPing() {
@@ -197,7 +270,6 @@ app.listen(PORT, "0.0.0.0", () => {
     }
   }
 
-  // First ping after 30s, then every 4 minutes
   setTimeout(() => {
     selfPing();
     setInterval(selfPing, SELF_PING_MS);
