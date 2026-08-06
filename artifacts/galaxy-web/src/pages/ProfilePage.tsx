@@ -1,4 +1,4 @@
-// ProfilePage.tsx – Full version without old daily tasks bottom sheet (task page code separated)
+// ProfilePage.tsx – Full version without old daily tasks, bottom sheet (task page code separated)
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db, storage } from "../lib/firebase";
@@ -89,7 +89,6 @@ export default function ProfilePage({
   const [adminLookupResult, setAdminLookupResult] = useState<UserProfile | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
   const [feedbackType, setFeedbackType] = useState<"feedback" | "bug" | "suggestion">("feedback");
-  const [feedbackSubject, setFeedbackSubject] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackSending, setFeedbackSending] = useState(false);
   const [feedbackCategory, setFeedbackCategory] = useState("");
@@ -202,7 +201,7 @@ export default function ProfilePage({
     }
   }, [showStorePage, onOpenSubPage, onCloseSubPage]);
 
-  // ---------- ALL HOOKS AND FUNCTIONS (unchanged from original) ----------
+  // ---------- ALL HOOKS AND FUNCTIONS ----------
   const achievements = useMemo(() => getAchievementsList(user), [user]);
   const unlockedCount = useMemo(() => achievements.filter((a) => a.unlocked).length, [achievements]);
   const xpPct = useMemo(() => Math.min(100, (user.xp / (user.level * 1000)) * 100), [user.xp, user.level]);
@@ -323,16 +322,9 @@ export default function ProfilePage({
     onLogout();
   };
 
+  // ❌ Removed handleDailyReward (unused)
 
-  const handleDailyReward = async () => {
-    const result = await claimDailyReward(user.uid, user);
-    if (result) {
-      showToast(`Daily reward: +${result.coins} diamonds! Day ${result.streak} streak! 🔥`, "success", "🎁");
-    } else {
-      showToast("Already claimed today! Come back tomorrow", "warning");
-    }
-  };
-
+  // ---------- Friend Response ----------
   const handleFriendResponse = async (reqId: string, accept: boolean) => {
     const req = friendRequests.find((r) => r.id === reqId);
     await respondFriendRequest(user.uid, reqId, accept);
@@ -373,14 +365,25 @@ export default function ProfilePage({
     showToast("Friend removed", "info");
   };
 
-  const handleReport = async () => {
-    if (!reportReason) {
-      showToast("Please select a reason", "warning");
+  // ---------- Unified Report & Feedback ----------
+  const handleReport = async (isFeedback: boolean = false) => {
+    const reason = isFeedback ? feedbackCategory : reportReason;
+    const details = isFeedback ? feedbackMessage : reportDetails;
+    const target = isFeedback ? "feedback" : (reportTarget || "general");
+
+    if (!reason) {
+      showToast(isFeedback ? "Please select a category" : "Please select a reason", "warning");
       return;
     }
+    if (!details?.trim()) {
+      showToast(isFeedback ? "Please describe your feedback" : "Please describe the issue", "warning");
+      return;
+    }
+
     setReportUploading(true);
     let attachmentUrl = "";
-    const primaryAttachment = reportAttachments[0] || reportAttachment;
+    const attachments = isFeedback ? feedbackAttachments : reportAttachments;
+    const primaryAttachment = attachments[0] || reportAttachment;
     if (primaryAttachment) {
       if (primaryAttachment.size > 20 * 1024 * 1024) {
         showToast("Size of a single video cannot exceed 20 MB", "warning");
@@ -398,21 +401,29 @@ export default function ProfilePage({
       }
     }
     try {
-      await reportUser(user.uid, reportTarget || "general", reportReason, reportDetails, attachmentUrl);
-      showToast("Report submitted. Thank you!", "success");
-      setShowReport(false);
+      await reportUser(user.uid, target, reason, details, attachmentUrl);
+      showToast("Thank you for your report/feedback!", "success");
+      if (isFeedback) {
+        setShowFeedback(false);
+        setFeedbackCategory("");
+        setFeedbackMessage("");
+        setFeedbackAttachments([]);
+      } else {
+        setShowReport(false);
+        setReportReason("");
+        setReportDetails("");
+        setReportTarget("");
+        setReportAttachment(null);
+        setReportAttachments([]);
+      }
       closeSubPage();
-      setReportReason("");
-      setReportDetails("");
-      setReportTarget("");
-      setReportAttachment(null);
-      setReportAttachments([]);
     } catch {
-      showToast("Failed to submit report. Try again.", "error");
+      showToast("Failed to submit. Try again.", "error");
     }
     setReportUploading(false);
   };
 
+  // ---------- Search ----------
   const handleSearch = async () => {
     if (searchQuery.trim().length < 2) return;
     const results = await searchUsers(searchQuery.trim());
@@ -424,37 +435,7 @@ export default function ProfilePage({
     showToast(`Friend request sent to ${target.name}!`, "success");
   };
 
-  const handleSubmitFeedback = async () => {
-    if (!feedbackCategory) {
-      showToast("Please select a category", "warning");
-      return;
-    }
-    if (!feedbackMessage.trim()) {
-      showToast("Please describe your feedback", "warning");
-      return;
-    }
-    setFeedbackSending(true);
-    try {
-      await submitFeedback(
-        user.uid,
-        user.name,
-        feedbackType,
-        feedbackCategory,
-        feedbackMessage.trim()
-      );
-      showToast("Thank you for your feedback!", "success");
-      setShowFeedback(false);
-      closeSubPage();
-      setFeedbackCategory("");
-      setFeedbackAttachments([]);
-      setFeedbackMessage("");
-      setFeedbackType("feedback");
-    } catch {
-      showToast("Failed to send feedback. Try again.", "error");
-    }
-    setFeedbackSending(false);
-  };
-
+  // ---------- Admin ----------
   const handleAdminLookup = async () => {
     if (!adminPromoteId.trim()) return;
     setAdminLoading(true);
@@ -498,7 +479,7 @@ export default function ProfilePage({
     setAdminLoading(false);
   };
 
-
+  // ---------- Backpack / Store ----------
   const handleEquip = async (itemId: string) => {
     setStoreLoading(itemId);
     try {
@@ -541,6 +522,7 @@ export default function ProfilePage({
     setStoreLoading(null);
   };
 
+  // ---------- Menu Actions ----------
   const handleMenu = (action: string) => {
     if (action === "edit") onEditProfile();
     if (action === "wallet") {
@@ -649,7 +631,7 @@ export default function ProfilePage({
     return <StorePage user={user} onBack={() => setShowStorePage(false)} onUpdate={onUpdate} />;
   }
 
-  // ---------- MAIN RENDER (original JSX, with old store bottom sheet removed) ----------
+  // ---------- MAIN RENDER ----------
   return (
     <div className="page-scroll no-screenshot" style={{ background: "#0a0820" }}>
       <div className="pf-hero">
@@ -831,13 +813,12 @@ export default function ProfilePage({
         </p>
       </div>
 
-      {/* Settings BottomSheet */}
+      {/* ===== SETTINGS ===== */}
       {showSettings && (
         <SettingsPage
           user={user}
           isAdmin={isAdmin}
           friendRequestsCount={friendRequests.length}
-
           onMenuAction={handleMenu}
           onOpenSubPage={openSubPage}
           onCloseSubPage={closeSubPage}
@@ -850,7 +831,7 @@ export default function ProfilePage({
         />
       )}
 
-      {/* Achievements BottomSheet */}
+      {/* ===== ACHIEVEMENTS ===== */}
       {showAchievements && (
         <BottomSheet
           onClose={() => {
@@ -859,9 +840,7 @@ export default function ProfilePage({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900 }}>
-              🏆 Achievements ({unlockedCount}/{achievements.length})
-            </h2>
+            <h2 style={{ fontSize: 18, fontWeight: 900 }}>🏆 Achievements ({unlockedCount}/{achievements.length})</h2>
             <button
               onClick={() => {
                 closeSubPage();
@@ -907,7 +886,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Privacy Policy BottomSheet */}
+      {/* ===== PRIVACY POLICY ===== */}
       {showPrivacyPolicy && (
         <BottomSheet
           onClose={() => {
@@ -988,7 +967,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Friend Requests BottomSheet */}
+      {/* ===== FRIEND REQUESTS ===== */}
       {showFriendRequests && (
         <BottomSheet
           onClose={() => {
@@ -1128,7 +1107,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Friends List BottomSheet */}
+      {/* ===== FRIENDS LIST ===== */}
       {showFriendsList && (
         <BottomSheet
           onClose={() => {
@@ -1257,7 +1236,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Followers List BottomSheet */}
+      {/* ===== FOLLOWERS ===== */}
       {showFollowersList && (
         <BottomSheet
           onClose={() => {
@@ -1400,7 +1379,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Following List BottomSheet */}
+      {/* ===== FOLLOWING ===== */}
       {showFollowingList && (
         <BottomSheet
           onClose={() => {
@@ -1543,7 +1522,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Viewing Profile BottomSheet */}
+      {/* ===== VIEW PROFILE ===== */}
       {viewingProfile && (
         <BottomSheet
           onClose={() => {
@@ -2180,7 +2159,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Blocked Users BottomSheet */}
+      {/* ===== BLOCKED USERS ===== */}
       {showBlocked && (
         <BottomSheet
           onClose={() => {
@@ -2239,7 +2218,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Report BottomSheet */}
+      {/* ===== REPORT ===== */}
       {showReport && (
         <BottomSheet
           onClose={() => {
@@ -2266,7 +2245,6 @@ export default function ProfilePage({
               style={{ borderRadius: 14, padding: "12px 14px" }}
             />
 
-            {/* Category chips */}
             <div>
               <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: "0 0 8px 0" }}>Select Reason</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -2287,7 +2265,6 @@ export default function ProfilePage({
               </div>
             </div>
 
-            {/* Details textarea */}
             <div>
               <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: "0 0 6px 0" }}>Details</p>
               <div style={{ position: "relative" }}>
@@ -2306,7 +2283,6 @@ export default function ProfilePage({
               </div>
             </div>
 
-            {/* Evidence Picker */}
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: 0 }}>Evidence (Optional)</p>
@@ -2358,7 +2334,6 @@ export default function ProfilePage({
               )}
             </div>
 
-            {/* Report Attachment Drawer */}
             {showReportAttachPicker && (
               <div
                 style={{ position: "fixed", inset: 0, zIndex: 6000, background: "rgba(0,0,0,0.72)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
@@ -2451,7 +2426,7 @@ export default function ProfilePage({
                 boxShadow: "0 0 18px rgba(255,71,87,0.4)",
                 transition: "all 0.2s", fontFamily: "inherit",
               }}
-              onClick={handleReport}
+              onClick={() => handleReport(false)}
               disabled={reportUploading}
             >
               {reportUploading ? "Uploading..." : "Submit Report"}
@@ -2460,7 +2435,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Search BottomSheet */}
+      {/* ===== SEARCH ===== */}
       {showSearch && (
         <BottomSheet
           onClose={() => {
@@ -2540,15 +2515,15 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Feedback BottomSheet */}
+      {/* ===== FEEDBACK ===== */}
       {showFeedback && (
         <BottomSheet
           onClose={() => {
             closeSubPage();
             setShowFeedback(false);
             setFeedbackCategory("");
-            setFeedbackAttachments([]);
             setFeedbackMessage("");
+            setFeedbackAttachments([]);
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexShrink: 0 }}>
@@ -2558,15 +2533,14 @@ export default function ProfilePage({
                 closeSubPage();
                 setShowFeedback(false);
                 setFeedbackCategory("");
-                setFeedbackAttachments([]);
                 setFeedbackMessage("");
+                setFeedbackAttachments([]);
               }}
               style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "rgba(162,155,254,0.5)" }}
             >✕</button>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Category Chips */}
             <div>
               <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: "0 0 10px 0" }}>Select Category</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -2589,7 +2563,6 @@ export default function ProfilePage({
               </div>
             </div>
 
-            {/* Description with char count */}
             <div>
               <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: "0 0 6px 0" }}>Description</p>
               <div style={{ position: "relative" }}>
@@ -2608,7 +2581,6 @@ export default function ProfilePage({
               </div>
             </div>
 
-            {/* Attachment Picker */}
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(162,155,254,0.6)", margin: 0 }}>Attachments (Optional)</p>
@@ -2662,7 +2634,6 @@ export default function ProfilePage({
               )}
             </div>
 
-            {/* Feedback Attachment Drawer */}
             {showFeedbackAttachPicker && (
               <div
                 style={{ position: "fixed", inset: 0, zIndex: 6000, background: "rgba(0,0,0,0.72)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
@@ -2746,9 +2717,8 @@ export default function ProfilePage({
               </div>
             )}
 
-            {/* Premium Submit Button */}
             <button
-              onClick={handleSubmitFeedback}
+              onClick={() => handleReport(true)}
               disabled={feedbackSending}
               style={{
                 width: "100%", padding: "16px 0", borderRadius: 22, border: "none",
@@ -2767,7 +2737,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Help BottomSheet */}
+      {/* ===== HELP ===== */}
       {showHelp && (
         <BottomSheet
           onClose={() => {
@@ -2883,7 +2853,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Admin Panel BottomSheet */}
+      {/* ===== ADMIN PANEL ===== */}
       {showAdminPanel && (
         <BottomSheet
           onClose={() => {
@@ -3609,7 +3579,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Backpack BottomSheet */}
+      {/* ===== BACKPACK ===== */}
       {showBackpack && (
         <div
           style={{
@@ -3821,7 +3791,7 @@ export default function ProfilePage({
         </div>
       )}
 
-      {/* Official Rules BottomSheet */}
+      {/* ===== OFFICIAL RULES ===== */}
       {showOfficialRules && (
         <BottomSheet
           onClose={() => {
@@ -3911,7 +3881,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Family BottomSheet */}
+      {/* ===== FAMILY ===== */}
       {showFamily && (
         <BottomSheet
           onClose={() => {
@@ -4185,7 +4155,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Language BottomSheet */}
+      {/* ===== LANGUAGE ===== */}
       {showLanguage && (
         <BottomSheet
           onClose={() => {
@@ -4237,7 +4207,7 @@ export default function ProfilePage({
         </BottomSheet>
       )}
 
-      {/* Report Queue BottomSheet */}
+      {/* ===== REPORT QUEUE ===== */}
       {showReportQueue && isAdmin && (
         <BottomSheet
           onClose={() => {
