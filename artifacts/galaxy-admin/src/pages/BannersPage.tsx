@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 
 // ─── Cloudinary Config ──────────────────────────────────────────
 const CLOUDINARY_CLOUD_NAME = "dz1bhfpkc";
-const CLOUDINARY_UPLOAD_PRESET = "app_uploads"; // ← अपना Upload Preset
+const CLOUDINARY_UPLOAD_PRESET = "Profile_pic"; // ← अपना Upload Preset
 
 // ─── Types ──────────────────────────────────────────────────────
 interface Banner {

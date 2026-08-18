@@ -5,10 +5,12 @@ import {
   LayoutDashboard, Users, CreditCard, Radio, Bell, Settings,
   LogOut, Menu, X, Flag, ChevronRight, Zap, Gift, Image,
   Package, Send, Crown, Trophy, Gamepad2, ClipboardList, Eye,
+  Wallet, FileText, HelpCircle, BarChart, Sparkles, Heart,
+  Shield, UserCheck, Gavel, DollarSign, ListChecks, BadgeDollarSign,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 
 const NAV_GROUPS = [
   {
@@ -19,28 +21,38 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "Users",
+    label: "Users & Reports",
     items: [
       { path: "/users", label: "All Users", icon: Users },
       { path: "/vip", label: "VIP & Officials", icon: Crown },
-      { path: "/reports", label: "Reports", icon: Flag },
       { path: "/applications", label: "Applications", icon: ClipboardList },
+      { path: "/kyc", label: "KYC Verification", icon: Shield },
+      { path: "/reports-list", label: "Reports List", icon: Flag },
+      { path: "/report-reasons", label: "Report Reasons", icon: Gavel },
     ],
   },
   {
-    label: "Finance",
+    label: "Finance & Payouts",
     items: [
       { path: "/recharge", label: "Recharges", icon: CreditCard },
       { path: "/packages", label: "Coin Packages", icon: Package },
+      { path: "/payout-requests", label: "Payout Requests", icon: DollarSign },
+      { path: "/payout-methods", label: "Payout Methods", icon: Wallet },
+      { path: "/wealth-levels", label: "Wealth Levels", icon: BarChart },
+      { path: "/lucky-gift", label: "Lucky Gift", icon: Gift },
     ],
   },
   {
-    label: "Content",
+    label: "Content & Engagement",
     items: [
       { path: "/rooms", label: "Rooms", icon: Radio },
       { path: "/gifts", label: "Gifts", icon: Gift },
       { path: "/banners", label: "Banners", icon: Image },
       { path: "/games", label: "Games", icon: Gamepad2 },
+      { path: "/game-bets", label: "Game Bets", icon: ListChecks },
+      { path: "/posts", label: "Posts", icon: FileText },
+      { path: "/beauty-effects", label: "Beauty Effects", icon: Sparkles },
+      { path: "/reactions", label: "Reactions", icon: Heart },
     ],
   },
   {
@@ -51,9 +63,28 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Support",
+    items: [
+      { path: "/help", label: "Help Requests", icon: HelpCircle },
+    ],
+  },
+  {
+    label: "Staff & Roles",
+    items: [
+      { path: "/staff", label: "Staff Management", icon: Users },
+      { path: "/access-roles", label: "Access Roles", icon: UserCheck },
+    ],
+  },
+  {
     label: "System",
     items: [
-      { path: "/settings", label: "Settings", icon: Settings },
+      { path: "/settings", label: "Main Settings", icon: Settings },
+      { path: "/settings/general", label: "General", icon: Settings2 },
+      { path: "/settings/payment", label: "Payment", icon: CreditCard },
+      { path: "/settings/moderation", label: "Moderation", icon: Gavel },
+      { path: "/settings/withdrawal", label: "Withdrawal", icon: BadgeDollarSign },
+      { path: "/settings/profile", label: "Profile", icon: UserCheck },
+      { path: "/official-frames", label: "Official Frames", icon: Image },
     ],
   },
 ];
@@ -62,7 +93,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location, navigate] = useLocation();
   const { adminUser, isDemo, setAdminLoggedIn } = useAdmin();
-  const { toast } = useToast();
 
   function handleLogout() {
     setAdminLoggedIn(false);
@@ -70,7 +100,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   function isActive(path: string) {
-    return path === "/" ? location === "/" : location.startsWith(path);
+    if (path === "/") return location === "/";
+    if (path === "/settings") return location === "/settings";
+    return location.startsWith(path);
   }
 
   const SidebarContent = () => (

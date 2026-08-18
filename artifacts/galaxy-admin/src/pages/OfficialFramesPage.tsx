@@ -1,19 +1,90 @@
 /**
  * OfficialFramesPage – Admin panel page to manage frame images for Official and Official Host roles
+ * Now supports direct Cloudinary upload (using `Profile_pic` preset)
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ref, get, set, remove } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Crown, Shield, Upload, Trash2, RefreshCw, Info } from "lucide-react";
+import { Crown, Shield, Upload, Trash2, RefreshCw, Info, ImagePlus } from "lucide-react";
 
 interface OfficialFrameConfig {
   url: string;
   updatedAt: number;
   note?: string;
+}
+
+// ─── Cloudinary Config ──────────────────────────────────────────
+const CLOUDINARY_CLOUD_NAME = "dz1bhfpkc";
+const CLOUDINARY_UPLOAD_PRESET = "Profile_pic"; // 👈 यह आपके Cloudinary में बना हुआ है
+
+// ─── Cloudinary Upload Button Component ─────────────────────────
+function UploadImageButton({ onUploaded, itemId }: { onUploaded: (url: string) => void; itemId: string }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) { setError("Only image files allowed"); return; }
+    if (file.size > 5 * 1024 * 1024) { setError("Max 5MB"); return; }
+    setError("");
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: formData }
+      );
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error?.message || "Upload failed");
+      }
+
+      const data = await response.json();
+      const url = data.secure_url;
+      console.log("✅ Cloudinary upload success:", url);
+      onUploaded(url);
+    } catch (err: any) {
+      console.error("❌ Cloudinary upload error:", err);
+      setError(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="w-full h-10 border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs gap-2"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+      >
+        <ImagePlus className="w-4 h-4" />
+        {uploading ? (
+          <span className="flex items-center gap-2">
+            <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Uploading...
+          </span>
+        ) : (
+          "📱 Upload from Gallery"
+        )}
+      </Button>
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+    </div>
+  );
 }
 
 export default function OfficialFramesPage() {
@@ -74,12 +145,26 @@ export default function OfficialFramesPage() {
     setLoading(false);
   }
 
+  // ── Upload callbacks ──────────────────────────────────────────
+  const onHostUploaded = (url: string) => {
+    setHostFrameUrl(url);
+    // Auto-save after upload (optional)
+    saveFrame("officialHost", url);
+  };
+
+  const onOfficialUploaded = (url: string) => {
+    setOfficialFrameUrl(url);
+    saveFrame("official", url);
+  };
+
   const FRAME_CARD = ({
     role, title, icon: Icon, iconColor, badge, current, inputVal, onInputChange, onSave, onClear,
+    uploadComponent, // 👈 new: upload button component
   }: {
     role: string; title: string; icon: typeof Crown; iconColor: string; badge: string;
     current: OfficialFrameConfig | null; inputVal: string; onInputChange: (v: string) => void;
     onSave: () => void; onClear: () => void;
+    uploadComponent: React.ReactNode;
   }) => (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       <div className="flex items-center gap-3 p-5 border-b border-border bg-muted/20">
@@ -102,9 +187,7 @@ export default function OfficialFramesPage() {
           {current ? (
             <div className="flex items-start gap-4">
               <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
-                {/* Avatar placeholder circle */}
                 <div className="absolute inset-3 rounded-full bg-muted" style={{ background: "rgba(108,92,231,0.2)" }} />
-                {/* Frame overlay */}
                 <img
                   src={current.url}
                   alt="Frame preview"
@@ -136,20 +219,23 @@ export default function OfficialFramesPage() {
           )}
         </div>
 
-        {/* Upload New Frame */}
+        {/* Upload New Frame – with Cloudinary button + URL input */}
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Upload New Frame</p>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Paste transparent PNG URL (Cloudinary, imgbb, etc.)"
-              value={inputVal}
-              onChange={e => onInputChange(e.target.value)}
-              className="text-sm"
-              disabled={isDemo}
-            />
-            <Button onClick={onSave} disabled={loading || !inputVal.trim() || isDemo} className="shrink-0">
-              <Upload className="w-4 h-4 mr-1.5" />Save
-            </Button>
+          <div className="space-y-2">
+            {uploadComponent}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Or paste transparent PNG URL directly"
+                value={inputVal}
+                onChange={e => onInputChange(e.target.value)}
+                className="text-sm"
+                disabled={isDemo}
+              />
+              <Button onClick={onSave} disabled={loading || !inputVal.trim() || isDemo} className="shrink-0">
+                <Upload className="w-4 h-4 mr-1.5" />Save
+              </Button>
+            </div>
           </div>
           <p className="text-[11px] text-muted-foreground mt-1.5">
             Frame image must be a transparent PNG. The image will be overlaid on top of the user's avatar. Recommended size: 200×200px or larger.
@@ -198,6 +284,12 @@ export default function OfficialFramesPage() {
             onInputChange={setHostFrameUrl}
             onSave={() => saveFrame("officialHost", hostFrameUrl)}
             onClear={() => clearFrame("officialHost")}
+            uploadComponent={
+              <UploadImageButton
+                onUploaded={onHostUploaded}
+                itemId="officialHostFrame"
+              />
+            }
           />
 
           <FRAME_CARD
@@ -211,6 +303,12 @@ export default function OfficialFramesPage() {
             onInputChange={setOfficialFrameUrl}
             onSave={() => saveFrame("official", officialFrameUrl)}
             onClear={() => clearFrame("official")}
+            uploadComponent={
+              <UploadImageButton
+                onUploaded={onOfficialUploaded}
+                itemId="officialFrame"
+              />
+            }
           />
         </div>
       )}

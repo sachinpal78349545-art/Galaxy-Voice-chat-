@@ -22,6 +22,28 @@ import GamesPage from "@/pages/GamesPage";
 import OfficialFramesPage from "@/pages/OfficialFramesPage";
 import Layout from "@/components/Layout";
 
+// ─── NEW IMPORTS ──────────────────────────────────────────────
+import GeneralSettings from "@/pages/GeneralSettings";
+import PaymentSettings from "@/pages/PaymentSettings";
+import ContentModeration from "@/pages/ContentModeration";
+import WithdrawalSettings from "@/pages/WithdrawalSettings";
+import ProfileManagement from "@/pages/ProfileManagement";
+import PayoutRequests from "@/pages/PayoutRequests";
+import PayoutMethod from "@/pages/PayoutMethod";
+import Report from "@/pages/Report";
+import ReportReason from "@/pages/ReportReason";
+import Help from "@/pages/Help";
+import WealthLevel from "@/pages/WealthLevel";
+import LuckyGiftHistory from "@/pages/LuckyGiftHistory";
+import BeautyEffect from "@/pages/BeautyEffect";
+import Reaction from "@/pages/Reaction";
+import KycVerification from "@/pages/KycVerification";
+import UserOverview from "@/pages/UserOverview";
+import Post from "@/pages/Post";
+import AccessRoles from "@/pages/AccessRoles";
+import StaffManagement from "@/pages/StaffManagement";
+import GameBetManagement from "@/pages/GameBetManagement";
+
 const queryClient = new QueryClient();
 
 const SESSION_KEY      = "galaxy_admin_auth";
@@ -162,6 +184,79 @@ function Router() {
       <Route path="/games">       <Guarded><GamesPage /></Guarded></Route>
       <Route path="/official-frames"><Guarded><OfficialFramesPage /></Guarded></Route>
       <Route path="/settings">    <Guarded><SettingsPage /></Guarded></Route>
+
+      {/* ─── NEW ADMIN ROUTES ────────────────────────────── */}
+      <Route path="/settings/general">
+        <Guarded><GeneralSettings /></Guarded>
+      </Route>
+      <Route path="/settings/payment">
+        <Guarded><PaymentSettings /></Guarded>
+      </Route>
+      <Route path="/settings/moderation">
+        <Guarded><ContentModeration /></Guarded>
+      </Route>
+      <Route path="/settings/withdrawal">
+        <Guarded><WithdrawalSettings /></Guarded>
+      </Route>
+      <Route path="/settings/profile">
+        <Guarded><ProfileManagement /></Guarded>
+      </Route>
+
+      <Route path="/payout-requests">
+        <Guarded><PayoutRequests /></Guarded>
+      </Route>
+      <Route path="/payout-methods">
+        <Guarded><PayoutMethod /></Guarded>
+      </Route>
+
+      {/* New Reports page (avoid conflict with existing /reports) */}
+      <Route path="/reports-list">
+        <Guarded><Report /></Guarded>
+      </Route>
+      <Route path="/report-reasons">
+        <Guarded><ReportReason /></Guarded>
+      </Route>
+
+      <Route path="/help">
+        <Guarded><Help /></Guarded>
+      </Route>
+
+      <Route path="/wealth-levels">
+        <Guarded><WealthLevel /></Guarded>
+      </Route>
+      <Route path="/lucky-gift">
+        <Guarded><LuckyGiftHistory /></Guarded>
+      </Route>
+      <Route path="/beauty-effects">
+        <Guarded><BeautyEffect /></Guarded>
+      </Route>
+      <Route path="/reactions">
+        <Guarded><Reaction /></Guarded>
+      </Route>
+
+      <Route path="/kyc">
+        <Guarded><KycVerification /></Guarded>
+      </Route>
+
+      {/* UserOverview uses a dynamic param */}
+      <Route path="/user/:uid">
+        <Guarded><UserOverview /></Guarded>
+      </Route>
+
+      <Route path="/posts">
+        <Guarded><Post /></Guarded>
+      </Route>
+
+      <Route path="/access-roles">
+        <Guarded><AccessRoles /></Guarded>
+      </Route>
+      <Route path="/staff">
+        <Guarded><StaffManagement /></Guarded>
+      </Route>
+      <Route path="/game-bets">
+        <Guarded><GameBetManagement /></Guarded>
+      </Route>
+
     </Switch>
   );
 }

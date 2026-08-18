@@ -200,7 +200,8 @@ const EMPTY_NEW_ENTRY: Partial<EntryItem> = { icon: "🎉", name: "", price: 100
 
 // ─── Cloudinary Config ─────────────────────────────────────
 const CLOUDINARY_CLOUD_NAME = "dz1bhfpkc";
-const CLOUDINARY_UPLOAD_PRESET = "my_upload_preset";
+const CLOUDINARY_UPLOAD_PRESET =
+  "Profile_pic";
 
 // ─── Upload Button (reusable) ─────────────────────────────
 function UploadImageButton({ onUploaded, itemId }: { onUploaded: (url: string) => void; itemId: string }) {
